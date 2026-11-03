@@ -7,6 +7,8 @@ import logger from './utils/logger.js';
 import { errorHandler, AppError } from './middlewares/errorHandler.js';
 import { prisma } from './utils/prisma.js';
 import authRoutes from './modules/auth/auth.routes.js';
+import registrationRoutes from './modules/registration/registration.routes.js';
+import documentRoutes from './modules/documents/document.routes.js';
 
 const app = express();
 
@@ -77,6 +79,8 @@ app.get('/api/v1/health', async (req, res) => {
 
 // 6. API Route Modules
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/registration', registrationRoutes);
+app.use('/api/v1/documents', documentRoutes);
 
 // 7. 404 Route Not Found Handler
 app.use((req, res, next) => {

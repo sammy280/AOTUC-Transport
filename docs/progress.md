@@ -23,3 +23,15 @@
 - [x] Secure authentication module (Argon2id hashing, JWT access/refresh token rotation).
 - [x] RBAC & territorial scope authorization middleware.
 - [x] Automated integration tests for authentication and authorization gates (9/9 passed).
+
+---
+
+## Milestone 2: Registration & Document Security (COMPLETED)
+- [x] Domain entities modeled in Prisma schema (`Person`, `Driver`, `Owner`, `Vehicle`, `VehicleInspection`, `VehicleAssignment`, `TransportUnion`, `Document`).
+- [x] Document storage engine (`DocumentStorageService`) with binary magic byte inspection (JPEG `FF D8 FF`, PNG `89 50 4E 47`, PDF `%PDF`).
+- [x] SHA-256 integrity hashing and safe filename sanitization preventing path traversal.
+- [x] File size enforcement (5 MB limit) and secure private storage outside public web root.
+- [x] Authorized, scope-checked document streaming endpoint (`GET /api/v1/documents/:id/stream`).
+- [x] Driver, Owner, and Vehicle registration services with duplicate prevention (NIN, Phone, Plate, License, Chassis/VIN).
+- [x] Guinean phone number normalizer to E.164 (`+224...`).
+- [x] Full automated integration test suite covering Milestones 1 & 2 (18/18 passed).

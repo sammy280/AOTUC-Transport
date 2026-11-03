@@ -24,7 +24,9 @@ model Commune {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  users User[]
+  users   User[]
+  persons Person[]
+  unions  TransportUnion[]
 
   @@map("communes")
 }
@@ -43,11 +45,11 @@ enum RoleType {
 }
 
 model Role {
-  id          String    @id @default(uuid())
-  name        RoleType  @unique
-  labelFr     String    @map("label_fr") // Human readable French label
+  id          String   @id @default(uuid())
+  name        RoleType @unique
+  labelFr     String   @map("label_fr") // Human readable French label
   description String?
-  createdAt   DateTime  @default(now()) @map("created_at")
+  createdAt   DateTime @default(now()) @map("created_at")
 
   userRoles UserRole[]
 
@@ -62,21 +64,28 @@ model User {
   firstName    String   @map("first_name")
   lastName     String   @map("last_name")
   isActive     Boolean  @default(true) @map("is_active")
-  
+
   // Territorial / Departmental Scope
-  communeId    String?  @map("commune_id")
-  commune      Commune? @relation(fields: [communeId], references: [id], onDelete: SetNull)
+  communeId String?  @map("commune_id")
+  commune   Commune? @relation(fields: [communeId], references: [id], onDelete: SetNull)
 
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  // Union Scope (for SYNDICAT role users)
+  unionId String?         @map("union_id")
+  union   TransportUnion? @relation(fields: [unionId], references: [id], onDelete: SetNull)
 
-  roles         UserRole[]
-  refreshTokens RefreshToken[]
-  auditLogs     AuditLog[]     @relation("ActorAuditLogs")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  roles              UserRole[]
+  refreshTokens      RefreshToken[]
+  auditLogs          AuditLog[]          @relation("ActorAuditLogs")
+  uploadedDocuments  Document[]          @relation("UploadedByUser")
+  vehicleAssignments VehicleAssignment[] @relation("AssignedByUser")
 
   @@index([phoneNumber])
   @@index([email])
   @@index([communeId])
+  @@index([unionId])
   @@map("users")
 }
 
@@ -98,14 +107,14 @@ model UserRole {
 // ==============================================================================
 
 model RefreshToken {
-  id               String   @id @default(uuid())
-  tokenHash        String   @unique @map("token_hash")
-  userId           String   @map("user_id")
-  family           String   // UUID representing token issuance lineage for reuse detection
-  isRevoked        Boolean  @default(false) @map("is_revoked")
-  expiresAt        DateTime @map("expires_at")
-  createdAt        DateTime @default(now()) @map("created_at")
-  replacedByToken  String?  @map("replaced_by_token")
+  id              String   @id @default(uuid())
+  tokenHash       String   @unique @map("token_hash")
+  userId          String   @map("user_id")
+  family          String // UUID representing token issuance lineage for reuse detection
+  isRevoked       Boolean  @default(false) @map("is_revoked")
+  expiresAt       DateTime @map("expires_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  replacedByToken String?  @map("replaced_by_token")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -121,8 +130,8 @@ model RefreshToken {
 model AuditLog {
   id             String   @id @default(uuid())
   actorId        String?  @map("actor_id")
-  action         String   // e.g., "USER_LOGIN", "ROLE_ASSIGNED", "PASSWORD_CHANGED"
-  targetModule   String   @map("target_module") // e.g., "AUTH", "USERS", "VALIDATION"
+  action         String // e.g., "USER_LOGIN", "DRIVER_ENROLLED", "DOCUMENT_UPLOADED"
+  targetModule   String   @map("target_module") // e.g., "AUTH", "REGISTRATION", "DOCUMENTS"
   targetRecordId String?  @map("target_record_id")
   previousValues Json?    @map("previous_values")
   newValues      Json?    @map("new_values")
@@ -138,4 +147,253 @@ model AuditLog {
   @@index([targetModule])
   @@index([timestamp])
   @@map("audit_logs")
+}
+
+// ==============================================================================
+// 5. PERSON IDENTITY REGISTRY (Module 2)
+// ==============================================================================
+
+model Person {
+  id          String    @id @default(uuid())
+  firstName   String    @map("first_name")
+  lastName    String    @map("last_name")
+  nin         String    @unique // Guinean National Identification Number (NIN)
+  phoneNumber String    @unique @map("phone_number") // Normalized E.164 (+224...)
+  email       String?
+  dateOfBirth DateTime? @map("date_of_birth")
+  address     String?
+
+  communeId String?  @map("commune_id")
+  commune   Commune? @relation(fields: [communeId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  driver    Driver?
+  owner     Owner?
+  documents Document[]
+
+  @@index([nin])
+  @@index([phoneNumber])
+  @@index([communeId])
+  @@map("persons")
+}
+
+// ==============================================================================
+// 6. DRIVERS & LICENCES (Module 2)
+// ==============================================================================
+
+enum DriverStatus {
+  BROUILLON
+  EN_ATTENTE_VALIDATION
+  ACTIF
+  SUSPENDU
+  INACTIF
+}
+
+model Driver {
+  id                    String       @id @default(uuid())
+  personId              String       @unique @map("person_id")
+  drivingLicenseNumber  String       @unique @map("driving_license_number")
+  licenseCategory       String       @default("B") @map("license_category") // e.g., "B", "C", "D"
+  licenseExpirationDate DateTime     @map("license_expiration_date")
+  status                DriverStatus @default(EN_ATTENTE_VALIDATION)
+
+  unionId String?         @map("union_id")
+  union   TransportUnion? @relation(fields: [unionId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  person      Person              @relation(fields: [personId], references: [id], onDelete: Restrict)
+  assignments VehicleAssignment[]
+
+  @@index([drivingLicenseNumber])
+  @@index([status])
+  @@index([unionId])
+  @@map("drivers")
+}
+
+// ==============================================================================
+// 7. VEHICLE OWNERS (Module 2)
+// ==============================================================================
+
+enum OwnerType {
+  INDIVIDU
+  ENTREPRISE
+}
+
+model Owner {
+  id           String    @id @default(uuid())
+  personId     String    @unique @map("person_id")
+  ownerType    OwnerType @default(INDIVIDU) @map("owner_type")
+  businessName String?   @map("business_name")
+  taxNumber    String?   @map("tax_number") // Numéro d'Identification Fiscale (NIF)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  person   Person    @relation(fields: [personId], references: [id], onDelete: Restrict)
+  vehicles Vehicle[]
+
+  @@map("owners")
+}
+
+// ==============================================================================
+// 8. VEHICLES & INSPECTIONS (Module 2)
+// ==============================================================================
+
+enum VehicleType {
+  TAXI_COLLECTIF
+  MAGBANA_MINIBUS
+  BUS_URBAIN
+  MOTOTAXI
+  AUTRE
+}
+
+enum VehicleStatus {
+  BROUILLON
+  EN_ATTENTE_VALIDATION
+  ACTIF
+  EN_PANNE
+  SUSPENDU
+  RETIRE
+}
+
+model Vehicle {
+  id                     String        @id @default(uuid())
+  ownerId                String        @map("owner_id")
+  plateNumber            String        @unique @map("plate_number") // Plaque d'immatriculation (ex: RC-1234-A)
+  registrationCardNumber String        @unique @map("registration_card_number") // Numéro carte grise
+  chassisVin             String        @unique @map("chassis_vin") // Numéro de châssis / VIN
+  vehicleType            VehicleType   @map("vehicle_type")
+  make                   String // Marque (ex: Toyota)
+  model                  String // Modèle (ex: Corolla)
+  year                   Int? // Année de mise en circulation
+  seatingCapacity        Int?          @map("seating_capacity")
+  status                 VehicleStatus @default(EN_ATTENTE_VALIDATION)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  owner       Owner                @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  inspections VehicleInspection[]
+  assignments VehicleAssignment[]
+  documents   Document[]
+
+  @@index([plateNumber])
+  @@index([chassisVin])
+  @@index([status])
+  @@index([ownerId])
+  @@map("vehicles")
+}
+
+model VehicleInspection {
+  id                 String   @id @default(uuid())
+  vehicleId          String   @map("vehicle_id")
+  certificateNumber  String   @unique @map("certificate_number")
+  inspectionCenter   String   @map("inspection_center")
+  inspectionDate     DateTime @map("inspection_date")
+  expirationDate     DateTime @map("expiration_date")
+  isConform          Boolean  @default(true) @map("is_conform")
+  remarks            String?
+  inspectionDocId    String?  @map("inspection_doc_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId])
+  @@index([expirationDate])
+  @@map("vehicle_inspections")
+}
+
+model VehicleAssignment {
+  id              String    @id @default(uuid())
+  vehicleId       String    @map("vehicle_id")
+  driverId        String    @map("driver_id")
+  transportLineId String?   @map("transport_line_id")
+  startDate       DateTime  @default(now()) @map("start_date")
+  endDate         DateTime? @map("end_date")
+  isActive        Boolean   @default(true) @map("is_active")
+  assignedBy      String    @map("assigned_by")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  vehicle    Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driver     Driver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  assignedUser User  @relation("AssignedByUser", fields: [assignedBy], references: [id], onDelete: Restrict)
+
+  @@index([vehicleId])
+  @@index([driverId])
+  @@index([isActive])
+  @@map("vehicle_assignments")
+}
+
+// ==============================================================================
+// 9. TRANSPORT UNIONS (Module 2)
+// ==============================================================================
+
+model TransportUnion {
+  id                  String   @id @default(uuid())
+  code                String   @unique // e.g., "FNTG", "USTG"
+  name                String   @unique
+  contactPhone        String?  @map("contact_phone")
+  contactEmail        String?  @map("contact_email")
+  headquartersAddress String?  @map("headquarters_address")
+
+  communeId String?  @map("commune_id")
+  commune   Commune? @relation(fields: [communeId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  members Driver[]
+  users   User[]
+
+  @@map("transport_unions")
+}
+
+// ==============================================================================
+// 10. DOCUMENT & MEDIA SECURE STORAGE (Module 9)
+// ==============================================================================
+
+enum DocumentCategory {
+  PHOTO_PORTRAIT
+  CNI_RECTO
+  CNI_VERSO
+  PERMIS_CONDUIRE
+  CARTE_GRISE
+  VISITE_TECHNIQUE
+  PHOTO_VEHICULE_AVANT
+  PHOTO_VEHICULE_ARRIERE
+  PHOTO_VEHICULE_GAUCHE
+  PHOTO_VEHICULE_DROITE
+  ATTESTATION_SYNDICALE
+  AUTRE
+}
+
+model Document {
+  id             String           @id @default(uuid())
+  fileName       String           @map("file_name") // Safe server filename (UUID based)
+  originalName   String           @map("original_name")
+  mimeType       String           @map("mime_type")
+  fileSizeBytes  Int              @map("file_size_bytes")
+  storagePath    String           @map("storage_path") // Path outside public web root
+  fileHashSha256 String           @map("file_hash_sha256") // Integrity hash
+  category       DocumentCategory
+
+  uploadedByUserId String @map("uploaded_by_user_id")
+  uploadedByUser   User   @relation("UploadedByUser", fields: [uploadedByUserId], references: [id], onDelete: Restrict)
+
+  personId  String?  @map("person_id")
+  person    Person?  @relation(fields: [personId], references: [id], onDelete: SetNull)
+
+  vehicleId String?  @map("vehicle_id")
+  vehicle   Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([uploadedByUserId])
+  @@index([personId])
+  @@index([vehicleId])
+  @@index([category])
+  @@map("documents")
 }

@@ -36,4 +36,10 @@ if (!parsed.success) {
 }
 
 export const config = parsed.data;
+
+// Ensure process.env.DATABASE_URL is set for Prisma Client
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = config.DATABASE_URL;
+}
+
 export default config;
