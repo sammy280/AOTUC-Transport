@@ -24,9 +24,10 @@ model Commune {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  users   User[]
-  persons Person[]
-  unions  TransportUnion[]
+  users              User[]
+  persons            Person[]
+  unions             TransportUnion[]
+  validationRequests ValidationRequest[]
 
   @@map("communes")
 }
@@ -76,11 +77,13 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  roles              UserRole[]
-  refreshTokens      RefreshToken[]
-  auditLogs          AuditLog[]          @relation("ActorAuditLogs")
-  uploadedDocuments  Document[]          @relation("UploadedByUser")
-  vehicleAssignments VehicleAssignment[] @relation("AssignedByUser")
+  roles                       UserRole[]
+  refreshTokens               RefreshToken[]
+  auditLogs                   AuditLog[]            @relation("ActorAuditLogs")
+  uploadedDocuments           Document[]            @relation("UploadedByUser")
+  vehicleAssignments          VehicleAssignment[]   @relation("AssignedByUser")
+  submittedValidationRequests ValidationRequest[]   @relation("SubmittedValidationRequests")
+  reviewedValidationSteps     ValidationStep[]      @relation("ReviewerValidationSteps")
 
   @@index([phoneNumber])
   @@index([email])
@@ -396,4 +399,78 @@ model Document {
   @@index([vehicleId])
   @@index([category])
   @@map("documents")
+}
+
+// ==============================================================================
+// 11. MULTI-LEVEL VALIDATION STATE MACHINE (Module 4)
+// ==============================================================================
+
+enum ValidationEntityType {
+  DRIVER_ENROLMENT
+  VEHICLE_ENROLMENT
+  OWNER_ENROLMENT
+}
+
+enum ValidationStatus {
+  BROUILLON
+  SOUMIS_NIVEAU2
+  EN_ATTENTE_NIVEAU3
+  RETOURNE_POUR_CORRECTION
+  VALIDE
+  REJETE
+}
+
+enum ValidationAction {
+  SUBMIT
+  FORWARD_TO_L3
+  RETURN_FOR_CORRECTION
+  APPROVE_FINAL
+  REJECT
+}
+
+model ValidationRequest {
+  id              String               @id @default(uuid())
+  requestNumber   String               @unique @map("request_number") // e.g. "VAL-2026-00001"
+  entityType      ValidationEntityType @map("entity_type")
+  targetEntityId  String               @map("target_entity_id")
+  submitterId     String               @map("submitter_id")
+  currentLevel    Int                  @default(1) @map("current_level")
+  currentStatus   ValidationStatus     @default(BROUILLON) @map("current_status")
+  communeId       String?              @map("commune_id")
+  submittedAt     DateTime?            @map("submitted_at")
+  finalDecisionAt DateTime?            @map("final_decision_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  submitter User             @relation("SubmittedValidationRequests", fields: [submitterId], references: [id], onDelete: Restrict)
+  commune   Commune?         @relation(fields: [communeId], references: [id], onDelete: SetNull)
+  steps     ValidationStep[]
+
+  @@index([targetEntityId])
+  @@index([submitterId])
+  @@index([communeId])
+  @@index([currentStatus])
+  @@index([currentLevel])
+  @@map("validation_requests")
+}
+
+model ValidationStep {
+  id                  String           @id @default(uuid())
+  validationRequestId String           @map("validation_request_id")
+  level               Int              // 1, 2, or 3
+  reviewerId          String           @map("reviewer_id")
+  action              ValidationAction
+  previousStatus      ValidationStatus @map("previous_status")
+  newStatus           ValidationStatus @map("new_status")
+  comment             String?
+  decidedAt           DateTime         @default(now()) @map("decided_at")
+
+  validationRequest ValidationRequest @relation(fields: [validationRequestId], references: [id], onDelete: Cascade)
+  reviewer          User              @relation("ReviewerValidationSteps", fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@index([validationRequestId])
+  @@index([reviewerId])
+  @@index([level])
+  @@map("validation_steps")
 }
