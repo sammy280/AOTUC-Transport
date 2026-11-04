@@ -15,6 +15,7 @@ import licenceRoutes from './modules/licences/licence.routes.js';
 import transportLinesRoutes from './modules/transport-lines/transport-lines.routes.js';
 import ticketingRoutes from './modules/ticketing/ticketing.routes.js';
 import syncRoutes from './modules/sync/sync.routes.js';
+import notificationsRoutes from './modules/notifications/notifications.routes.js';
 
 const app = express();
 
@@ -93,6 +94,7 @@ app.use('/api/v1/licences', licenceRoutes);
 app.use('/api/v1/transport-lines', transportLinesRoutes);
 app.use('/api/v1/ticketing', ticketingRoutes);
 app.use('/api/v1/sync', syncRoutes);
+app.use('/api/v1/notifications', notificationsRoutes);
 
 // 7. 404 Route Not Found Handler
 app.use((req, res, next) => {

@@ -59,3 +59,25 @@ export interface ValidationItem {
     timestamp: string;
   }[];
 }
+
+export type NotificationCategory = 'VALIDATION' | 'SECURITY' | 'TICKETING' | 'SMS' | 'SYSTEM';
+export type NotificationPriority = 'INFO' | 'SUCCESS' | 'WARNING' | 'CRITICAL';
+
+export interface NotificationItem {
+  id: string;
+  category: NotificationCategory;
+  priority: NotificationPriority;
+  title: string;
+  message: string;
+  timestamp: string;
+  isRead: boolean;
+  linkTab?: 'dashboard' | 'validation' | 'enrolment' | 'mapping' | 'badges' | 'licences' | 'ticketing' | 'audit';
+  metadata?: Record<string, string>;
+}
+
+export interface ToastMessage {
+  id: string;
+  type: 'success' | 'warning' | 'error' | 'info';
+  title: string;
+  message: string;
+}
