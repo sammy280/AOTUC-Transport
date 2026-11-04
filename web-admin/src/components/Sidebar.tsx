@@ -8,6 +8,7 @@ import {
   MapPin,
   Ticket,
   ShieldAlert,
+  UserCog,
 } from 'lucide-react';
 import { UserContext } from '../types';
 import { isTabAllowed } from '../utils/permissions';
@@ -38,6 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'licences', label: 'Licences & Stickers', icon: FileCheck2 },
     { id: 'mapping', label: 'Réseau & Carte Conakry', icon: MapPin },
     { id: 'ticketing', label: 'Billetterie & Finances', icon: Ticket },
+    { id: 'users', label: 'Gestion Utilisateurs (DSI)', icon: UserCog },
     { id: 'audit', label: 'Journal d Audit & Sécurité', icon: ShieldAlert },
   ];
 

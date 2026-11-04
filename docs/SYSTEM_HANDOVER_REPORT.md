@@ -54,11 +54,12 @@ Ce rapport atteste de la réalisation, de la validation intégrale et de la mise
   * `tests/mobile_sync.test.js` : 5/5 validés
   * `tests/communications.test.js` : 6/6 validés
   * `tests/notifications.test.js` : 4/4 validés
-  * **TOTAL : 69 tests automatisés sur 69 réussis (Taux de succès : 100%).**
+  * `tests/rbac_matrix.test.js` : 25/25 validés (Couverture intégrale des 24 scénarios Section 10 + Anti-Fraude)
+  * **TOTAL : 94 tests automatisés sur 94 réussis (Taux de succès : 100%).**
 
 * **Frontend Web Admin (`tsc && vite build`) :**
-  * Compilation TypeScript stricte sans avertissement (`TS6133`, `TS2339`, `TS2367` résolus).
-  * Bundle de production optimisé : `dist/assets/index-5MRdPRBe.js` (451 kB brut / 124 kB gzippé).
+  * Compilation TypeScript stricte sans erreur avec typage complet des 5 rôles.
+  * Tableaux de bord personnalisés par rôle, console d'administration des utilisateurs (DSI), et guichet distributeur sécurisé avec contre-passation.
 
 ---
 

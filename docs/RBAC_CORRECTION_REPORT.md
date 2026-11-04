@@ -112,7 +112,7 @@ Le module `backend/src/config/permissions.js` définit la source unique de véri
 
 ---
 
-## 4. Résultats des Tests Automatisés (10 Suites • 87/87 Tests Réussis)
+## 4. Résultats des Tests Automatisés (10 Suites • 94/94 Tests Réussis)
 
 L'ensemble des suites de tests s'exécute avec **100% de succès** :
 
@@ -129,29 +129,36 @@ PASS tests/auth.test.js
 PASS tests/rbac_matrix.test.js
 
 Test Suites: 10 passed, 10 total
-Tests:       87 passed, 87 total
+Tests:       94 passed, 94 total
 Snapshots:   0 total
 ```
 
-### Couverture des 18 Scénarios de Sécurité
+### Couverture Intégrale des 24 Scénarios de Sécurité (Section 10)
 - [x] **Scénario 1 :** Requête non authentifiée vers ressource protégée $\rightarrow$ HTTP 401 `UNAUTHORIZED`.
-- [x] **Scénario 2 :** Jeton invalide ou expiré $\rightarrow$ HTTP 401 `INVALID_ACCESS_TOKEN` / `TOKEN_EXPIRED`.
-- [x] **Scénario 3 :** Utilisateur désactivé $\rightarrow$ HTTP 401 `ACCOUNT_DEACTIVATED` (invalidation instantanée).
-- [x] **Scénario 4 :** Le Super Administrateur peut gérer les comptes utilisateurs (GET/POST `/api/v1/users`).
-- [x] **Scénario 5 :** Le Super Administrateur NE PEUT PAS approuver un dossier transport $\rightarrow$ HTTP 403 `FORBIDDEN_ROLE`.
-- [x] **Scénario 6 :** Le Super Administrateur NE PEUT PAS émettre un badge officiel $\rightarrow$ HTTP 403 `FORBIDDEN_ROLE`.
-- [x] **Scénario 7 :** Le Directeur Général peut valider au Niveau 3 (`APPROVE_FINAL` $\rightarrow$ `VALIDE`).
-- [x] **Scénario 8 :** Le Directeur Général NE PEUT PAS modifier les rôles ou créer d'utilisateurs $\rightarrow$ HTTP 403 `FORBIDDEN_ROLE`.
-- [x] **Scénario 9 :** Le Directeur Général NE PEUT PAS modifier ou supprimer les journaux d'audit $\rightarrow$ HTTP 405 `AUDIT_LOG_IMMUTABLE`.
-- [x] **Scénario 10 :** Le Chef de Service Matoto peut instruire et transmettre les dossiers de sa commune (`FORWARD_TO_L3`).
-- [x] **Scénario 11 :** Le Chef de Service Matoto NE PEUT PAS traiter les dossiers d'une autre commune (ex. Kaloum) $\rightarrow$ HTTP 403 `FORBIDDEN_COMMUNE_SCOPE`.
-- [x] **Scénario 12 :** Le Chef de Service Matoto NE PEUT PAS octroyer l'approbation finale Niveau 3 $\rightarrow$ HTTP 403 `FORBIDDEN_ROLE`.
-- [x] **Scénario 13 :** Le Chef de Service Matoto NE PEUT PAS approuver son propre dossier soumis $\rightarrow$ HTTP 403 `SELF_APPROVAL_FORBIDDEN`.
-- [x] **Scénario 14 :** L'Agent Matoto dispose des permissions d'enrôlement et de téléversement (`DRIVERS_CREATE`, `DOCUMENTS_UPLOAD`).
-- [x] **Scénario 15 :** L'Agent Matoto NE PEUT approuver aucun dossier $\rightarrow$ HTTP 403 `FORBIDDEN_ROLE`.
-- [x] **Scénario 16 :** L'Agent Matoto est strictement confiné à sa commune d'affectation $\rightarrow$ HTTP 403 `FORBIDDEN_COMMUNE_SCOPE`.
-- [x] **Scénario 17 :** Le Distributeur Agréé peut créer des ventes de tickets et consulter ses propres opérations.
-- [x] **Scénario 18 :** Le Distributeur Agréé NE PEUT PAS consulter les dossiers conducteurs (HTTP 403), ni approuver de dossier, ni altérer les écritures du grand livre (HTTP 405).
+- [x] **Scénario 2 :** L'Agent Matoto (L1) peut enrôler des chauffeurs, téléverser des documents et soumettre des dossiers.
+- [x] **Scénario 3 :** L'Agent Matoto (L1) NE PEUT PAS approuver ni rejeter de dossiers $\rightarrow$ HTTP 403 / rejet machine d'état.
+- [x] **Scénario 4 :** L'Agent Matoto (L1) NE PEUT PAS accéder aux modules financiers (Billetterie, Ventes, Grand Livre) $\rightarrow$ HTTP 403 `FORBIDDEN_ROLE`.
+- [x] **Scénario 5 :** Le Chef de Service Matoto (L2) peut instruire et transmettre les dossiers de sa commune (`FORWARD_TO_L3`).
+- [x] **Scénario 6 :** Le Chef de Service Matoto (L2) NE PEUT PAS traiter les dossiers de Kaloum $\rightarrow$ HTTP 403 `FORBIDDEN_COMMUNE_SCOPE`.
+- [x] **Scénario 7 :** Le Chef de Service Matoto (L2) NE PEUT PAS octroyer l'approbation finale Niveau 3 $\rightarrow$ HTTP 403 `FORBIDDEN_ROLE`.
+- [x] **Scénario 8 :** Le Directeur Général (L3) peut valider au Niveau 3 (`APPROVE_FINAL` $\rightarrow$ `VALIDE`).
+- [x] **Scénario 9 :** Le Directeur Général (L3) NE PEUT PAS créer ni désactiver des comptes utilisateurs $\rightarrow$ HTTP 403 `FORBIDDEN_ROLE`.
+- [x] **Scénario 10 :** Le Directeur Général (L3) NE PEUT PAS modifier ou supprimer les journaux d'audit $\rightarrow$ HTTP 405 `AUDIT_LOG_IMMUTABLE`.
+- [x] **Scénario 11 :** Le Super Administrateur (DSI) peut administrer les comptes, statuts, rôles et sécurité système.
+- [x] **Scénario 12 :** Le Super Administrateur (DSI) NE PEUT PAS approuver de dossiers conducteurs $\rightarrow$ HTTP 403 `FORBIDDEN_ROLE`.
+- [x] **Scénario 13 :** Le Super Administrateur (DSI) NE PEUT PAS émettre de badges officiels CR80 ni de vignettes $\rightarrow$ HTTP 403 `FORBIDDEN_ROLE`.
+- [x] **Scénario 14 :** Le Distributeur Agréé peut émettre des ventes de tickets au guichet POS et enregistrer les encaissements en GNF.
+- [x] **Scénario 15 :** Le Distributeur Agréé NE PEUT PAS accéder aux dossiers d'enrôlement ni au registre conducteurs $\rightarrow$ HTTP 403 `FORBIDDEN_ROLE`.
+- [x] **Scénario 16 :** Le Distributeur Agréé NE PEUT PAS accéder au grand livre en partie double $\rightarrow$ HTTP 403 `FORBIDDEN_ROLE`.
+- [x] **Scénario 17 :** Prévention de l'escalade de privilèges : les utilisateurs non administrateurs ne peuvent pas s'octroyer de privilèges supérieurs.
+- [x] **Scénario 18 :** Les comptes désactivés sont immédiatement révoqués sans attendre l'expiration du jeton $\rightarrow$ HTTP 401 `ACCOUNT_DEACTIVATED`.
+- [x] **Scénario 19 :** Les requêtes API directes hors interface frontend sont rigoureusement contrôlées et rejetées (HTTP 401/403).
+- [x] **Scénario 20 :** Les restrictions territoriales de commune sont appliquées au niveau API et base de données $\rightarrow$ HTTP 403 `FORBIDDEN_COMMUNE_SCOPE`.
+- [x] **Scénario 21 :** L'émission de titres en doublon ou pour un chauffeur non agréé est formellement bloquée $\rightarrow$ HTTP 400 `DRIVER_NOT_ELIGIBLE`.
+- [x] **Scénario 22 :** Toute signature Ed25519 corrompue ou falsifiée est détectée et rejetée par la vérification hors-ligne.
+- [x] **Scénario 23 :** Les écritures financières inscrites au grand livre sont strictly inaltérables $\rightarrow$ HTTP 405 `LEDGER_IMMUTABLE`.
+- [x] **Scénario 24 :** Les journaux d'audit de sécurité ne peuvent être ni modifiés ni purgés par quiconque $\rightarrow$ HTTP 405 `AUDIT_LOG_IMMUTABLE`.
+- [x] **Anti-Fraude Complémentaire :** Interdiction d'auto-approbation pour les instructeurs $\rightarrow$ HTTP 403 `SELF_APPROVAL_FORBIDDEN`.
 
 ---
 

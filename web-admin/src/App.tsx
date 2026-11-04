@@ -15,6 +15,7 @@ import BadgeLicenceCenter from './features/badges/BadgeLicenceCenter';
 import TicketingLedgerView from './features/ticketing/TicketingLedgerView';
 import RegistrationDesk from './features/enrolment/RegistrationDesk';
 import AuditSecurityLogView from './features/audit/AuditSecurityLogView';
+import UserManagementView from './features/users/UserManagementView';
 import ToastContainer from './components/ToastContainer';
 import LoginView from './features/auth/LoginView';
 import AccessDenied from './components/AccessDenied';
@@ -266,7 +267,15 @@ export const App: React.FC = () => {
           ) : (
             <>
               {currentTab === 'dashboard' && (
-                <DashboardOverview onOpenValidationQueue={() => setCurrentTab('validation')} />
+                <DashboardOverview
+                  currentUser={currentUser}
+                  onOpenValidationQueue={() => setCurrentTab('validation')}
+                  onNavigateTab={setCurrentTab}
+                />
+              )}
+
+              {currentTab === 'users' && (
+                <UserManagementView currentUser={currentUser} />
               )}
 
               {currentTab === 'validation' && (

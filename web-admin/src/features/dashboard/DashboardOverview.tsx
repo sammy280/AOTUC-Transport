@@ -1,14 +1,485 @@
 import React from 'react';
-import { Users, Car, IdCard, Clock, CheckCircle2, ArrowUpRight } from 'lucide-react';
+import {
+  Users,
+  Car,
+  IdCard,
+  Clock,
+  CheckCircle2,
+  ArrowUpRight,
+  Shield,
+  Server,
+  Activity,
+  AlertTriangle,
+  Receipt,
+  Wallet,
+  Ticket,
+  UserPlus,
+  Send,
+} from 'lucide-react';
+import { UserContext } from '../../types';
 
 interface DashboardOverviewProps {
+  currentUser: UserContext;
   onOpenValidationQueue: () => void;
+  onNavigateTab?: (tab: string) => void;
 }
 
-export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenValidationQueue }) => {
-  const stats = [
+export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
+  currentUser,
+  onOpenValidationQueue,
+  onNavigateTab,
+}) => {
+  // Navigation helper
+  const navigateTo = (tab: string) => {
+    if (onNavigateTab) {
+      onNavigateTab(tab);
+    } else if (tab === 'validation') {
+      onOpenValidationQueue();
+    }
+  };
+
+  // --------------------------------------------------------------------------
+  // ROLE 2: SUPER ADMINISTRATOR (DSI) DASHBOARD
+  // --------------------------------------------------------------------------
+  if (currentUser.role === 'SUPER_ADMIN') {
+    const dsiStats = [
+      {
+        title: 'Comptes Utilisateurs Actifs',
+        value: '7 / 7',
+        subtitle: '100% accrédités RBAC',
+        icon: Users,
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-50',
+      },
+      {
+        title: 'Santé des Composants API',
+        value: 'Optimal (6/6)',
+        subtitle: 'PostGIS, Ed25519, SMS, Revocation',
+        icon: Server,
+        color: 'text-emerald-600',
+        bgColor: 'bg-emerald-50',
+      },
+      {
+        title: 'Intégrité Cryptographique',
+        value: 'SHA-256 Intègre',
+        subtitle: 'Empreintes inaltérables certifiées',
+        icon: Shield,
+        color: 'text-purple-600',
+        bgColor: 'bg-purple-50',
+      },
+      {
+        title: 'Tentatives & Incidents Bloqués',
+        value: '0 Brèche',
+        subtitle: '401/403 enregistrés au journal',
+        icon: Activity,
+        color: 'text-amber-600',
+        bgColor: 'bg-amber-50',
+      },
+    ];
+
+    const technicalServices = [
+      { name: 'Passerelle API Express v2.0', status: 'Actif • 100% Uptime', port: 'Port 5000' },
+      { name: 'Moteur de Base de Données PostGIS 18', status: 'Connecté • Schéma Sync', port: 'PostgreSQL' },
+      { name: 'Moteur Asymétrique RFC 8032 Ed25519', status: 'Clé active: aotuc-2026-v1', port: 'Backend KMS' },
+      { name: 'Registre Invalidation Sessions (Revocation)', status: 'Surveillance Temps Réel', port: 'In-Memory Gate' },
+      { name: 'Passerelle SMS Orange & MTN Guinée', status: 'Opérationnelle', port: 'SMPP / HTTPS' },
+      { name: 'Grand Livre & Hash Intégrité SHA-256', status: 'Append-Only Verrouillé', port: 'Table Audit' },
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex items-center space-x-3">
+            <img
+              src="/logo-guinee.png"
+              alt="Armoiries République de Guinée"
+              className="w-12 h-12 rounded-full object-contain p-0.5 border border-slate-200 shadow-sm flex-shrink-0"
+            />
+            <div>
+              <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
+                DIRECTION DES SYSTÈMES D INFORMATION (DSI) • SUPERVISION TECHNIQUE
+              </div>
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">
+                Console d Administration Système & Sécurité
+              </h1>
+              <p className="text-xs text-slate-500">
+                Gestion des comptes, surveillance des signatures cryptographiques et audit de conformité.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => navigateTo('users')}
+              className="flex items-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer"
+            >
+              <span>Gérer les Utilisateurs</span>
+              <ArrowUpRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* 4 DSI Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {dsiStats.map((st, idx) => {
+            const Icon = st.icon;
+            return (
+              <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-600">{st.title}</span>
+                  <div className={`p-2 rounded-lg ${st.bgColor} ${st.color}`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-xl font-black text-slate-900">{st.value}</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">{st.subtitle}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Technical Services Status */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">Services Techniques & Infrastructure AOTUC</h2>
+              <p className="text-xs text-slate-500">État temps réel des démons et des passerelles d intégrité</p>
+            </div>
+            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center space-x-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
+              <span>Système Intègre</span>
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {technicalServices.map((svc, idx) => (
+              <div key={idx} className="p-3.5 bg-slate-50 border border-slate-200 rounded-lg space-y-1">
+                <div className="font-bold text-xs text-slate-900">{svc.name}</div>
+                <div className="text-[11px] text-emerald-600 font-semibold">{svc.status}</div>
+                <div className="text-[10px] text-slate-400 font-mono">{svc.port}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // ROLE 3: HEAD OF SERVICE (L2 - MATOTO) DASHBOARD
+  // --------------------------------------------------------------------------
+  if (currentUser.role === 'CHEF_SERVICE') {
+    const matotoStats = [
+      {
+        title: 'Chauffeurs Commune Matoto',
+        value: '540',
+        subtitle: '38% du parc urbain total',
+        icon: Users,
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-50',
+      },
+      {
+        title: 'Véhicules Immatriculés',
+        value: '380',
+        subtitle: 'Magbanas & Taxis communaux',
+        icon: Car,
+        color: 'text-emerald-600',
+        bgColor: 'bg-emerald-50',
+      },
+      {
+        title: 'En Attente Avis Niveau 2',
+        value: '32 Dossiers',
+        subtitle: 'Soumis par agents de terrain',
+        icon: Clock,
+        color: 'text-amber-600',
+        bgColor: 'bg-amber-50',
+        action: onOpenValidationQueue,
+      },
+      {
+        title: 'Dossiers Renvoyés pour Correction',
+        value: '5',
+        subtitle: 'Notifications SMS transmises',
+        icon: AlertTriangle,
+        color: 'text-rose-600',
+        bgColor: 'bg-rose-50',
+      },
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex items-center space-x-3">
+            <img
+              src="/logo-guinee.png"
+              alt="Logo"
+              className="w-12 h-12 rounded-full object-contain p-0.5 border border-slate-200 shadow-sm flex-shrink-0"
+            />
+            <div>
+              <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
+                PÉRIMÈTRE OPÉRATIONNEL TERRITORIAL • NIVEAU 2
+              </div>
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">
+                Tableau de Bord — Chef de Service ({currentUser.communeName})
+              </h1>
+              <p className="text-xs text-slate-500">
+                Instruction hiérarchique, contrôle anti-fraude et transmission des dossiers au Directeur Général.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onOpenValidationQueue}
+            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer"
+          >
+            <Send className="w-4 h-4" />
+            <span>Instruire les Dossiers Matoto (N2)</span>
+          </button>
+        </div>
+
+        {/* 4 Matoto Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {matotoStats.map((st, idx) => {
+            const Icon = st.icon;
+            return (
+              <div
+                key={idx}
+                onClick={st.action}
+                className={`p-4 rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col justify-between ${
+                  st.action ? 'cursor-pointer hover:border-blue-400' : ''
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-600">{st.title}</span>
+                  <div className={`p-2 rounded-lg ${st.bgColor} ${st.color}`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-xl font-black text-slate-900">{st.value}</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">{st.subtitle}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Territorial Scope Card */}
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start space-x-3 text-xs text-emerald-900">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <span className="font-bold">Découpage Territorial Garanti :</span> Votre compte est configuré pour examiner exclusivement les dossiers émis dans la commune de Matoto. Toute tentative d examen d un dossier de Kaloum ou d une autre commune est automatiquement bloquée par le middleware de sécurité (HTTP 403).
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // ROLE 4: FIELD AGENT (L1 - MATOTO) DASHBOARD
+  // --------------------------------------------------------------------------
+  if (currentUser.role === 'AGENT_TERRAIN') {
+    const agentStats = [
+      {
+        title: 'Mes Enrôlements Soumis',
+        value: '18 Dossiers',
+        subtitle: 'Chauffeurs enregistrés',
+        icon: UserPlus,
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-50',
+      },
+      {
+        title: 'En Cours d Instruction L2',
+        value: '4 Dossiers',
+        subtitle: 'En attente avis Chef Matoto',
+        icon: Clock,
+        color: 'text-amber-600',
+        bgColor: 'bg-amber-50',
+      },
+      {
+        title: 'Nécessitant Correction',
+        value: '1 Dossier',
+        subtitle: 'Prêt pour resoumission',
+        icon: AlertTriangle,
+        color: 'text-rose-600',
+        bgColor: 'bg-rose-50',
+      },
+      {
+        title: 'Badges Validés & Prêts',
+        value: '13 Titres',
+        subtitle: 'Disponibles pour délivrance',
+        icon: IdCard,
+        color: 'text-emerald-600',
+        bgColor: 'bg-emerald-50',
+      },
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex items-center space-x-3">
+            <img
+              src="/logo-guinee.png"
+              alt="Logo"
+              className="w-12 h-12 rounded-full object-contain p-0.5 border border-slate-200 shadow-sm flex-shrink-0"
+            />
+            <div>
+              <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
+                GUICHET D ENRÔLEMENT TERRAIN • NIVEAU 1
+              </div>
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">
+                Espace Opérationnel Agent — {currentUser.name}
+              </h1>
+              <p className="text-xs text-slate-500">
+                Enregistrement des chauffeurs, téléversement des pièces justificatives avec contrôle magic-bytes et soumission.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigateTo('enrolment')}
+            className="flex items-center space-x-2 bg-[#CE1126] hover:bg-red-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Nouvel Enrôlement Chauffeur</span>
+          </button>
+        </div>
+
+        {/* 4 Agent Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {agentStats.map((st, idx) => {
+            const Icon = st.icon;
+            return (
+              <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-600">{st.title}</span>
+                  <div className={`p-2 rounded-lg ${st.bgColor} ${st.color}`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-xl font-black text-slate-900">{st.value}</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">{st.subtitle}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 space-y-1">
+          <div className="font-bold">Habilitation Opérationnelle Active (L1) :</div>
+          <p className="text-slate-600 leading-relaxed">
+            Vous pouvez saisir et modifier les dossiers d enrôlement de Matoto, téléverser les photos et permis biométriques, et soumettre les dossiers complets au Chef de Service. Vous ne disposez pas des boutons d approbation ou de rejet (réservés à la hiérarchie).
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // ROLE 5: AUTHORIZED DISTRIBUTOR (TICKETING) DASHBOARD
+  // --------------------------------------------------------------------------
+  if (currentUser.role === 'DISTRIBUTEUR') {
+    const distStats = [
+      {
+        title: 'Tickets Vendus Aujourd hui',
+        value: '48 Tickets',
+        subtitle: 'Guichet Kaloum Express',
+        icon: Ticket,
+        color: 'text-orange-600',
+        bgColor: 'bg-orange-50',
+      },
+      {
+        title: 'Recettes Totales du Jour',
+        value: '96 000 GNF',
+        subtitle: 'Encaissements certifiés',
+        icon: Wallet,
+        color: 'text-emerald-600',
+        bgColor: 'bg-emerald-50',
+      },
+      {
+        title: 'Paiements Mobile Money',
+        value: '68% (Orange / MTN)',
+        subtitle: 'Paiements sans contact',
+        icon: Receipt,
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-50',
+      },
+      {
+        title: 'Carnets en Stock de Vente',
+        value: '1 Lot Alloué',
+        subtitle: 'Reste 34 tickets sur 100',
+        icon: Clock,
+        color: 'text-purple-600',
+        bgColor: 'bg-purple-50',
+      },
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex items-center space-x-3">
+            <img
+              src="/logo-guinee.png"
+              alt="Logo"
+              className="w-12 h-12 rounded-full object-contain p-0.5 border border-slate-200 shadow-sm flex-shrink-0"
+            />
+            <div>
+              <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
+                RÉGIE DE BILLETTERIE AGRÉÉE • GUICHET KALOUUM
+              </div>
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">
+                Espace de Vente & Encaissement POS
+              </h1>
+              <p className="text-xs text-slate-500">
+                Émission des tickets de transport urbain, encaissement en GNF et génération de reçus électroniques.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigateTo('ticketing')}
+            className="flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer"
+          >
+            <Receipt className="w-4 h-4" />
+            <span>Ouvrir le Guichet POS</span>
+          </button>
+        </div>
+
+        {/* 4 Distributor Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {distStats.map((st, idx) => {
+            const Icon = st.icon;
+            return (
+              <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-600">{st.title}</span>
+                  <div className={`p-2 rounded-lg ${st.bgColor} ${st.color}`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-xl font-black text-slate-900">{st.value}</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">{st.subtitle}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl text-xs text-orange-950 space-y-1">
+          <div className="font-bold">Confidentialité & Immuabilité des Encaissements :</div>
+          <p className="text-slate-600 leading-relaxed">
+            Vous avez accès uniquement à vos propres carnets alloués et à vos transactions enregistrées. Conformément aux principes comptables, les écritures validées sont immuables et ne peuvent être altérées que par contre-passation autorisée.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // ROLE 1: DIRECTOR GENERAL (L3) STRATEGIC DASHBOARD (DEFAULT)
+  // --------------------------------------------------------------------------
+  const directorStats = [
     {
-      title: 'Chauffeurs Enrôlés',
+      title: 'Chauffeurs Enrôlés (National)',
       value: '1 428',
       subtitle: '+34 cette semaine',
       icon: Users,
@@ -17,7 +488,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenVali
       borderColor: 'border-blue-100',
     },
     {
-      title: 'Véhicules Contrôlés',
+      title: 'Véhicules Régulés',
       value: '982',
       subtitle: 'Taxis (64%), Magbanas (36%)',
       icon: Car,
@@ -26,18 +497,18 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenVali
       borderColor: 'border-emerald-100',
     },
     {
-      title: 'Badges CR80 Actifs',
+      title: 'Badges CR80 Délivrés',
       value: '1 210',
-      subtitle: 'Signés cryptographiquement Ed25519',
+      subtitle: 'Signés RFC 8032 Ed25519',
       icon: IdCard,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-100',
     },
     {
-      title: 'En Attente de Validation',
-      value: '46',
-      subtitle: 'Niveau 2 (32) • Niveau 3 (14)',
+      title: 'En Attente Décret L3',
+      value: '14 Dossiers',
+      subtitle: 'Validés par Chefs de Service',
       icon: Clock,
       color: 'text-amber-600',
       bgColor: 'bg-amber-50',
@@ -89,7 +560,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenVali
   return (
     <div className="space-y-6">
       {/* Title & Actions Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex items-center space-x-3">
           <img
             src="/logo-guinee.png"
@@ -100,20 +571,20 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenVali
             <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
               RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS
             </div>
-            <h1 className="text-lg font-black text-slate-900 tracking-tight">
-              Tableau de Bord Exécutif AOTUC
+            <h1 className="text-xl font-black text-slate-900 tracking-tight">
+              Tableau de Bord Stratégique — Direction Générale AOTUC
             </h1>
             <p className="text-xs text-slate-500">
-              Supervision opérationnelle centralisée du transport urbain dans l agglomération de Conakry.
+              Supervision exécutive de la régulation des transports, décrets d agrément et émission des titres officiels.
             </p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
           <button
             onClick={onOpenValidationQueue}
-            className="flex items-center space-x-2 bg-[#CE1126] hover:bg-red-700 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-sm transition"
+            className="flex items-center space-x-2 bg-[#CE1126] hover:bg-red-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer"
           >
-            <span>Traiter les Dossiers en Attente</span>
+            <span>Examiner les Dossiers Niveau 3</span>
             <ArrowUpRight className="w-4 h-4" />
           </button>
         </div>
@@ -121,7 +592,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenVali
 
       {/* 4 Key Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, idx) => {
+        {directorStats.map((stat, idx) => {
           const Icon = stat.icon;
           return (
             <div
@@ -132,13 +603,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenVali
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-500">{stat.title}</span>
+                <span className="text-xs font-semibold text-slate-600">{stat.title}</span>
                 <div className={`p-2 rounded-lg ${stat.bgColor} ${stat.color}`}>
                   <Icon className="w-4 h-4" />
                 </div>
               </div>
               <div className="mt-3">
-                <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
+                <div className="text-2xl font-black text-slate-900">{stat.value}</div>
                 <div className="text-[11px] text-slate-500 mt-0.5">{stat.subtitle}</div>
               </div>
             </div>
@@ -192,7 +663,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenVali
             </div>
           </div>
 
-          {/* Quick Notice */}
           <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start space-x-3 text-xs text-blue-900">
             <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
             <div>

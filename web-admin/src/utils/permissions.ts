@@ -118,6 +118,8 @@ export const ROLE_ALLOWED_TABS: Record<RoleType, string[]> = {
     'audit',
   ],
   SUPER_ADMIN: [
+    'dashboard',
+    'users',
     'audit',
     'mapping',
   ],
@@ -130,10 +132,12 @@ export const ROLE_ALLOWED_TABS: Record<RoleType, string[]> = {
     'mapping',
   ],
   AGENT_TERRAIN: [
+    'dashboard',
     'enrolment',
     'validation',
   ],
   DISTRIBUTEUR: [
+    'dashboard',
     'ticketing',
   ],
   SYNDICAT: [
@@ -147,10 +151,10 @@ export const ROLE_ALLOWED_TABS: Record<RoleType, string[]> = {
  */
 export const ROLE_DEFAULT_TAB: Record<RoleType, string> = {
   DIRECTOR: 'dashboard',
-  SUPER_ADMIN: 'audit',
+  SUPER_ADMIN: 'dashboard',
   CHEF_SERVICE: 'dashboard',
-  AGENT_TERRAIN: 'enrolment',
-  DISTRIBUTEUR: 'ticketing',
+  AGENT_TERRAIN: 'dashboard',
+  DISTRIBUTEUR: 'dashboard',
   SYNDICAT: 'dashboard',
 };
 
