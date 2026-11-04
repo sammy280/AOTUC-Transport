@@ -17,6 +17,7 @@ import TicketingLedgerView from './features/ticketing/TicketingLedgerView';
 import RegistrationDesk from './features/enrolment/RegistrationDesk';
 import AuditSecurityLogView from './features/audit/AuditSecurityLogView';
 import ToastContainer from './components/ToastContainer';
+import LoginView from './features/auth/LoginView';
 
 const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
@@ -61,14 +62,30 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
 ];
 
 export const App: React.FC = () => {
-  // Configurable user context simulating the 6 RBAC roles
-  const [currentUser, setCurrentUser] = useState<UserContext>({
-    id: 'usr-001',
-    name: 'Mamadou Camara',
-    role: 'DIRECTOR',
-    roleLabel: 'Directeur Général AOTUC',
-    communeName: 'Direction Générale (Conakry)',
-    communeId: null,
+  // Check if session already exists in localStorage
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return localStorage.getItem('aotuc_auth_token') !== null;
+  });
+
+  const [currentUser, setCurrentUser] = useState<UserContext>(() => {
+    const saved = localStorage.getItem('aotuc_user');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        // fallback
+      }
+    }
+    return {
+      id: 'usr-001',
+      name: 'Mamadou Camara',
+      role: 'DIRECTOR',
+      roleLabel: 'Directeur Général AOTUC',
+      communeName: 'Direction Générale (Conakry)',
+      communeId: null,
+      email: 'directeur@aotuc.test',
+      phoneNumber: '+224 620 00 00 02',
+    };
   });
 
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
@@ -94,6 +111,19 @@ export const App: React.FC = () => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
+  const handleLoginSuccess = (user: UserContext) => {
+    setCurrentUser(user);
+    setIsAuthenticated(true);
+    showToast('success', 'Authentification Réussie', `Bienvenue ${user.name} (${user.roleLabel}).`);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('aotuc_auth_token');
+    localStorage.removeItem('aotuc_user');
+    setIsAuthenticated(false);
+    showToast('info', 'Session Clôturée', 'Vous avez été déconnecté avec succès du système AOTUC.');
+  };
+
   const handleSwitchRole = (role: RoleType) => {
     switch (role) {
       case 'SUPER_ADMIN':
@@ -104,6 +134,8 @@ export const App: React.FC = () => {
           roleLabel: 'Super Administrateur DSI',
           communeName: 'Toutes Communes',
           communeId: null,
+          email: 'superadmin@aotuc.test',
+          phoneNumber: '+224 620 00 00 01',
         });
         showToast('info', 'Changement de Rôle', 'Session basculée sur Super Administrateur (DSI).');
         break;
@@ -115,6 +147,8 @@ export const App: React.FC = () => {
           roleLabel: 'Directeur Général AOTUC',
           communeName: 'Direction Générale',
           communeId: null,
+          email: 'directeur@aotuc.test',
+          phoneNumber: '+224 620 00 00 02',
         });
         showToast('info', 'Changement de Rôle', 'Session basculée sur Directeur Général AOTUC (Niveau 3).');
         break;
@@ -126,6 +160,8 @@ export const App: React.FC = () => {
           roleLabel: 'Chef de Service Territorial',
           communeName: 'Matoto',
           communeId: 'cm-matoto',
+          email: 'chef.matoto@aotuc.test',
+          phoneNumber: '+224 620 00 00 03',
         });
         showToast('info', 'Changement de Rôle', 'Session basculée sur Chef de Service Matoto (Niveau 2).');
         break;
@@ -137,6 +173,8 @@ export const App: React.FC = () => {
           roleLabel: 'Agent d Enrôlement Terrain',
           communeName: 'Matoto',
           communeId: 'cm-matoto',
+          email: 'agent.matoto@aotuc.test',
+          phoneNumber: '+224 620 00 00 05',
         });
         showToast('info', 'Changement de Rôle', 'Session basculée sur Agent d Enrôlement Terrain.');
         break;
@@ -148,6 +186,8 @@ export const App: React.FC = () => {
           roleLabel: 'Délégué Syndical FNTG',
           communeName: 'Fédération Syndicale',
           communeId: null,
+          email: 'syndicat.fntg@aotuc.test',
+          phoneNumber: '+224 620 00 00 07',
         });
         showToast('info', 'Changement de Rôle', 'Session basculée sur Délégué Syndical (Lecture).');
         break;
@@ -159,6 +199,8 @@ export const App: React.FC = () => {
           roleLabel: 'Distributeur Agréé Billetterie',
           communeName: 'Kaloum',
           communeId: 'cm-kaloum',
+          email: 'distributeur.kaloum@aotuc.test',
+          phoneNumber: '+224 620 00 00 06',
         });
         showToast('info', 'Changement de Rôle', 'Session basculée sur Distributeur Billetterie.');
         break;
@@ -247,6 +289,16 @@ export const App: React.FC = () => {
     );
   };
 
+  // If user is not authenticated, render Login Page
+  if (!isAuthenticated) {
+    return (
+      <>
+        <LoginView onLoginSuccess={handleLoginSuccess} />
+        <ToastContainer toasts={toasts} onDismiss={handleDismissToast} />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       <Navbar
@@ -258,6 +310,7 @@ export const App: React.FC = () => {
         onClearAll={handleClearAll}
         onSelectNotification={handleSelectNotification}
         onTriggerTestNotification={handleTriggerTestNotification}
+        onLogout={handleLogout}
       />
 
       <div className="flex-1 flex max-w-7xl w-full mx-auto">

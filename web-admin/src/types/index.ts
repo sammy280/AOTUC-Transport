@@ -28,6 +28,8 @@ export interface UserContext {
   roleLabel: string;
   communeName: string;
   communeId: string | null;
+  email?: string;
+  phoneNumber?: string;
 }
 
 export interface MetricSummary {

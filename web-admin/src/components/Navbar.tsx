@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { UserContext, RoleType, NotificationItem } from '../types';
-import { ShieldCheck, UserCheck, Bell, ChevronDown } from 'lucide-react';
+import { ShieldCheck, UserCheck, Bell, ChevronDown, LogOut } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown';
 
 interface NavbarProps {
@@ -12,6 +12,7 @@ interface NavbarProps {
   onClearAll: () => void;
   onSelectNotification: (item: NotificationItem) => void;
   onTriggerTestNotification: () => void;
+  onLogout: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -23,6 +24,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onClearAll,
   onSelectNotification,
   onTriggerTestNotification,
+  onLogout,
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const unreadCount = notifications.filter((n) => !n.isRead).length;
@@ -127,6 +129,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Logout Action Button */}
+            <button
+              onClick={onLogout}
+              className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition"
+              title="Se déconnecter de la session AOTUC"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Déconnexion</span>
+            </button>
           </div>
         </div>
       </div>
