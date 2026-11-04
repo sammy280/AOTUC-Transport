@@ -6,6 +6,7 @@ import DashboardOverview from './features/dashboard/DashboardOverview';
 import ValidationQueue from './features/validation/ValidationQueue';
 import NetworkMapView from './features/mapping/NetworkMapView';
 import BadgeLicenceCenter from './features/badges/BadgeLicenceCenter';
+import TicketingLedgerView from './features/ticketing/TicketingLedgerView';
 
 export const App: React.FC = () => {
   // Configurable user context simulating the 6 RBAC roles
@@ -113,11 +114,16 @@ export const App: React.FC = () => {
             <BadgeLicenceCenter currentUser={currentUser} />
           )}
 
+          {currentTab === 'ticketing' && (
+            <TicketingLedgerView currentUser={currentUser} />
+          )}
+
           {currentTab !== 'dashboard' &&
             currentTab !== 'validation' &&
             currentTab !== 'mapping' &&
             currentTab !== 'badges' &&
-            currentTab !== 'licences' && (
+            currentTab !== 'licences' &&
+            currentTab !== 'ticketing' && (
               <div className="p-8 bg-white border border-slate-200 rounded-xl text-center space-y-3">
                 <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400 font-bold">
                   AOTUC

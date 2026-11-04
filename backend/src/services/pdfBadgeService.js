@@ -1,5 +1,12 @@
 import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const OFFICIAL_LOGO_PATH = path.resolve(__dirname, '../../assets/logo-guinee.png');
 
 export class PdfBadgeService {
   /**
@@ -38,8 +45,14 @@ export class PdfBadgeService {
       doc.rect(161.76, 0, 80.89, 4).fill('#009460');
 
       // 2. Header
+      if (fs.existsSync(OFFICIAL_LOGO_PATH)) {
+        try {
+          doc.image(OFFICIAL_LOGO_PATH, 10, 6, { width: 15, height: 15 });
+        } catch (_) {}
+      }
+
       doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#0B1E36')
-        .text('RÉPUBLIQUE DE GUINÉE', 8, 8, { align: 'center', width: 226.65 });
+        .text('RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS', 8, 8, { align: 'center', width: 226.65 });
       doc.fontSize(6.5).font('Helvetica-Bold').fillColor('#CE1126')
         .text('AOTUC — CARTE PROFESSIONNELLE DE CONDUCTEUR', 8, 15, { align: 'center', width: 226.65 });
 
@@ -133,10 +146,17 @@ export class PdfBadgeService {
 
       // Top Header
       doc.rect(6, 6, 271.46, 32).fill('#0B1E36');
+
+      if (fs.existsSync(OFFICIAL_LOGO_PATH)) {
+        try {
+          doc.image(OFFICIAL_LOGO_PATH, 10, 8, { width: 26, height: 26 });
+        } catch (_) {}
+      }
+
       doc.fontSize(8).font('Helvetica-Bold').fillColor('#FFFFFF')
-        .text('RÉPUBLIQUE DE GUINÉE • AOTUC', 6, 12, { align: 'center', width: 271.46 });
+        .text('RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS', 6, 12, { align: 'center', width: 271.46 });
       doc.fontSize(9.5).font('Helvetica-Bold').fillColor('#FCD116')
-        .text('LICENCE D EXPLOITATION URBAINE', 6, 23, { align: 'center', width: 271.46 });
+        .text('AOTUC — LICENCE D EXPLOITATION URBAINE', 6, 23, { align: 'center', width: 271.46 });
 
       // Route Code Badge
       doc.rect(20, 48, 80, 36).fill('#CE1126');

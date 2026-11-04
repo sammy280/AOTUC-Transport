@@ -74,10 +74,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, pendi
       </div>
 
       {/* Footer Info Box */}
-      <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-500 space-y-1">
-        <div className="font-semibold text-slate-700 flex items-center space-x-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
-          <span>API Backend Connectée</span>
+      <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-500 space-y-1.5">
+        <div className="flex items-center space-x-2">
+          <img
+            src="/logo-guinee.png"
+            alt="Sceau Officiel République de Guinée"
+            className="w-6 h-6 rounded-full object-contain"
+          />
+          <div className="font-semibold text-slate-700 flex items-center space-x-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
+            <span>API Backend Connectée</span>
+          </div>
         </div>
         <div>PostGIS 18 • Node v22 LTS</div>
         <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-200">

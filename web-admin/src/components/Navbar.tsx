@@ -21,18 +21,20 @@ export const Navbar: React.FC<NavbarProps> = ({ currentUser, onSwitchRole }) => 
         <div className="flex justify-between items-center h-16">
           {/* Brand & Organization Title */}
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-lg bg-slate-900 flex items-center justify-center text-white font-bold text-lg shadow">
-              <span className="text-[#FCD116]">AO</span>TUC
-            </div>
+            <img
+              src="/logo-guinee.png"
+              alt="République de Guinée - Ministère des Transports"
+              className="w-11 h-11 object-contain rounded-full shadow-sm bg-white p-0.5 border border-slate-200 flex-shrink-0"
+            />
             <div>
               <div className="flex items-center space-x-2">
                 <span className="text-base font-bold text-slate-900 tracking-tight">AOTUC-TRANSPORT</span>
                 <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200">
-                  v2.0 Pilote
+                  v2.0 Officiel
                 </span>
               </div>
               <p className="text-xs text-slate-500 hidden sm:block">
-                Agence Organisatrice du Transport Urbain de Conakry • République de Guinée
+                Ministère des Transports • République de Guinée • AOTUC
               </p>
             </div>
           </div>

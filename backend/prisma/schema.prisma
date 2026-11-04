@@ -85,6 +85,9 @@ model User {
   vehicleAssignments          VehicleAssignment[]   @relation("AssignedByUser")
   submittedValidationRequests ValidationRequest[]   @relation("SubmittedValidationRequests")
   reviewedValidationSteps     ValidationStep[]      @relation("ReviewerValidationSteps")
+  allocatedTicketBatches      TicketBatch[]
+  recordedTicketSales         TicketSale[]
+  recordedLedgerEntries       FinancialLedgerEntry[]
 
   @@index([phoneNumber])
   @@index([email])
@@ -644,4 +647,142 @@ model LineStop {
   @@index([stopId])
   @@index([stopOrder])
   @@map("line_stops")
+}
+
+// ==============================================================================
+// 14. TICKETING & DOUBLE-ENTRY IMMUTABLE FINANCIAL LEDGER (GNF)
+// ==============================================================================
+
+enum TicketBatchStatus {
+  EN_STOCK_CENTRAL
+  ALLOUE_DISTRIBUTEUR
+  EPUISE
+  ANNULE
+}
+
+enum PaymentMethod {
+  ESPECES
+  ORANGE_MONEY
+  MTN_MOMO
+  VIREMENT_BANCAIRE
+}
+
+enum FinancialAccountType {
+  ACTIF
+  PASSIF
+  PRODUIT
+  CHARGE
+}
+
+enum LedgerTransactionType {
+  ALLOCATION_DISTRIBUTEUR
+  VENTE_TICKETS_DIRECTE
+  ENCAISSEMENT_MOBILE_MONEY
+  VERSEMENT_BANQUE_BCRG
+  REGULARISATION_COMPTABLE
+}
+
+model TicketTariff {
+  id              String   @id @default(uuid())
+  code            String   @unique // e.g. "T-2000", "T-5000", "T-10000"
+  name            String   // e.g. "Ticket Standard Urbain 2 000 GNF"
+  priceGnf        Int      // In Guinean Francs (GNF)
+  vehicleCategory String?  @map("vehicle_category") // TAXI_COMMUNAL, MINIBUS_URBAIN...
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  batches TicketBatch[]
+  sales   TicketSale[]
+
+  @@map("ticket_tariffs")
+}
+
+model TicketBatch {
+  id                String            @id @default(uuid())
+  batchNumber       String            @unique @map("batch_number") // e.g. "LOT-2026-0001"
+  tariffId          String            @map("tariff_id")
+  startSerial       BigInt            @map("start_serial") // e.g. 1000001
+  endSerial         BigInt            @map("end_serial")   // e.g. 1000100 (Carnet de 100)
+  totalCount        Int               @map("total_count")
+  remainingCount    Int               @map("remaining_count")
+  status            TicketBatchStatus @default(EN_STOCK_CENTRAL)
+  allocatedToUserId String?           @map("allocated_to_user_id")
+  allocatedAt       DateTime?         @map("allocated_at")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  tariff          TicketTariff @relation(fields: [tariffId], references: [id])
+  allocatedToUser User?        @relation(fields: [allocatedToUserId], references: [id])
+  sales           TicketSale[]
+
+  @@index([batchNumber])
+  @@index([status])
+  @@index([allocatedToUserId])
+  @@map("ticket_batches")
+}
+
+model TicketSale {
+  id              String        @id @default(uuid())
+  receiptNumber   String        @unique @map("receipt_number") // e.g. "REC-2026-00042"
+  tariffId        String        @map("tariff_id")
+  batchId         String        @map("batch_id")
+  sellerUserId    String        @map("seller_user_id") // Agent or Distributeur
+  quantitySold    Int           @map("quantity_sold")
+  unitPriceGnf    Int           @map("unit_price_gnf")
+  totalAmountGnf  BigInt        @map("total_amount_gnf") // quantity * unitPrice
+  paymentMethod   PaymentMethod @default(ESPECES) @map("payment_method")
+  paymentRef      String?       @map("payment_ref") // Orange Money / MTN MoMo Transaction ID
+  buyerName       String?       @map("buyer_name")
+  buyerPhone      String?       @map("buyer_phone")
+  saleTimestamp   DateTime      @default(now()) @map("sale_timestamp")
+
+  tariff     TicketTariff @relation(fields: [tariffId], references: [id])
+  batch      TicketBatch  @relation(fields: [batchId], references: [id])
+  sellerUser User         @relation(fields: [sellerUserId], references: [id])
+
+  @@index([receiptNumber])
+  @@index([sellerUserId])
+  @@index([saleTimestamp])
+  @@map("ticket_sales")
+}
+
+model FinancialAccount {
+  id          String               @id @default(uuid())
+  accountCode String               @unique @map("account_code") // e.g. "512100", "531100", "706100"
+  name        String               // e.g. "Banque Centrale (BCRG)", "Caisse Principale AOTUC"
+  type        FinancialAccountType
+  balanceGnf  BigInt               @default(0) @map("balance_gnf")
+  currency    String               @default("GNF")
+  isActive    Boolean              @default(true) @map("is_active")
+  createdAt   DateTime             @default(now()) @map("created_at")
+  updatedAt   DateTime             @updatedAt @map("updated_at")
+
+  debitEntries  FinancialLedgerEntry[] @relation("DebitAccount")
+  creditEntries FinancialLedgerEntry[] @relation("CreditAccount")
+
+  @@map("financial_accounts")
+}
+
+model FinancialLedgerEntry {
+  id              String                @id @default(uuid())
+  entryNumber     String                @unique @map("entry_number") // Sequential unique: "JNL-2026-000001"
+  debitAccountId  String                @map("debit_account_id")
+  creditAccountId String                @map("credit_account_id")
+  amountGnf       BigInt                @map("amount_gnf") // Strictly positive double-entry balance
+  transactionType LedgerTransactionType @map("transaction_type")
+  referenceCode   String                @map("reference_code") // Sale receipt, batch allocation ID, or bank deposit
+  description     String
+  actorUserId     String                @map("actor_user_id")
+  createdAt       DateTime              @default(now()) @map("created_at") // IMMUTABLE
+
+  debitAccount  FinancialAccount @relation("DebitAccount", fields: [debitAccountId], references: [id])
+  creditAccount FinancialAccount @relation("CreditAccount", fields: [creditAccountId], references: [id])
+  actorUser     User             @relation(fields: [actorUserId], references: [id])
+
+  @@index([entryNumber])
+  @@index([debitAccountId])
+  @@index([creditAccountId])
+  @@index([createdAt])
+  @@map("financial_ledger_entries")
 }

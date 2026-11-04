@@ -347,12 +347,19 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = () =>
 
                 {/* Header */}
                 <div className="flex items-center justify-between mt-1">
-                  <div>
-                    <div className="text-[9px] uppercase tracking-wider text-slate-300 font-bold">
-                      RÉPUBLIQUE DE GUINÉE
-                    </div>
-                    <div className="text-[11px] font-black text-[#FCD116] tracking-wide">
-                      AOTUC • CARTE PROFESSIONNELLE
+                  <div className="flex items-center space-x-2">
+                    <img
+                      src="/logo-guinee.png"
+                      alt="Sceau Guinée"
+                      className="w-7 h-7 rounded-full bg-white p-0.5 object-contain shadow-sm border border-slate-600 flex-shrink-0"
+                    />
+                    <div>
+                      <div className="text-[8px] uppercase tracking-wider text-slate-300 font-bold">
+                        RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS
+                      </div>
+                      <div className="text-[10px] font-black text-[#FCD116] tracking-wide">
+                        AOTUC • CARTE PROFESSIONNELLE DE CONDUCTEUR
+                      </div>
                     </div>
                   </div>
                   <div className="text-[9px] font-mono bg-slate-800/80 px-2 py-0.5 rounded border border-slate-600 text-slate-200">
@@ -402,12 +409,19 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = () =>
               /* Windshield Sticker Visual Preview (Square 100x100 mm) */
               <div className="relative w-full aspect-square max-w-[280px] mx-auto bg-amber-400 text-slate-950 rounded-2xl p-4 shadow-xl border-4 border-slate-900 flex flex-col justify-between overflow-hidden">
                 {/* Header */}
-                <div className="text-center border-b-2 border-slate-900 pb-1">
-                  <div className="text-[9px] uppercase font-bold tracking-wider">
-                    RÉPUBLIQUE DE GUINÉE • AOTUC
-                  </div>
-                  <div className="text-xs font-black uppercase">
-                    LICENCE OFFICIELLE DE TRANSPORT URBAIN
+                <div className="flex items-center space-x-2 border-b-2 border-slate-900 pb-1.5">
+                  <img
+                    src="/logo-guinee.png"
+                    alt="Sceau République de Guinée"
+                    className="w-9 h-9 rounded-full bg-white p-0.5 object-contain border border-slate-900 flex-shrink-0 shadow-sm"
+                  />
+                  <div className="text-left flex-1 leading-tight">
+                    <div className="text-[8px] uppercase font-bold tracking-wider text-slate-800">
+                      RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS
+                    </div>
+                    <div className="text-[11px] font-black uppercase text-slate-950">
+                      AOTUC • VIGNETTE DE TRANSPORT URBAIN
+                    </div>
                   </div>
                 </div>
 

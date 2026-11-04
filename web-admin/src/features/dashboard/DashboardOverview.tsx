@@ -89,14 +89,24 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenVali
   return (
     <div className="space-y-6">
       {/* Title & Actions Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-            Tableau de Bord Exécutif AOTUC
-          </h1>
-          <p className="text-xs text-slate-500">
-            Supervision opérationnelle centralisée du transport urbain dans l agglomération de Conakry.
-          </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex items-center space-x-3">
+          <img
+            src="/logo-guinee.png"
+            alt="Armoiries de la République de Guinée"
+            className="w-12 h-12 rounded-full object-contain p-0.5 border border-slate-200 shadow-sm flex-shrink-0"
+          />
+          <div>
+            <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
+              RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS
+            </div>
+            <h1 className="text-lg font-black text-slate-900 tracking-tight">
+              Tableau de Bord Exécutif AOTUC
+            </h1>
+            <p className="text-xs text-slate-500">
+              Supervision opérationnelle centralisée du transport urbain dans l agglomération de Conakry.
+            </p>
+          </div>
         </div>
         <div className="flex items-center space-x-2">
           <button

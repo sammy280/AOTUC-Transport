@@ -37,6 +37,9 @@ export function authenticateToken(req, res, next) {
   }
 }
 
+// Convenient alias for authenticateToken
+export const requireAuth = authenticateToken;
+
 /**
  * Enforces Role-Based Access Control (RBAC)
  * @param  {...string} allowedRoles Roles authorized to access the route
@@ -47,7 +50,8 @@ export function requireRoles(...allowedRoles) {
       return next(new AppError('Accès non autorisé. Identité non vérifiée.', 401, 'UNAUTHORIZED'));
     }
 
-    const hasRole = req.user.roles.some((role) => allowedRoles.includes(role));
+    const flatRoles = allowedRoles.flat();
+    const hasRole = req.user.roles.some((role) => flatRoles.includes(role));
 
     if (!hasRole) {
       logger.warn('Access denied by RBAC policy', {
