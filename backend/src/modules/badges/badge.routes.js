@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import BadgeController from './badge.controller.js';
-import { authenticateToken, requireRoles } from '../../middlewares/authMiddleware.js';
+import { authenticateToken, requirePermissions } from '../../middlewares/authMiddleware.js';
+import { PERMISSIONS } from '../../config/permissions.js';
 
 const router = Router();
 
@@ -12,24 +13,24 @@ router.post('/verify', BadgeController.verifyQr);
 // Protected Management Endpoints
 router.use(authenticateToken);
 
-// Issue new badge (Director or Admin only)
+// Issue new badge (Director General ONLY - Super Admin forbidden)
 router.post(
   '/issue',
-  requireRoles('DIRECTOR', 'SUPER_ADMIN'),
+  requirePermissions(PERMISSIONS.CREDENTIALS_ISSUE),
   BadgeController.issueBadge
 );
 
-// Suspend badge
+// Suspend badge (Director General authority)
 router.post(
   '/:id/suspend',
-  requireRoles('DIRECTOR', 'SUPER_ADMIN'),
+  requirePermissions(PERMISSIONS.CREDENTIALS_ISSUE),
   BadgeController.suspendBadge
 );
 
 // Download printable CR80 PDF
 router.get(
   '/:id/pdf',
-  requireRoles('DIRECTOR', 'CHEF_SERVICE', 'SUPER_ADMIN'),
+  requirePermissions(PERMISSIONS.CREDENTIALS_READ, PERMISSIONS.CREDENTIALS_ISSUE),
   BadgeController.downloadPdf
 );
 

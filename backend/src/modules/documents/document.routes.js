@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import multer from 'multer';
 import DocumentController from './document.controller.js';
-import { authenticateToken, requireRoles } from '../../middlewares/authMiddleware.js';
+import { authenticateToken, requirePermissions } from '../../middlewares/authMiddleware.js';
+import { PERMISSIONS } from '../../config/permissions.js';
 
 const router = Router();
 const upload = multer({
@@ -12,18 +13,22 @@ const upload = multer({
 // All document operations require authentication
 router.use(authenticateToken);
 
-// Upload endpoint (Authorized to Field Agents, Chefs de Service, and Admins)
+// Upload endpoint (Authorized to Field Agents and Chefs de Service with DOCUMENTS_UPLOAD)
 router.post(
   '/upload',
-  requireRoles('AGENT_TERRAIN', 'CHEF_SERVICE', 'SUPER_ADMIN', 'DIRECTOR'),
+  requirePermissions(PERMISSIONS.DOCUMENTS_UPLOAD),
   upload.single('file'),
   DocumentController.upload
 );
 
-// Secure streaming endpoint
+// Secure streaming endpoint (Authorized reviewers and agents)
 router.get(
   '/:id/stream',
-  requireRoles('AGENT_TERRAIN', 'CHEF_SERVICE', 'SUPER_ADMIN', 'DIRECTOR', 'SYNDICAT'),
+  requirePermissions(
+    PERMISSIONS.DOCUMENTS_VERIFY,
+    PERMISSIONS.DOCUMENTS_UPLOAD,
+    PERMISSIONS.DRIVERS_READ
+  ),
   DocumentController.stream
 );
 

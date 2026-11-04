@@ -84,6 +84,34 @@ export class TicketingController {
       next(err);
     }
   }
+
+  static async listSales(req, res, next) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 20;
+      const sellerUserId = req.query.sellerUserId || null;
+
+      const result = await TicketingService.listSales(
+        { page, limit, sellerUserId },
+        req.user
+      );
+
+      return res.status(200).json({ success: true, ...result });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async reverseSale(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      const result = await TicketingService.reverseSale(id, { reason }, req.user);
+      return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export default TicketingController;

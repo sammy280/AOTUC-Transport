@@ -1,41 +1,43 @@
 import { Router } from 'express';
 import RegistrationController from './registration.controller.js';
-import { authenticateToken, requireRoles } from '../../middlewares/authMiddleware.js';
+import { authenticateToken, requirePermissions } from '../../middlewares/authMiddleware.js';
+import { PERMISSIONS } from '../../config/permissions.js';
 
 const router = Router();
 
 // All registration operations require authentication
 router.use(authenticateToken);
 
-// 1. Enrolment Endpoints (Field Agents, Chefs de Service, Admins)
+// 1. Enrolment Endpoints (Field Agents & Chefs de Service with DRIVERS_CREATE)
 router.post(
   '/drivers',
-  requireRoles('AGENT_TERRAIN', 'CHEF_SERVICE', 'SUPER_ADMIN'),
+  requirePermissions(PERMISSIONS.DRIVERS_CREATE),
   RegistrationController.registerDriver
 );
 
 router.post(
   '/owners',
-  requireRoles('AGENT_TERRAIN', 'CHEF_SERVICE', 'SUPER_ADMIN'),
+  requirePermissions(PERMISSIONS.DRIVERS_CREATE),
   RegistrationController.registerOwner
 );
 
 router.post(
   '/vehicles',
-  requireRoles('AGENT_TERRAIN', 'CHEF_SERVICE', 'SUPER_ADMIN'),
+  requirePermissions(PERMISSIONS.DRIVERS_CREATE),
   RegistrationController.registerVehicle
 );
 
-// 2. Listing & Lookup Endpoints (All staff + Syndicats for drivers)
+// 2. Listing & Lookup Endpoints (Agents, Chefs, Director, Syndicat with DRIVERS_READ)
+// Distributeurs and unpermitted accounts are strictly forbidden (403)
 router.get(
   '/drivers',
-  requireRoles('AGENT_TERRAIN', 'CHEF_SERVICE', 'DIRECTOR', 'SUPER_ADMIN', 'SYNDICAT'),
+  requirePermissions(PERMISSIONS.DRIVERS_READ),
   RegistrationController.listDrivers
 );
 
 router.get(
   '/vehicles',
-  requireRoles('AGENT_TERRAIN', 'CHEF_SERVICE', 'DIRECTOR', 'SUPER_ADMIN', 'SYNDICAT'),
+  requirePermissions(PERMISSIONS.DRIVERS_READ),
   RegistrationController.listVehicles
 );
 

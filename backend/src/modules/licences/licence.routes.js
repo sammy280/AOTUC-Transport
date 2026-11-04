@@ -1,22 +1,23 @@
 import { Router } from 'express';
 import LicenceController from './licence.controller.js';
-import { authenticateToken, requireRoles } from '../../middlewares/authMiddleware.js';
+import { authenticateToken, requirePermissions } from '../../middlewares/authMiddleware.js';
+import { PERMISSIONS } from '../../config/permissions.js';
 
 const router = Router();
 
 router.use(authenticateToken);
 
-// Issue transport licence sticker (Director or Admin only)
+// Issue transport licence sticker (Director General ONLY - Super Admin forbidden)
 router.post(
   '/issue',
-  requireRoles('DIRECTOR', 'SUPER_ADMIN'),
+  requirePermissions(PERMISSIONS.CREDENTIALS_ISSUE),
   LicenceController.issueLicence
 );
 
 // Download printable sticker PDF
 router.get(
   '/:id/sticker-pdf',
-  requireRoles('DIRECTOR', 'CHEF_SERVICE', 'SUPER_ADMIN'),
+  requirePermissions(PERMISSIONS.CREDENTIALS_READ, PERMISSIONS.CREDENTIALS_ISSUE),
   LicenceController.downloadStickerPdf
 );
 

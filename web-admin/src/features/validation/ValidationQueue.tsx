@@ -8,7 +8,9 @@ import {
   Eye,
   FileText,
   MapPin,
+  Lock,
 } from 'lucide-react';
+import { PERMISSIONS, hasRolePermission } from '../../utils/permissions';
 
 interface ValidationQueueProps {
   currentUser: UserContext;
@@ -123,8 +125,8 @@ export const ValidationQueue: React.FC<ValidationQueueProps> = ({ currentUser })
       return;
     }
 
-    // Rule: Level 3 approval only by Director
-    if (action === 'APPROVE_FINAL' && currentUser.role !== 'DIRECTOR' && currentUser.role !== 'SUPER_ADMIN') {
+    // Rule: Level 3 approval strictly by Director General (Super Admin cannot approve)
+    if (action === 'APPROVE_FINAL' && !hasRolePermission(currentUser.role, PERMISSIONS.APPLICATIONS_APPROVE_L3)) {
       setFeedbackMessage({
         type: 'error',
         text: 'Action refusée. Seul le Directeur Général a l autorité d approuver définitivement (Niveau 3).',
@@ -132,20 +134,36 @@ export const ValidationQueue: React.FC<ValidationQueueProps> = ({ currentUser })
       return;
     }
 
-    // Rule: Forward to L3 only by Chef de Service or Super Admin
-    if (action === 'FORWARD_TO_L3' && currentUser.role !== 'CHEF_SERVICE' && currentUser.role !== 'SUPER_ADMIN') {
+    // Rule: Forward to L3 strictly by Chef de Service (Super Admin cannot forward)
+    if (action === 'FORWARD_TO_L3' && !hasRolePermission(currentUser.role, PERMISSIONS.APPLICATIONS_APPROVE_L2)) {
       setFeedbackMessage({
         type: 'error',
-        text: 'Action refusée. Seul un Chef de Service peut transmettre un dossier au Niveau 3.',
+        text: 'Action refusée. Seul un Chef de Service territorial peut transmettre un dossier au Niveau 3.',
       });
       return;
     }
 
-    // Rule: Scope check
-    if (currentUser.role === 'CHEF_SERVICE' && currentUser.communeName !== selectedItem.communeName) {
+    // Rule: Rejection or Return authority check
+    if (
+      (action === 'RETURN_FOR_CORRECTION' || action === 'REJECT') &&
+      !hasRolePermission(currentUser.role, PERMISSIONS.APPLICATIONS_RETURN)
+    ) {
       setFeedbackMessage({
         type: 'error',
-        text: `Accès refusé. Vous êtes Chef de Service pour ${currentUser.communeName}, vous ne pouvez pas traiter un dossier de ${selectedItem.communeName}.`,
+        text: 'Action refusée. Votre rôle ne dispose pas des droits d instruction sur ce dossier.',
+      });
+      return;
+    }
+
+    // Rule: Scope check for territorial Chefs de Service
+    if (
+      currentUser.role === 'CHEF_SERVICE' &&
+      currentUser.communeName !== selectedItem.communeName &&
+      !currentUser.communeName.includes(selectedItem.communeName)
+    ) {
+      setFeedbackMessage({
+        type: 'error',
+        text: `Accès refusé. Vous êtes affecté à ${currentUser.communeName}, vous ne pouvez pas traiter un dossier de ${selectedItem.communeName}.`,
       });
       return;
     }
@@ -412,48 +430,64 @@ export const ValidationQueue: React.FC<ValidationQueueProps> = ({ currentUser })
                 {/* Role-Specific Action Buttons */}
                 <div className="flex flex-wrap gap-2">
                   {/* Niveau 2 : Chef de Service Actions */}
-                  {selectedItem.status === 'SOUMIS_NIVEAU2' && (
-                    <button
-                      onClick={() => handleDecision('FORWARD_TO_L3')}
-                      className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>Transmettre au Niveau 3 (Direction)</span>
-                    </button>
-                  )}
+                  {selectedItem.status === 'SOUMIS_NIVEAU2' &&
+                    hasRolePermission(currentUser.role, PERMISSIONS.APPLICATIONS_APPROVE_L2) && (
+                      <button
+                        onClick={() => handleDecision('FORWARD_TO_L3')}
+                        className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Transmettre au Niveau 3 (Direction)</span>
+                      </button>
+                    )}
 
                   {/* Niveau 3 : Directeur Général Actions */}
-                  {selectedItem.status === 'EN_ATTENTE_NIVEAU3' && (
-                    <button
-                      onClick={() => handleDecision('APPROVE_FINAL')}
-                      className="flex items-center space-x-1.5 bg-[#009460] hover:bg-emerald-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition"
-                    >
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      <span>Approbation Finale (Délivrance Badge)</span>
-                    </button>
-                  )}
+                  {selectedItem.status === 'EN_ATTENTE_NIVEAU3' &&
+                    hasRolePermission(currentUser.role, PERMISSIONS.APPLICATIONS_APPROVE_L3) && (
+                      <button
+                        onClick={() => handleDecision('APPROVE_FINAL')}
+                        className="flex items-center space-x-1.5 bg-[#009460] hover:bg-emerald-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition"
+                      >
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        <span>Approbation Finale (Délivrance Badge)</span>
+                      </button>
+                    )}
 
                   {/* Return for Correction */}
-                  {(selectedItem.status === 'SOUMIS_NIVEAU2' || selectedItem.status === 'EN_ATTENTE_NIVEAU3') && (
-                    <button
-                      onClick={() => handleDecision('RETURN_FOR_CORRECTION')}
-                      className="flex items-center space-x-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      <span>Renvoyer pour Correction</span>
-                    </button>
-                  )}
+                  {(selectedItem.status === 'SOUMIS_NIVEAU2' || selectedItem.status === 'EN_ATTENTE_NIVEAU3') &&
+                    hasRolePermission(currentUser.role, PERMISSIONS.APPLICATIONS_RETURN) && (
+                      <button
+                        onClick={() => handleDecision('RETURN_FOR_CORRECTION')}
+                        className="flex items-center space-x-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Renvoyer pour Correction</span>
+                      </button>
+                    )}
 
                   {/* Rejection */}
-                  {(selectedItem.status === 'SOUMIS_NIVEAU2' || selectedItem.status === 'EN_ATTENTE_NIVEAU3') && (
-                    <button
-                      onClick={() => handleDecision('REJECT')}
-                      className="flex items-center space-x-1.5 bg-[#CE1126] hover:bg-red-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition"
-                    >
-                      <XCircle className="w-3.5 h-3.5" />
-                      <span>Rejeter Définitivement</span>
-                    </button>
-                  )}
+                  {(selectedItem.status === 'SOUMIS_NIVEAU2' || selectedItem.status === 'EN_ATTENTE_NIVEAU3') &&
+                    hasRolePermission(currentUser.role, PERMISSIONS.APPLICATIONS_REJECT) && (
+                      <button
+                        onClick={() => handleDecision('REJECT')}
+                        className="flex items-center space-x-1.5 bg-[#CE1126] hover:bg-red-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition"
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                        <span>Rejeter Définitivement</span>
+                      </button>
+                    )}
+
+                  {/* Read-Only Notice for Users Without Validation Powers */}
+                  {!hasRolePermission(currentUser.role, PERMISSIONS.APPLICATIONS_APPROVE_L2) &&
+                    !hasRolePermission(currentUser.role, PERMISSIONS.APPLICATIONS_APPROVE_L3) &&
+                    !hasRolePermission(currentUser.role, PERMISSIONS.APPLICATIONS_RETURN) && (
+                      <div className="flex items-center space-x-2 p-3 bg-slate-100 text-slate-600 rounded-lg text-xs w-full">
+                        <Lock className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                        <span>
+                          Mode Consultation : Votre rôle ({currentUser.roleLabel}) ne dispose pas des droits de validation administrative.
+                        </span>
+                      </div>
+                    )}
                 </div>
               </div>
             </div>

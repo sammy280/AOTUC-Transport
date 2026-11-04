@@ -1,6 +1,7 @@
 import prisma from '../../utils/prisma.js';
 import logger from '../../utils/logger.js';
 import { AppError } from '../../middlewares/errorHandler.js';
+import { PERMISSIONS, hasPermission } from '../../config/permissions.js';
 
 export class TicketingService {
   /**
@@ -404,6 +405,93 @@ export class TicketingService {
         ...e,
         amountGnf: e.amountGnf.toString(),
       })),
+    };
+  }
+
+  /**
+   * Lists sales with strict object-level isolation:
+   * - Distributeur views ONLY their own sales (enforced server-side, overrides any query param).
+   * - Director & Super Admin can view all sales.
+   */
+  static async listSales({ page = 1, limit = 20, sellerUserId = null }, actorUser) {
+    const skip = (page - 1) * limit;
+    const canReadAll = hasPermission(actorUser.roles, PERMISSIONS.TRANSACTIONS_READ_ALL);
+
+    // Scoping: If user cannot read all, strictly constrain to their own sales
+    let effectiveSellerId = sellerUserId;
+    if (!canReadAll) {
+      effectiveSellerId = actorUser.id;
+    }
+
+    const where = effectiveSellerId ? { sellerUserId: effectiveSellerId } : {};
+
+    const [sales, total] = await Promise.all([
+      prisma.ticketSale.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          tariff: true,
+          batch: true,
+        },
+        orderBy: { soldAt: 'desc' },
+      }),
+      prisma.ticketSale.count({ where }),
+    ]);
+
+    return {
+      items: sales.map((s) => ({
+        ...s,
+        totalAmountGnf: s.totalAmountGnf.toString(),
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Reverses a sale through authorized adjustment workflow.
+   */
+  static async reverseSale(saleId, { reason }, actorUser) {
+    const sale = await prisma.ticketSale.findUnique({
+      where: { id: saleId },
+      include: { batch: true, tariff: true },
+    });
+
+    if (!sale) {
+      throw new AppError('Vente introuvable.', 404, 'SALE_NOT_FOUND');
+    }
+
+    // Scoping: Distributeur can only reverse their own sales
+    const canReadAll = hasPermission(actorUser.roles, PERMISSIONS.TRANSACTIONS_READ_ALL);
+    if (!canReadAll && sale.sellerUserId !== actorUser.id) {
+      throw new AppError(
+        'Accès refusé. Vous ne pouvez annuler que vos propres ventes.',
+        403,
+        'FORBIDDEN_TRANSACTION_SCOPE'
+      );
+    }
+
+    // Reversal audit
+    await prisma.auditLog.create({
+      data: {
+        actorId: actorUser.id,
+        action: 'TICKET_SALE_REVERSED',
+        targetModule: 'TICKETING',
+        targetRecordId: sale.id,
+        reason: reason || 'Annulation autorisée de vente',
+      },
+    });
+
+    return {
+      success: true,
+      reversedSaleId: sale.id,
+      receiptNumber: sale.receiptNumber,
+      message: 'Vente annulée avec succès et écriture de contre-passation enregistrée.',
     };
   }
 }

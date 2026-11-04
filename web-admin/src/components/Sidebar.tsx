@@ -9,15 +9,23 @@ import {
   Ticket,
   ShieldAlert,
 } from 'lucide-react';
+import { UserContext } from '../types';
+import { isTabAllowed } from '../utils/permissions';
 
 interface SidebarProps {
   currentTab: string;
   onSelectTab: (tab: string) => void;
   pendingCount: number;
+  currentUser: UserContext;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, pendingCount }) => {
-  const menuItems = [
+export const Sidebar: React.FC<SidebarProps> = ({
+  currentTab,
+  onSelectTab,
+  pendingCount,
+  currentUser,
+}) => {
+  const allMenuItems = [
     { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
     {
       id: 'validation',
@@ -33,13 +41,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, pendi
     { id: 'audit', label: 'Journal d Audit & Sécurité', icon: ShieldAlert },
   ];
 
+  // Least-Privilege Filtering: Only display navigation tabs authorized for user's role
+  const visibleMenuItems = allMenuItems.filter((item) =>
+    isTabAllowed(currentUser.role, item.id)
+  );
+
   return (
     <aside className="w-64 bg-white border-r border-slate-200 min-h-[calc(100vh-4.5rem)] p-4 flex flex-col justify-between">
       <div className="space-y-1">
         <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-          Modules Opérationnels
+          Modules Opérationnels Habilités
         </div>
-        {menuItems.map((item) => {
+        {visibleMenuItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentTab === item.id;
 
@@ -83,10 +96,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, pendi
           />
           <div className="font-semibold text-slate-700 flex items-center space-x-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
-            <span>API Backend Connectée</span>
+            <span>Contrôle RBAC Actif</span>
           </div>
         </div>
-        <div>PostGIS 18 • Node v22 LTS</div>
+        <div>{currentUser.roleLabel}</div>
         <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-200">
           Système officiel AOTUC v2.0
         </div>

@@ -2,7 +2,17 @@ import { AppError } from '../../middlewares/errorHandler.js';
 
 /**
  * Multi-Level Validation State Machine Definition (Module 4)
- * Strict, deterministic transition table enforcing Guinea AOTUC administrative hierarchy.
+ * Strict, deterministic transition table enforcing Guinea AOTUC administrative hierarchy
+ * and rigorous separation of duties.
+ * 
+ * Rules:
+ * - Level 1 (Agent de Terrain): Registers and SUBMITs draft applications.
+ * - Level 2 (Chef de Service Matoto): Reviews and FORWARD_TO_L3, or REJECTs / RETURN_FOR_CORRECTION.
+ *   Strictly scoped to assigned commune (Matoto). Cannot perform final L3 approval.
+ * - Level 3 (Directeur Général): Final APPROVE_FINAL, REJECT, or RETURN_FOR_CORRECTION.
+ * - Super Administrateur (DSI): Excluded from all business validation transitions!
+ *   Cannot assume Director approval authority or issue transport authorizations.
+ * - Anti-Fraud: Self-approval is strictly forbidden (cannot approve own submission).
  */
 
 export const VALID_TRANSITIONS = [
@@ -12,7 +22,7 @@ export const VALID_TRANSITIONS = [
     from: ['BROUILLON', 'RETOURNE_POUR_CORRECTION'],
     to: 'SOUMIS_NIVEAU2',
     targetLevel: 2,
-    allowedRoles: ['AGENT_TERRAIN', 'CHEF_SERVICE', 'SUPER_ADMIN'],
+    allowedRoles: ['AGENT_TERRAIN', 'CHEF_SERVICE'],
     requireComment: false,
     disallowSelfReview: false, // Agent files their own submission
   },
@@ -22,7 +32,7 @@ export const VALID_TRANSITIONS = [
     from: ['SOUMIS_NIVEAU2'],
     to: 'EN_ATTENTE_NIVEAU3',
     targetLevel: 3,
-    allowedRoles: ['CHEF_SERVICE', 'SUPER_ADMIN'],
+    allowedRoles: ['CHEF_SERVICE'],
     requireComment: false,
     disallowSelfReview: true,
   },
@@ -32,7 +42,7 @@ export const VALID_TRANSITIONS = [
     from: ['SOUMIS_NIVEAU2', 'EN_ATTENTE_NIVEAU3'],
     to: 'RETOURNE_POUR_CORRECTION',
     targetLevel: 1,
-    allowedRoles: ['CHEF_SERVICE', 'DIRECTOR', 'SUPER_ADMIN'],
+    allowedRoles: ['CHEF_SERVICE', 'DIRECTOR'],
     requireComment: true,
     disallowSelfReview: true,
   },
@@ -42,7 +52,7 @@ export const VALID_TRANSITIONS = [
     from: ['EN_ATTENTE_NIVEAU3'],
     to: 'VALIDE',
     targetLevel: 3,
-    allowedRoles: ['DIRECTOR', 'SUPER_ADMIN'],
+    allowedRoles: ['DIRECTOR'],
     requireComment: false,
     disallowSelfReview: true,
   },
@@ -52,7 +62,7 @@ export const VALID_TRANSITIONS = [
     from: ['SOUMIS_NIVEAU2', 'EN_ATTENTE_NIVEAU3'],
     to: 'REJETE',
     targetLevel: 3,
-    allowedRoles: ['CHEF_SERVICE', 'DIRECTOR', 'SUPER_ADMIN'],
+    allowedRoles: ['CHEF_SERVICE', 'DIRECTOR'],
     requireComment: true,
     disallowSelfReview: true,
   },
@@ -76,8 +86,9 @@ export class ValidationStateMachine {
       );
     }
 
-    // 2. Enforce Role Authority
-    const hasRole = reviewerUser.roles.some((r) => rule.allowedRoles.includes(r));
+    // 2. Enforce Strict Role Authority (No auto-bypass for Super Admin)
+    const userRoles = reviewerUser.roles || [];
+    const hasRole = userRoles.some((r) => rule.allowedRoles.includes(r));
     if (!hasRole) {
       throw new AppError(
         `Permissions insuffisantes : votre rôle ne vous permet pas d'exécuter l'action "${action}".`,
@@ -106,9 +117,9 @@ export class ValidationStateMachine {
       }
     }
 
-    // 5. Enforce Territorial Scope for Chef de Service
-    const isGlobal = reviewerUser.roles.includes('SUPER_ADMIN') || reviewerUser.roles.includes('DIRECTOR');
-    if (!isGlobal && reviewerUser.roles.includes('CHEF_SERVICE')) {
+    // 5. Enforce Territorial Scope for Chef de Service & Agent
+    const isDirector = userRoles.includes('DIRECTOR');
+    if (!isDirector && userRoles.includes('CHEF_SERVICE')) {
       if (reviewerUser.communeId && requestCommuneId && reviewerUser.communeId !== requestCommuneId) {
         throw new AppError(
           'Accès refusé. Vous ne pouvez valider que les dossiers rattachés à votre commune.',

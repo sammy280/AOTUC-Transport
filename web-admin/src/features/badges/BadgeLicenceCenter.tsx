@@ -9,8 +9,10 @@ import {
   CheckCircle2,
   Truck,
   User,
+  Lock,
 } from 'lucide-react';
 import { UserContext } from '../../types';
+import { PERMISSIONS, hasRolePermission } from '../../utils/permissions';
 
 interface BadgeRecord {
   id: string;
@@ -111,11 +113,13 @@ const SAMPLE_LICENCES: LicenceRecord[] = [
   },
 ];
 
-export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = () => {
+export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ currentUser }) => {
   const [activeTab, setActiveTab] = useState<'badges' | 'licences'>('badges');
   const [selectedBadge, setSelectedBadge] = useState<BadgeRecord>(SAMPLE_BADGES[0]);
   const [selectedLicence, setSelectedLicence] = useState<LicenceRecord>(SAMPLE_LICENCES[0]);
   const [verificationFeedback, setVerificationFeedback] = useState<string | null>(null);
+
+  const canIssue = currentUser ? hasRolePermission(currentUser.role, PERMISSIONS.CREDENTIALS_ISSUE) : true;
 
   const handleVerifyOffline = (_signature: string) => {
     setVerificationFeedback('Vérification cryptographique en cours avec la clé publique ed25519_2026_01...');
@@ -136,6 +140,16 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = () =>
             <h1 className="text-xl font-bold text-slate-900">
               Centre des Titres Sécurisés — Badges & Licences Ed25519
             </h1>
+            {canIssue ? (
+              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full">
+                Autorité d Émission Actrice (Directeur Général)
+              </span>
+            ) : (
+              <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-medium rounded-full flex items-center space-x-1">
+                <Lock className="w-3 h-3 text-slate-400" />
+                <span>Consultation / Impression (Émission réservée au DG)</span>
+              </span>
+            )}
           </div>
           <p className="text-xs text-slate-500 mt-1">
             Génération, signature asymétrique RFC 8032, impression CR80 PVC et vignettes pare-brise 100×100mm.

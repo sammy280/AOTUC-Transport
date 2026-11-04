@@ -17,6 +17,8 @@ import RegistrationDesk from './features/enrolment/RegistrationDesk';
 import AuditSecurityLogView from './features/audit/AuditSecurityLogView';
 import ToastContainer from './components/ToastContainer';
 import LoginView from './features/auth/LoginView';
+import AccessDenied from './components/AccessDenied';
+import { isTabAllowed, getDefaultTab } from './utils/permissions';
 
 const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
@@ -87,7 +89,9 @@ export const App: React.FC = () => {
     };
   });
 
-  const [currentTab, setCurrentTab] = useState<string>('dashboard');
+  const [currentTab, setCurrentTab] = useState<string>(() => {
+    return getDefaultTab(currentUser.role);
+  });
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -115,6 +119,7 @@ export const App: React.FC = () => {
     sessionStorage.setItem('aotuc_user', JSON.stringify(user));
     setCurrentUser(user);
     setIsAuthenticated(true);
+    setCurrentTab(getDefaultTab(user.role));
     showToast('success', 'Authentification Réussie', `Bienvenue ${user.name} (${user.roleLabel}).`);
   };
 
@@ -145,8 +150,16 @@ export const App: React.FC = () => {
 
   const handleSelectNotification = (item: NotificationItem) => {
     if (item.linkTab) {
-      setCurrentTab(item.linkTab);
-      showToast('info', 'Navigation AOTUC', `Ouverture du module "${item.title}".`);
+      if (isTabAllowed(currentUser.role, item.linkTab)) {
+        setCurrentTab(item.linkTab);
+        showToast('info', 'Navigation AOTUC', `Ouverture du module "${item.title}".`);
+      } else {
+        showToast(
+          'warning',
+          'Accès Restreint',
+          `Votre rôle (${currentUser.roleLabel}) ne vous autorise pas à ouvrir le module "${item.linkTab}".`
+        );
+      }
     }
   };
 
@@ -219,6 +232,9 @@ export const App: React.FC = () => {
     );
   }
 
+  // Check if current tab is permitted for the authenticated user's role
+  const isCurrentTabPermitted = isTabAllowed(currentUser.role, currentTab);
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       <Navbar
@@ -237,35 +253,46 @@ export const App: React.FC = () => {
           currentTab={currentTab}
           onSelectTab={setCurrentTab}
           pendingCount={notifications.filter((n) => !n.isRead && n.category === 'VALIDATION').length || 46}
+          currentUser={currentUser}
         />
 
         <main className="flex-1 p-6 overflow-y-auto">
-          {currentTab === 'dashboard' && (
-            <DashboardOverview onOpenValidationQueue={() => setCurrentTab('validation')} />
-          )}
+          {!isCurrentTabPermitted ? (
+            <AccessDenied
+              currentUser={currentUser}
+              attemptedTab={currentTab}
+              onNavigateHome={() => setCurrentTab(getDefaultTab(currentUser.role))}
+            />
+          ) : (
+            <>
+              {currentTab === 'dashboard' && (
+                <DashboardOverview onOpenValidationQueue={() => setCurrentTab('validation')} />
+              )}
 
-          {currentTab === 'validation' && (
-            <ValidationQueue currentUser={currentUser} />
-          )}
+              {currentTab === 'validation' && (
+                <ValidationQueue currentUser={currentUser} />
+              )}
 
-          {currentTab === 'enrolment' && (
-            <RegistrationDesk currentUser={currentUser} />
-          )}
+              {currentTab === 'enrolment' && (
+                <RegistrationDesk currentUser={currentUser} />
+              )}
 
-          {currentTab === 'mapping' && (
-            <NetworkMapView />
-          )}
+              {currentTab === 'mapping' && (
+                <NetworkMapView />
+              )}
 
-          {(currentTab === 'badges' || currentTab === 'licences') && (
-            <BadgeLicenceCenter currentUser={currentUser} />
-          )}
+              {(currentTab === 'badges' || currentTab === 'licences') && (
+                <BadgeLicenceCenter currentUser={currentUser} />
+              )}
 
-          {currentTab === 'ticketing' && (
-            <TicketingLedgerView currentUser={currentUser} />
-          )}
+              {currentTab === 'ticketing' && (
+                <TicketingLedgerView currentUser={currentUser} />
+              )}
 
-          {currentTab === 'audit' && (
-            <AuditSecurityLogView currentUser={currentUser} />
+              {currentTab === 'audit' && (
+                <AuditSecurityLogView currentUser={currentUser} />
+              )}
+            </>
           )}
         </main>
       </div>
