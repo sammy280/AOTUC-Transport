@@ -28,6 +28,7 @@ model Commune {
   persons            Person[]
   unions             TransportUnion[]
   validationRequests ValidationRequest[]
+  stops              TransportStop[]
 
   @@map("communes")
 }
@@ -322,12 +323,14 @@ model VehicleAssignment {
   assignedBy      String    @map("assigned_by")
   createdAt       DateTime  @default(now()) @map("created_at")
 
-  vehicle    Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  driver     Driver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
-  assignedUser User  @relation("AssignedByUser", fields: [assignedBy], references: [id], onDelete: Restrict)
+  vehicle       Vehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driver        Driver         @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  assignedUser  User           @relation("AssignedByUser", fields: [assignedBy], references: [id], onDelete: Restrict)
+  transportLine TransportLine? @relation(fields: [transportLineId], references: [id], onDelete: SetNull)
 
   @@index([vehicleId])
   @@index([driverId])
+  @@index([transportLineId])
   @@index([isActive])
   @@map("vehicle_assignments")
 }
@@ -567,4 +570,78 @@ model CredentialRevocation {
   @@index([credentialType])
   @@index([revokedAt])
   @@map("credential_revocations")
+}
+
+// ==============================================================================
+// 13. GIS, TRANSPORT LINES & BUS STOPS (Modules 6 & 7)
+// ==============================================================================
+
+enum StopDirection {
+  ALLER
+  RETOUR
+  CIRCULAIRE
+}
+
+model TransportLine {
+  id               String   @id @default(uuid())
+  code             String   @unique // e.g. "L-01", "L-02", "L-03"
+  name             String   // e.g. "Kaloum (Port) — Matoto (Rond-point)"
+  colorHex         String   @default("#2563EB") @map("color_hex") // Route color e.g. #2563EB, #DC2626
+  description      String?
+  originName       String   @map("origin_name")
+  destinationName  String   @map("destination_name")
+  distanceKm       Float?   @map("distance_km")
+  estimatedMinutes Int?     @map("estimated_minutes")
+  isActive         Boolean  @default(true) @map("is_active")
+  pathCoordinates  Json?    @map("path_coordinates") // GeoJSON LineString coordinates [[lng, lat], ...]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  stops       LineStop[]
+  assignments VehicleAssignment[]
+
+  @@index([code])
+  @@index([isActive])
+  @@map("transport_lines")
+}
+
+model TransportStop {
+  id          String   @id @default(uuid())
+  code        String   @unique // e.g. "ARR-KLM-01"
+  name        String   // e.g. "Gare Centrale de Kaloum", "Madina Marché"
+  communeId   String?  @map("commune_id")
+  latitude    Float
+  longitude   Float
+  isSheltered Boolean  @default(false) @map("is_sheltered")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  commune Commune?   @relation(fields: [communeId], references: [id], onDelete: SetNull)
+  lines   LineStop[]
+
+  @@index([code])
+  @@index([communeId])
+  @@map("transport_stops")
+}
+
+model LineStop {
+  id                  String        @id @default(uuid())
+  lineId              String        @map("line_id")
+  stopId              String        @map("stop_id")
+  stopOrder           Int           @map("stop_order") // 1, 2, 3...
+  direction           StopDirection @default(ALLER)
+  distanceFromStartKm Float?        @map("distance_from_start_km")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  line TransportLine @relation(fields: [lineId], references: [id], onDelete: Cascade)
+  stop TransportStop @relation(fields: [stopId], references: [id], onDelete: Cascade)
+
+  @@unique([lineId, stopId, direction])
+  @@index([lineId])
+  @@index([stopId])
+  @@index([stopOrder])
+  @@map("line_stops")
 }
