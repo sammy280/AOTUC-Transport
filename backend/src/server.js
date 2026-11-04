@@ -2,11 +2,15 @@ import app from './app.js';
 import config from './config/index.js';
 import logger from './utils/logger.js';
 import prisma from './utils/prisma.js';
+import SocketService from './services/socketService.js';
 
 const server = app.listen(config.PORT, config.HOST, () => {
   logger.info(`🚀 AOTUC-TRANSPORT API Server started on http://${config.HOST}:${config.PORT}`);
   logger.info(`Environment: ${config.NODE_ENV} | Health endpoint: http://${config.HOST}:${config.PORT}/api/v1/health`);
 });
+
+// Initialize real-time WebSocket Hub
+SocketService.init(server);
 
 // Graceful Shutdown Handling
 const shutdown = async (signal) => {
