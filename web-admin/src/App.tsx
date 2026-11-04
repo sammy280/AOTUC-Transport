@@ -7,6 +7,8 @@ import ValidationQueue from './features/validation/ValidationQueue';
 import NetworkMapView from './features/mapping/NetworkMapView';
 import BadgeLicenceCenter from './features/badges/BadgeLicenceCenter';
 import TicketingLedgerView from './features/ticketing/TicketingLedgerView';
+import RegistrationDesk from './features/enrolment/RegistrationDesk';
+import AuditSecurityLogView from './features/audit/AuditSecurityLogView';
 
 export const App: React.FC = () => {
   // Configurable user context simulating the 6 RBAC roles
@@ -106,6 +108,10 @@ export const App: React.FC = () => {
             <ValidationQueue currentUser={currentUser} />
           )}
 
+          {currentTab === 'enrolment' && (
+            <RegistrationDesk currentUser={currentUser} />
+          )}
+
           {currentTab === 'mapping' && (
             <NetworkMapView />
           )}
@@ -118,30 +124,9 @@ export const App: React.FC = () => {
             <TicketingLedgerView currentUser={currentUser} />
           )}
 
-          {currentTab !== 'dashboard' &&
-            currentTab !== 'validation' &&
-            currentTab !== 'mapping' &&
-            currentTab !== 'badges' &&
-            currentTab !== 'licences' &&
-            currentTab !== 'ticketing' && (
-              <div className="p-8 bg-white border border-slate-200 rounded-xl text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400 font-bold">
-                  AOTUC
-                </div>
-                <h2 className="text-base font-bold text-slate-800">
-                  Module en Cours d Implémentation : {currentTab.toUpperCase()}
-                </h2>
-                <p className="text-xs text-slate-500 max-w-md mx-auto">
-                  Ce module sera branché au fur et à mesure des jalons backend validés (Billetterie & Finances au Jalon 7, Messagerie & Alertes au Jalon 8).
-                </p>
-                <button
-                  onClick={() => setCurrentTab('dashboard')}
-                  className="mt-4 px-4 py-2 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition"
-                >
-                  Retour au Tableau de Bord
-                </button>
-              </div>
-            )}
+          {currentTab === 'audit' && (
+            <AuditSecurityLogView currentUser={currentUser} />
+          )}
         </main>
       </div>
     </div>
