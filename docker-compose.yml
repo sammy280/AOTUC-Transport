@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # ==============================================================================
+  # 1. PostgreSQL 16 + PostGIS 3.4 Spatial Database
+  # ==============================================================================
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: aotuc_postgres_postgis
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-aotuc_transport}
+      POSTGRES_USER: ${POSTGRES_USER:-aotuc_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-AotucSecure2026!}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aotuc_admin} -d ${POSTGRES_DB:-aotuc_transport}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aotuc_network
+
+  # ==============================================================================
+  # 2. Node.js Express Backend API + WebSocket Hub
+  # ==============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aotuc_backend_api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aotuc_admin}:${POSTGRES_PASSWORD:-AotucSecure2026!}@postgres:5432/${POSTGRES_DB:-aotuc_transport}?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-aotuc_jwt_access_super_secret_key_2026_conakry}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-aotuc_jwt_refresh_super_secret_key_2026_conakry}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+      STORAGE_DRIVER: local
+      STORAGE_LOCAL_ROOT: /app/storage/documents
+      SMS_PROVIDER: ${SMS_PROVIDER:-MOCK}
+    ports:
+      - "4000:4000"
+    volumes:
+      - aotuc_documents:/app/storage/documents
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - aotuc_network
+
+  # ==============================================================================
+  # 3. Web Admin Console (Nginx + React 18)
+  # ==============================================================================
+  web-admin:
+    build:
+      context: ./web-admin
+      dockerfile: Dockerfile
+    container_name: aotuc_web_admin
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - aotuc_network
+
+volumes:
+  postgres_data:
+    name: aotuc_postgres_data
+  aotuc_documents:
+    name: aotuc_documents_data
+
+networks:
+  aotuc_network:
+    name: aotuc_transport_network
+    driver: bridge
