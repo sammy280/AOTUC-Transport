@@ -62,13 +62,13 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
 ];
 
 export const App: React.FC = () => {
-  // Check if session already exists in localStorage
+  // Strict Security Gate: The user MUST authenticate to access the system
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('aotuc_auth_token') !== null;
+    return sessionStorage.getItem('aotuc_session_active') === 'true';
   });
 
   const [currentUser, setCurrentUser] = useState<UserContext>(() => {
-    const saved = localStorage.getItem('aotuc_user');
+    const saved = sessionStorage.getItem('aotuc_user');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -112,12 +112,16 @@ export const App: React.FC = () => {
   };
 
   const handleLoginSuccess = (user: UserContext) => {
+    sessionStorage.setItem('aotuc_session_active', 'true');
+    sessionStorage.setItem('aotuc_user', JSON.stringify(user));
     setCurrentUser(user);
     setIsAuthenticated(true);
     showToast('success', 'Authentification Réussie', `Bienvenue ${user.name} (${user.roleLabel}).`);
   };
 
   const handleLogout = () => {
+    sessionStorage.removeItem('aotuc_session_active');
+    sessionStorage.removeItem('aotuc_user');
     localStorage.removeItem('aotuc_auth_token');
     localStorage.removeItem('aotuc_user');
     setIsAuthenticated(false);

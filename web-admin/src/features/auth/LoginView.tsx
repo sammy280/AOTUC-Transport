@@ -11,6 +11,7 @@ import {
   Users,
   Ticket,
   ArrowRight,
+  Info,
 } from 'lucide-react';
 import { UserContext, RoleType } from '../../types';
 
@@ -100,30 +101,35 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
 ];
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
-  const [identifier, setIdentifier] = useState('directeur@aotuc.test');
-  const [password, setPassword] = useState('DevAotuc2026!');
+  // Empty initially so the user MUST fill credentials to login
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!identifier.trim() || !password.trim()) {
-      setErrorMessage('Veuillez renseigner votre identifiant et votre mot de passe.');
+    const cleanIdentifier = identifier.trim();
+    const cleanPassword = password.trim();
+
+    if (!cleanIdentifier || !cleanPassword) {
+      setErrorMessage('Veuillez saisir votre identifiant professionnel et votre mot de passe.');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // 1. First attempt real backend authentication
+      // 1. Attempt backend authentication
       const response = await fetch('http://localhost:5000/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: identifier.trim(), password: password.trim() }),
+        body: JSON.stringify({ identifier: cleanIdentifier, password: cleanPassword }),
       }).catch(() => null);
 
       if (response && response.ok) {
@@ -138,12 +144,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           roleLabel: 'Directeur Général AOTUC',
           communeName: apiUser?.communeName || 'Direction Générale',
           communeId: apiUser?.communeId || null,
-          email: apiUser?.email || identifier,
+          email: apiUser?.email || cleanIdentifier,
           phoneNumber: apiUser?.phoneNumber,
         };
 
         if (rememberMe) {
-          localStorage.setItem('aotuc_auth_token', accessToken || 'mock-token');
+          localStorage.setItem('aotuc_auth_token', accessToken || 'token-session');
           localStorage.setItem('aotuc_user', JSON.stringify(loggedUser));
         }
 
@@ -151,14 +157,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         return;
       }
 
-      // 2. Fallback to Local Certified Demo Match (offline/standalone dev mode)
+      // 2. Demo credentials matching
       const matchedDemo = DEMO_ACCOUNTS.find(
         (acc) =>
-          acc.email.toLowerCase() === identifier.trim().toLowerCase() ||
-          acc.phone.replace(/\s+/g, '') === identifier.replace(/\s+/g, '')
+          acc.email.toLowerCase() === cleanIdentifier.toLowerCase() ||
+          acc.phone.replace(/\s+/g, '') === cleanIdentifier.replace(/\s+/g, '')
       );
 
-      if (matchedDemo && password.trim() === 'DevAotuc2026!') {
+      if (matchedDemo && cleanPassword === 'DevAotuc2026!') {
         const loggedUser: UserContext = {
           id: `usr-${matchedDemo.role.toLowerCase()}`,
           name: matchedDemo.name,
@@ -179,9 +185,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         return;
       }
 
-      // If credentials do not match
+      // Credentials rejected
       setErrorMessage(
-        'Identifiant ou mot de passe incorrect. Pour les tests, utilisez le mot de passe "DevAotuc2026!" ou cliquez sur un compte de démonstration ci-dessous.'
+        'Identifiant ou mot de passe invalide. Veuillez vérifier vos identifiants ou sélectionner un compte de test ci-dessous.'
       );
     } catch {
       setErrorMessage('Une erreur est survenue lors de la tentative de connexion.');
@@ -191,28 +197,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   };
 
   const handleSelectDemoAccount = (demo: DemoAccount) => {
+    // Populate form fields only without automatically bypassing the login gate
     setIdentifier(demo.email);
     setPassword('DevAotuc2026!');
     setErrorMessage(null);
-
-    // Instant login for smooth developer experience
-    const loggedUser: UserContext = {
-      id: `usr-${demo.role.toLowerCase()}`,
-      name: demo.name,
-      role: demo.role,
-      roleLabel: demo.roleLabel,
-      communeName: demo.commune,
-      communeId: demo.communeId,
-      email: demo.email,
-      phoneNumber: demo.phone,
-    };
-
-    if (rememberMe) {
-      localStorage.setItem('aotuc_auth_token', 'mock-jwt-token-aotuc-2026');
-      localStorage.setItem('aotuc_user', JSON.stringify(loggedUser));
-    }
-
-    onLoginSuccess(loggedUser, 'mock-jwt-token-aotuc-2026');
+    setInfoMessage(
+      `Identifiants pré-remplis pour « ${demo.name} » (${demo.roleLabel}). Cliquez sur « Accéder au Système AOTUC » pour valider la connexion.`
+    );
   };
 
   return (
@@ -257,8 +248,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   <ShieldCheck className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="font-semibold text-white">Cryptographie Asymétrique Ed25519</div>
-                  <div className="text-[11px] text-slate-400">Badges et licences infalsifiables vérifiables hors ligne.</div>
+                  <div className="font-semibold text-white">Authentification Sécurisée Obligatoire</div>
+                  <div className="text-[11px] text-slate-400">Accès restreint aux agents assermentés et habilités.</div>
                 </div>
               </div>
 
@@ -267,7 +258,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   <Building2 className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="font-semibold text-white">Workflow Tri-Niveaux & Découpage Territorial</div>
+                  <div className="font-semibold text-white">Traçabilité & Découpage Territorial</div>
                   <div className="text-[11px] text-slate-400">Contrôle hiérarchique étanche par commune et direction.</div>
                 </div>
               </div>
@@ -285,10 +276,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               />
               <div>
                 <h2 className="text-lg font-bold text-slate-900 tracking-tight">
-                  Connexion Sécurisée
+                  Connexion Requise
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Veuillez vous authentifier pour accéder à la console de gestion
+                  Veuillez renseigner vos identifiants pour accéder au système
                 </p>
               </div>
             </div>
@@ -301,11 +292,19 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               </div>
             )}
 
+            {/* Info Notice when demo account selected */}
+            {infoMessage && (
+              <div className="mx-6 sm:mx-8 mt-6 p-3.5 bg-blue-50 border border-blue-200 rounded-xl flex items-start space-x-3 text-blue-900 text-xs">
+                <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{infoMessage}</span>
+              </div>
+            )}
+
             {/* Login Form */}
             <form onSubmit={handleLogin} className="p-6 sm:p-8 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Identifiant Professionnel
+                  Identifiant Professionnel (Email ou Téléphone)
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -314,8 +313,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   <input
                     type="text"
                     value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="email@aotuc.test ou +224 6XX XX XX XX"
+                    onChange={(e) => {
+                      setIdentifier(e.target.value);
+                      setInfoMessage(null);
+                    }}
+                    placeholder="ex: directeur@aotuc.test ou +224 620 00 00 02"
                     className="w-full pl-9 pr-3 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#CE1126] transition"
                     required
                   />
@@ -333,7 +335,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setInfoMessage(null);
+                    }}
                     placeholder="••••••••••••"
                     className="w-full pl-9 pr-10 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#CE1126] transition font-mono"
                     required
@@ -359,16 +364,16 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   />
                   <span>Mémoriser ma session</span>
                 </label>
-                <span className="text-[11px] text-slate-400">Chiffrement AES-GCM / Argon2</span>
+                <span className="text-[11px] text-slate-400">Protection Argon2id & JWT</span>
               </div>
 
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3 px-4 bg-[#CE1126] hover:bg-[#b00f20] text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center space-x-2 shadow-lg shadow-red-500/20 transition disabled:opacity-50"
+                className="w-full py-3 px-4 bg-[#CE1126] hover:bg-[#b00f20] text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center space-x-2 shadow-lg shadow-red-500/20 transition disabled:opacity-50 cursor-pointer"
               >
                 {isLoading ? (
-                  <span>Authentification en cours...</span>
+                  <span>Vérification des accréditations...</span>
                 ) : (
                   <>
                     <span>Accéder au Système AOTUC</span>
@@ -381,7 +386,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             {/* Quick Demo Accounts Selection */}
             <div className="px-6 sm:px-8 pb-6 pt-3 bg-slate-50/70 border-t border-slate-100">
               <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2.5 flex items-center justify-between">
-                <span>Comptes Démonstrateurs Certifiés (Accès Direct)</span>
+                <span>Remplir les identifiants d un profil certifié :</span>
                 <span className="text-[10px] text-slate-400 font-mono">DevAotuc2026!</span>
               </div>
 
@@ -391,7 +396,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                     key={demo.email}
                     type="button"
                     onClick={() => handleSelectDemoAccount(demo)}
-                    className="p-2 text-left bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-xl transition flex items-center space-x-2.5 group shadow-sm"
+                    className="p-2 text-left bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-xl transition flex items-center space-x-2.5 group shadow-sm cursor-pointer"
+                    title={`Remplir les identifiants pour ${demo.name}`}
                   >
                     <div className="p-1.5 rounded-lg bg-slate-100 group-hover:scale-105 transition">
                       {demo.icon}
