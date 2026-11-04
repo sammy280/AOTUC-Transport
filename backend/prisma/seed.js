@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { PrismaClient, RoleType } from '@prisma/client';
 import argon2 from 'argon2';
 
@@ -139,8 +140,191 @@ async function main() {
       },
     });
   }
-
   console.log('✅ Fictional development test users seeded successfully.');
+
+  // 4. Seed Chart of Financial Accounts (Double-Entry Ledger in GNF)
+  const financialAccounts = [
+    { accountCode: '512100', name: 'Banque Centrale BCRG - Compte Général AOTUC', type: 'ACTIF', balanceGnf: 2500000000n },
+    { accountCode: '531100', name: 'Caisse Principale AOTUC Conakry', type: 'ACTIF', balanceGnf: 45000000n },
+    { accountCode: '411100', name: 'Créances Distributeurs & Points de Vente', type: 'ACTIF', balanceGnf: 12000000n },
+    { accountCode: '706100', name: 'Produits des Ventes Titres de Transport', type: 'PRODUIT', balanceGnf: 0n },
+  ];
+
+  for (const fa of financialAccounts) {
+    await prisma.financialAccount.upsert({
+      where: { accountCode: fa.accountCode },
+      update: { name: fa.name, type: fa.type },
+      create: fa,
+    });
+  }
+  console.log('✅ Chart of Financial Accounts seeded successfully.');
+
+  // 5. Seed Ticket Tariffs
+  const tariffsData = [
+    { code: 'T-2000', name: 'Ticket Urbain Standard (2 000 GNF)', priceGnf: 2000, vehicleCategory: 'MINIBUS_URBAIN' },
+    { code: 'T-5000', name: 'Ticket Express Conakry Direct (5 000 GNF)', priceGnf: 5000, vehicleCategory: 'AUTOBUS_GRAND_GABARIT' },
+    { code: 'T-10000', name: 'Pass Journalier Toutes Lignes (10 000 GNF)', priceGnf: 10000, vehicleCategory: 'TOUS_VEHICULES' },
+  ];
+
+  const tariffs = {};
+  for (const t of tariffsData) {
+    const tariff = await prisma.ticketTariff.upsert({
+      where: { code: t.code },
+      update: { name: t.name, priceGnf: t.priceGnf, vehicleCategory: t.vehicleCategory },
+      create: t,
+    });
+    tariffs[t.code] = tariff;
+  }
+  console.log('✅ Ticket Tariffs seeded successfully.');
+
+  // 6. Seed Initial Ticket Carnet Batch (EN_STOCK_CENTRAL)
+  await prisma.ticketBatch.upsert({
+    where: { batchNumber: 'LOT-2026-0001' },
+    update: {},
+    create: {
+      batchNumber: 'LOT-2026-0001',
+      tariffId: tariffs['T-2000'].id,
+      startSerial: 1000001n,
+      endSerial: 1001000n,
+      totalCount: 1000,
+      remainingCount: 1000,
+      status: 'EN_STOCK_CENTRAL',
+    },
+  });
+  console.log('✅ Ticket Batch LOT-2026-0001 seeded successfully.');
+
+  // 7. Seed Official Transport Stops of Conakry
+  const stopsData = [
+    { code: 'ARR-KLM-01', name: 'Palais du Peuple', communeId: communes['KLM'].id, latitude: 9.5241, longitude: -13.6892, isSheltered: true },
+    { code: 'ARR-DXN-01', name: 'Université Gamal Abdel Nasser', communeId: communes['DXN'].id, latitude: 9.5375, longitude: -13.6765, isSheltered: true },
+    { code: 'ARR-MTM-01', name: 'Grand Marché de Madina', communeId: communes['MTM'].id, latitude: 9.5482, longitude: -13.6558, isSheltered: true },
+    { code: 'ARR-MTT-01', name: 'Aéroport Int. Ahmed Sékou Touré', communeId: communes['MTT'].id, latitude: 9.5768, longitude: -13.6121, isSheltered: true },
+    { code: 'ARR-MTT-02', name: 'Gare Routière Entag', communeId: communes['MTT'].id, latitude: 9.6105, longitude: -13.5654, isSheltered: true },
+    { code: 'ARR-RTM-01', name: 'Carrefour Bambéto', communeId: communes['RTM'].id, latitude: 9.5932, longitude: -13.6378, isSheltered: true },
+    { code: 'ARR-RTM-02', name: 'Rond-Point Cosa', communeId: communes['RTM'].id, latitude: 9.6201, longitude: -13.6102, isSheltered: true },
+  ];
+
+  const stops = {};
+  for (const s of stopsData) {
+    const stop = await prisma.transportStop.upsert({
+      where: { code: s.code },
+      update: { name: s.name, latitude: s.latitude, longitude: s.longitude, isSheltered: s.isSheltered },
+      create: s,
+    });
+    stops[s.code] = stop;
+  }
+  console.log('✅ Transport Stops seeded successfully.');
+
+  // 8. Seed Transport Lines (Conakry Corridors)
+  const linesData = [
+    {
+      code: 'L-01',
+      name: 'Axe Autoroute Fidel Castro (Kaloum ↔ Entag)',
+      colorHex: '#CE1126',
+      originName: 'Palais du Peuple (Kaloum)',
+      destinationName: 'Gare Routière Entag',
+      distanceKm: 22.4,
+      estimatedMinutes: 45,
+      pathCoordinates: [
+        [-13.6892, 9.5241],
+        [-13.6765, 9.5375],
+        [-13.6558, 9.5482],
+        [-13.6121, 9.5768],
+        [-13.5654, 9.6105],
+      ],
+    },
+    {
+      code: 'L-02',
+      name: 'Axe Route Le Prince (Kaloum ↔ Cosa)',
+      colorHex: '#FCD116',
+      originName: 'Kaloum Port',
+      destinationName: 'Cosa Marché',
+      distanceKm: 19.8,
+      estimatedMinutes: 50,
+      pathCoordinates: [
+        [-13.6892, 9.5241],
+        [-13.6650, 9.5520],
+        [-13.6378, 9.5932],
+        [-13.6102, 9.6201],
+      ],
+    },
+    {
+      code: 'L-03',
+      name: 'Corniche Nord (Dixinn ↔ Lambanyi)',
+      colorHex: '#009460',
+      originName: 'Dixinn Belle-Vue',
+      destinationName: 'Lambanyi Carrefour',
+      distanceKm: 16.5,
+      estimatedMinutes: 40,
+      pathCoordinates: [
+        [-13.6765, 9.5375],
+        [-13.6500, 9.5700],
+        [-13.6200, 9.6050],
+      ],
+    },
+    {
+      code: 'L-04',
+      name: 'Corniche Sud (Madina ↔ Dabompa)',
+      colorHex: '#1E3A8A',
+      originName: 'Madina Marché',
+      destinationName: 'Dabompa Plateau',
+      distanceKm: 21.0,
+      estimatedMinutes: 48,
+      pathCoordinates: [
+        [-13.6558, 9.5482],
+        [-13.6100, 9.5700],
+        [-13.5500, 9.6100],
+      ],
+    },
+  ];
+
+  for (const l of linesData) {
+    const line = await prisma.transportLine.upsert({
+      where: { code: l.code },
+      update: {
+        name: l.name,
+        colorHex: l.colorHex,
+        originName: l.originName,
+        destinationName: l.destinationName,
+        distanceKm: l.distanceKm,
+        estimatedMinutes: l.estimatedMinutes,
+        pathCoordinates: l.pathCoordinates,
+      },
+      create: l,
+    });
+
+    // Link stops for Line 1
+    if (l.code === 'L-01') {
+      const lineStops = [
+        { stopId: stops['ARR-KLM-01'].id, order: 1, dist: 0.0 },
+        { stopId: stops['ARR-DXN-01'].id, order: 2, dist: 3.2 },
+        { stopId: stops['ARR-MTM-01'].id, order: 3, dist: 6.5 },
+        { stopId: stops['ARR-MTT-01'].id, order: 4, dist: 14.8 },
+        { stopId: stops['ARR-MTT-02'].id, order: 5, dist: 22.4 },
+      ];
+
+      for (const ls of lineStops) {
+        await prisma.lineStop.upsert({
+          where: {
+            lineId_stopId_direction: {
+              lineId: line.id,
+              stopId: ls.stopId,
+              direction: 'ALLER',
+            },
+          },
+          update: { stopOrder: ls.order, distanceFromStartKm: ls.dist },
+          create: {
+            lineId: line.id,
+            stopId: ls.stopId,
+            stopOrder: ls.order,
+            direction: 'ALLER',
+            distanceFromStartKm: ls.dist,
+          },
+        });
+      }
+    }
+  }
+  console.log('✅ Transport Lines and Corridors seeded successfully.');
   console.log('📌 NOTE: All test users share password: "DevAotuc2026!"');
 }
 
