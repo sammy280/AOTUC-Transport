@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   UserContext,
-  RoleType,
   NotificationItem,
   ToastMessage,
   NotificationCategory,
@@ -128,89 +127,6 @@ export const App: React.FC = () => {
     showToast('info', 'Session Clôturée', 'Vous avez été déconnecté avec succès du système AOTUC.');
   };
 
-  const handleSwitchRole = (role: RoleType) => {
-    switch (role) {
-      case 'SUPER_ADMIN':
-        setCurrentUser({
-          id: 'adm-001',
-          name: 'Ibrahima Diallo',
-          role: 'SUPER_ADMIN',
-          roleLabel: 'Super Administrateur DSI',
-          communeName: 'Toutes Communes',
-          communeId: null,
-          email: 'superadmin@aotuc.test',
-          phoneNumber: '+224 620 00 00 01',
-        });
-        showToast('info', 'Changement de Rôle', 'Session basculée sur Super Administrateur (DSI).');
-        break;
-      case 'DIRECTOR':
-        setCurrentUser({
-          id: 'dir-001',
-          name: 'Mamadou Camara',
-          role: 'DIRECTOR',
-          roleLabel: 'Directeur Général AOTUC',
-          communeName: 'Direction Générale',
-          communeId: null,
-          email: 'directeur@aotuc.test',
-          phoneNumber: '+224 620 00 00 02',
-        });
-        showToast('info', 'Changement de Rôle', 'Session basculée sur Directeur Général AOTUC (Niveau 3).');
-        break;
-      case 'CHEF_SERVICE':
-        setCurrentUser({
-          id: 'chf-001',
-          name: 'Fanta Soumah',
-          role: 'CHEF_SERVICE',
-          roleLabel: 'Chef de Service Territorial',
-          communeName: 'Matoto',
-          communeId: 'cm-matoto',
-          email: 'chef.matoto@aotuc.test',
-          phoneNumber: '+224 620 00 00 03',
-        });
-        showToast('info', 'Changement de Rôle', 'Session basculée sur Chef de Service Matoto (Niveau 2).');
-        break;
-      case 'AGENT_TERRAIN':
-        setCurrentUser({
-          id: 'agt-001',
-          name: 'Sekou Conte',
-          role: 'AGENT_TERRAIN',
-          roleLabel: 'Agent d Enrôlement Terrain',
-          communeName: 'Matoto',
-          communeId: 'cm-matoto',
-          email: 'agent.matoto@aotuc.test',
-          phoneNumber: '+224 620 00 00 05',
-        });
-        showToast('info', 'Changement de Rôle', 'Session basculée sur Agent d Enrôlement Terrain.');
-        break;
-      case 'SYNDICAT':
-        setCurrentUser({
-          id: 'syn-001',
-          name: 'Amadou Diallo',
-          role: 'SYNDICAT',
-          roleLabel: 'Délégué Syndical FNTG',
-          communeName: 'Fédération Syndicale',
-          communeId: null,
-          email: 'syndicat.fntg@aotuc.test',
-          phoneNumber: '+224 620 00 00 07',
-        });
-        showToast('info', 'Changement de Rôle', 'Session basculée sur Délégué Syndical (Lecture).');
-        break;
-      case 'DISTRIBUTEUR':
-        setCurrentUser({
-          id: 'dst-001',
-          name: 'Ousmane Sylla',
-          role: 'DISTRIBUTEUR',
-          roleLabel: 'Distributeur Agréé Billetterie',
-          communeName: 'Kaloum',
-          communeId: 'cm-kaloum',
-          email: 'distributeur.kaloum@aotuc.test',
-          phoneNumber: '+224 620 00 00 06',
-        });
-        showToast('info', 'Changement de Rôle', 'Session basculée sur Distributeur Billetterie.');
-        break;
-    }
-  };
-
   const handleMarkAsRead = (id: string) => {
     setNotifications((prev) =>
       prev.map((item) => (item.id === id ? { ...item, isRead: true } : item))
@@ -307,7 +223,6 @@ export const App: React.FC = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       <Navbar
         currentUser={currentUser}
-        onSwitchRole={handleSwitchRole}
         notifications={notifications}
         onMarkAsRead={handleMarkAsRead}
         onMarkAllAsRead={handleMarkAllAsRead}

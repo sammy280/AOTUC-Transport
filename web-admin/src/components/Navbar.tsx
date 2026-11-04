@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { UserContext, RoleType, NotificationItem } from '../types';
-import { ShieldCheck, UserCheck, Bell, ChevronDown, LogOut } from 'lucide-react';
+import { UserContext, NotificationItem } from '../types';
+import { ShieldCheck, UserCheck, Bell, LogOut } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown';
 
 interface NavbarProps {
   currentUser: UserContext;
-  onSwitchRole: (role: RoleType) => void;
   notifications: NotificationItem[];
   onMarkAsRead: (id: string) => void;
   onMarkAllAsRead: () => void;
@@ -17,7 +16,6 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
-  onSwitchRole,
   notifications,
   onMarkAsRead,
   onMarkAllAsRead,
@@ -60,27 +58,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Right Controls: Role Switcher & Profile */}
+          {/* Right Controls: Role Badge, Notifications & Profile */}
           <div className="flex items-center space-x-4">
-            {/* Quick Role Switcher for Developer Testing */}
-            <div className="relative inline-block text-left">
-              <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span className="font-medium text-slate-500 hidden md:inline">Profil Actif :</span>
-                <select
-                  value={currentUser.role}
-                  onChange={(e) => onSwitchRole(e.target.value as RoleType)}
-                  className="bg-transparent font-semibold text-slate-900 focus:outline-none cursor-pointer"
-                >
-                  <option value="SUPER_ADMIN">Super Administrateur (DSI)</option>
-                  <option value="DIRECTOR">Directeur Général (Niveau 3)</option>
-                  <option value="CHEF_SERVICE">Chef de Service Matoto (Niveau 2)</option>
-                  <option value="AGENT_TERRAIN">Agent Terrain (Enrôlement)</option>
-                  <option value="SYNDICAT">Délégué Syndical (Lecture)</option>
-                  <option value="DISTRIBUTEUR">Distributeur Billetterie</option>
-                </select>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-              </div>
+            {/* Active Accredited Role Badge (No Switcher, No other users shown) */}
+            <div className="hidden sm:flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <span className="font-semibold text-slate-900">{currentUser.roleLabel}</span>
             </div>
 
             {/* Notifications Dropdown Anchor */}
@@ -133,7 +116,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Logout Action Button */}
             <button
               onClick={onLogout}
-              className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition"
+              className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition cursor-pointer"
               title="Se déconnecter de la session AOTUC"
             >
               <LogOut className="w-3.5 h-3.5" />
