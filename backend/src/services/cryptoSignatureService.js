@@ -152,6 +152,10 @@ export class CryptoSignatureService {
       },
     ];
   }
+
+  static getActivePublicKeys() {
+    return this.getPublicKeys();
+  }
 }
 
 export default CryptoSignatureService;
