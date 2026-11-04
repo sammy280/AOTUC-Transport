@@ -48,3 +48,16 @@
 - [x] Scope enforcement: Chefs de Service restricted to dossiers within their assigned commune (`FORBIDDEN_COMMUNE_SCOPE` 403).
 - [x] Automatic operational synchronization: `VALIDE` status updates Driver/Vehicle to `ACTIF`.
 - [x] Full automated integration test suite (27/27 passed across 3 test suites).
+
+---
+
+## Milestone 4: Badges (CR80) & Licences with Ed25519 QR Cryptography (COMPLETED)
+- [x] Asymmetric Ed25519 digital signature engine (`CryptoSignatureService`) based on RFC 8032.
+- [x] Compact serialized QR code format (`AOTUC1.<keyId>.<cid>.<typ>.<tid>.<iat>.<exp>.<sig>`) under 200 characters for instant low-light camera scanning.
+- [x] Offline verification logic with public key caching and anti-tamper signature checking.
+- [x] Dual-sided CR80 printable PVC badge PDF generator ($85.6 \times 53.98\text{ mm}$) with Guinea national colors, driver photo frame, and high-contrast QR code.
+- [x] Windshield transport licence sticker PDF generator ($100 \times 100\text{ mm}$) with route badge and scannable QR code.
+- [x] Credential lifecycle state machine (`ACTIF`, `SUSPENDU`, `EXPIRE`, `PERDU`, `REMPLACE`, `REVOQUE`).
+- [x] Automatic revocation of previous credentials on replacement/renewal.
+- [x] Revocation snapshot endpoint (`GET /api/v1/badges/revocations`) and public key distribution endpoint (`GET /api/v1/badges/public-keys`).
+- [x] Full automated integration test suite covering Milestones 1, 2, 3, and 4 (36/36 tests passed).

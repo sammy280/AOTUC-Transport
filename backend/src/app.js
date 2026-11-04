@@ -10,6 +10,8 @@ import authRoutes from './modules/auth/auth.routes.js';
 import registrationRoutes from './modules/registration/registration.routes.js';
 import documentRoutes from './modules/documents/document.routes.js';
 import validationRoutes from './modules/validation/validation.routes.js';
+import badgeRoutes from './modules/badges/badge.routes.js';
+import licenceRoutes from './modules/licences/licence.routes.js';
 
 const app = express();
 
@@ -83,6 +85,8 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/registration', registrationRoutes);
 app.use('/api/v1/documents', documentRoutes);
 app.use('/api/v1/validation', validationRoutes);
+app.use('/api/v1/badges', badgeRoutes);
+app.use('/api/v1/licences', licenceRoutes);
 
 // 7. 404 Route Not Found Handler
 app.use((req, res, next) => {
