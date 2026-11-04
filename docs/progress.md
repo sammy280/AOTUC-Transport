@@ -104,3 +104,22 @@
 - [x] Production environment template `.env.production.example`.
 - [x] Automated PostGIS database backup and retention scripts (`scripts/backup_db.ps1` and `scripts/backup_db.sh`).
 - [x] Official Republic of Guinea / Ministère des Transports logo integrated across Web Admin (Navbar, Sidebar, Dashboard, Badges, Licences, Tickets), Mobile App, and PDF generators.
+
+---
+
+## Milestone 10: Real-Time Notification Center & Global Toast Alerts (COMPLETED)
+- [x] Interactive Notification Center Dropdown (`NotificationDropdown.tsx`) with category filters (`Validations`, `Sécurité`, `Billetterie`, `SMS`).
+- [x] Unread badge counter with real-time indicators and direct module navigation.
+- [x] Global Toast Notification System (`ToastContainer.tsx`) with auto-dismiss and color-coded status alerts.
+- [x] Backend notifications API (`/api/v1/notifications`, `/api/v1/notifications/simulate`, `/api/v1/notifications/:id/read`) integrated with Socket.IO hub.
+- [x] Automated test suite `backend/tests/notifications.test.js` (4/4 passed).
+
+---
+
+## Milestone 11: Institutional Authentication & Operational Confidentiality (COMPLETED)
+- [x] Strict mandatory login gate (`LoginView.tsx`): All modules protected behind authenticated session.
+- [x] Secure session state management (`App.tsx`) with session storage and immediate logout (`Navbar.tsx`).
+- [x] Offline reference documentation: [`CREDENTIALS.md`](file:///C:/Users/Derrick/OneDrive/Desktop/transport/CREDENTIALS.md) and [`credentials.json`](file:///C:/Users/Derrick/OneDrive/Desktop/transport/credentials.json).
+- [x] Operational confidentiality enforcement: Complete removal of certified users list, demo cards, and role switcher dropdowns from the UI.
+- [x] 100% backend test suite validation (69/69 passed across 9 test suites).
+- [x] 100% frontend production compilation (`tsc && vite build` passed with 0 errors).
