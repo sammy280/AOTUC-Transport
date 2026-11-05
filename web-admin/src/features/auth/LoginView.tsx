@@ -214,6 +214,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenPubl
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1">
                 AOTUC-TRANSPORT
               </h1>
+              <div className="mt-2 inline-flex items-center px-2.5 py-1 rounded-md bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-semibold italic">
+                « Pour une Mobilité Urbaine Participative &amp; Durable »
+              </div>
               <p className="text-xs text-slate-400 mt-2 leading-relaxed">
                 Plateforme Numérique Intégrée d Organisation, d Immatriculation et de Régulation des Transports Urbains de Conakry.
               </p>
@@ -368,8 +371,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenPubl
       </div>
 
       {/* Footer Legal & Security */}
-      <footer className="p-4 text-center text-slate-500 text-[11px] border-t border-slate-800">
-        République de Guinée • Ministère des Transports • Agence Organisatrice du Transport Urbain de Conakry (AOTUC) © 2026
+      <footer className="p-4 text-center text-slate-500 text-[11px] border-t border-slate-800 space-y-0.5">
+        <div>République de Guinée • Ministère des Transports • Agence Organisatrice du Transport Urbain de Conakry (AOTUC) © 2026</div>
+        <div className="italic text-slate-400">« Pour une Mobilité Urbaine Participative &amp; Durable »</div>
       </footer>
     </div>
   );

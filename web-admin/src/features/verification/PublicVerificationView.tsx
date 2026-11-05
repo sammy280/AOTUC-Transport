@@ -142,6 +142,9 @@ export const PublicVerificationView: React.FC<{
               <h1 className="text-sm font-black text-slate-900 dark:text-white tracking-tight">
                 Portail Public de Vérification & Contrôle Routier AOTUC
               </h1>
+              <div className="text-[10px] text-slate-400 dark:text-slate-400 italic font-medium">
+                « Pour une Mobilité Urbaine Participative &amp; Durable »
+              </div>
             </div>
           </div>
 
@@ -571,7 +574,10 @@ export const PublicVerificationView: React.FC<{
           <div>
             <b>AGENCE ORGANISATRICE DU TRANSPORT URBAIN DE CONAKRY (AOTUC)</b> • Système Sécurisé v2.0
           </div>
-          <div className="text-[11px] text-slate-400">
+          <div className="italic text-[11px] text-slate-500 dark:text-slate-400">
+            « Pour une Mobilité Urbaine Participative &amp; Durable »
+          </div>
+          <div className="text-[10px] text-slate-400">
             Conformité aux décrets de régulation des transports publics urbains • République de Guinée
           </div>
         </div>

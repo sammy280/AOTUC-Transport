@@ -59,7 +59,7 @@ export class PdfBadgeService {
         margins: { top: 0, bottom: 0, left: 0, right: 0 },
         info: {
           Title: `AOTUC-Badge-${badgeNumber}`,
-          Author: 'AOTUC Guinée',
+          Author: 'AOTUC Guinée — Pour une Mobilité Urbaine Participative & Durable',
         },
       });
 
@@ -198,6 +198,8 @@ export class PdfBadgeService {
         .text('SIGNATURE DE L AUTORITÉ ÉMETTRICE', 12, 84, { align: 'center', width: 218 });
       doc.fontSize(5).font('Helvetica').fillColor('#64748B')
         .text('Directeur Général de l AOTUC — République de Guinée', 12, 92, { align: 'center', width: 218 });
+      doc.fontSize(4.5).font('Helvetica-Oblique').fillColor('#0284C7')
+        .text('« Pour une Mobilité Urbaine Participative & Durable »', 12, 102, { align: 'center', width: 218 });
       doc.fontSize(4.5).font('Helvetica-Oblique').fillColor('#94A3B8')
         .text('[Signature Électronique Certifiée & Sceau République de Guinée RFC 8032]', 12, 116, { align: 'center', width: 218 });
 
@@ -234,7 +236,7 @@ export class PdfBadgeService {
         margins: { top: 0, bottom: 0, left: 0, right: 0 },
         info: {
           Title: `AOTUC-Licence-${licenceNumber}`,
-          Author: 'AOTUC Guinée',
+          Author: 'AOTUC Guinée — Pour une Mobilité Urbaine Participative & Durable',
         },
       });
 

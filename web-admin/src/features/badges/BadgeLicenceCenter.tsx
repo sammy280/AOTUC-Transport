@@ -251,7 +251,7 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
             )}
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Génération, signature asymétrique RFC 8032, impression CR80 PVC et vignettes pare-brise 100×100mm.
+            Génération, signature asymétrique RFC 8032, impression CR80 PVC et vignettes pare-brise 100×100mm • <span className="italic font-medium text-slate-600">« Pour une Mobilité Urbaine Participative &amp; Durable »</span>
           </p>
         </div>
 
