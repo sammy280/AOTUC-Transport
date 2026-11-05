@@ -66,25 +66,27 @@ export const PublicVerificationView: React.FC<{
           success: true,
           status: 'REVOKED',
           statusText: 'TITRE RÉVOQUÉ DÉFINITIVEMENT',
-          documentType: 'DRIVER_BADGE',
+          documentType: 'CARTE PROFESSIONNELLE CONDUCTEUR (CR80)',
           credentialNumber: cleaned,
           issuingAuthority: 'AOTUC — République de Guinée',
           message: 'Ce titre officiel a été révoqué par la Direction Générale suite à une infraction routière.',
           verifiedAt: new Date().toISOString(),
         });
-      } else if (cleaned.includes('CH-') || cleaned.includes('BDG-') || cleaned.includes('LIC-') || cleaned.includes('REC-') || cleaned.startsWith('AOTUC1')) {
+      } else if (cleaned.includes('1452') || cleaned.includes('CH-') || cleaned.includes('BDG-') || cleaned.includes('LIC-') || cleaned.includes('0895') || cleaned.includes('REC-') || cleaned.startsWith('AOTUC1')) {
+        const isLicence = cleaned.includes('LIC') || cleaned.includes('0895');
+        const isTicket = cleaned.includes('REC') || cleaned.includes('TICKET');
         setResult({
           success: true,
           status: 'VALID',
           statusText: 'DOCUMENT AUTHENTIQUE & VALIDE',
-          documentType: cleaned.includes('LIC') ? 'VIGNETTE LICENCE PARE-BRISE' : cleaned.includes('REC') ? 'BILLET DE TRANSPORT URBAIN' : 'CARTE PROFESSIONNELLE CONDUCTEUR (CR80)',
-          credentialNumber: cleaned.startsWith('AOTUC1') ? 'CH-2026-00412' : cleaned,
-          holderInfo: cleaned.includes('LIC') ? 'Véhicule Toyota HiAce (RC-9844-AB)' : 'Conducteur Professionnel AOTUC',
-          authorizedRoute: 'L-01 KALOUM — MATOTO',
-          issuedAt: new Date().toISOString(),
-          expiresAt: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
+          documentType: isLicence ? 'ÉCUSSON DE LICENCE TRANSPORT URBAIN' : isTicket ? 'BILLET DE TRANSPORT URBAIN' : 'BADGE CONDUCTEUR PROFESSIONNEL (CR80)',
+          credentialNumber: isLicence ? 'LC-2026-0895' : isTicket ? 'REC-2026-00042' : 'CH-2026-1452',
+          holderInfo: isLicence ? 'Véhicule Minibus (RC-1234-AB)' : isTicket ? 'Passager Urbain' : 'CAMARA Moussa',
+          authorizedRoute: isLicence ? 'L-01 • KALOUM — LAMBANDJI' : 'L-01 Kaloum-Lambandji',
+          issuedAt: '2024-10-30',
+          expiresAt: isLicence ? '2027-12-31' : '2027-10-30',
           issuingAuthority: 'AOTUC — Direction Générale (Conakry)',
-          securitySeal: 'Signature Cryptographique RFC 8032 Ed25519 Certifiée',
+          securitySeal: 'Signature Cryptographique RFC 8032 Ed25519 Certifiée & Hologramme Inaltérable',
           verifiedAt: new Date().toISOString(),
           message: 'Ce document officiel est conforme, authentique et enregistré au registre central de l AOTUC.',
         });
@@ -110,9 +112,9 @@ export const PublicVerificationView: React.FC<{
   }, [initialCode]);
 
   const sampleBadges = [
-    { label: 'Badge Chauffeur Valide', code: 'CH-2026-00042' },
-    { label: 'Licence Véhicule Valide', code: 'LIC-2026-00188' },
-    { label: 'Badge Chauffeur Révoqué', code: 'BDG-2025-00911' },
+    { label: 'Badge Chauffeur Moussa (CH-2026-1452)', code: 'CH-2026-1452' },
+    { label: 'Écusson Licence Véhicule (LC-2026-0895)', code: 'LC-2026-0895' },
+    { label: 'Badge Chauffeur Révoqué', code: 'CH-2025-00911' },
     { label: 'Billet de Transport Valide', code: 'REC-2026-00042' },
   ];
 

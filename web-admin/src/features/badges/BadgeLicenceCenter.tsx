@@ -21,10 +21,11 @@ interface BadgeRecord {
   nin: string;
   licenseNumber: string;
   categories: string;
+  routeName?: string;
   commune: string;
   issueDate: string;
   expiryDate: string;
-  status: 'ACTIF' | 'REVOQUE' | 'SUSPENDU';
+  status: 'ACTIF' | 'REVOQUE' | 'SUSPENDU' | 'EXPIRE';
   signaturePreview: string;
 }
 
@@ -35,50 +36,69 @@ interface LicenceRecord {
   vehicleMakeModel: string;
   ownerName: string;
   category: string;
+  lineCode?: string;
   seats: number;
   commune: string;
   validYear: number;
+  expiryDate?: string;
   status: 'ACTIF' | 'EXPIRE' | 'REVOQUE';
   signaturePreview: string;
 }
 
 const SAMPLE_BADGES: BadgeRecord[] = [
   {
+    id: 'bdg-spec-001',
+    badgeNumber: 'CH-2026-1452',
+    driverName: 'CAMARA Moussa',
+    nin: '1989041200142',
+    licenseNumber: 'DL-9844-GN',
+    categories: 'B, D1',
+    routeName: 'L-01 Kaloum-Lambandji',
+    commune: 'Kaloum',
+    issueDate: '30-10-2024',
+    expiryDate: '30-10-2027',
+    status: 'ACTIF',
+    signaturePreview: 'AOTUC1.aotuc-2026-v1.CH-2026-1452.DRIVER_BADGE.d1.1730246400.1824854400.sig_Camara_Moussa_Valid_2027',
+  },
+  {
     id: 'bdg-001',
-    badgeNumber: 'BDG-2026-00042',
+    badgeNumber: 'CH-2026-00042',
     driverName: 'Abdoulaye Bah',
     nin: '1988041200142',
     licenseNumber: 'PC-GN-2015-8841',
     categories: 'B, C1',
+    routeName: 'L-02 Matoto-Dixinn',
     commune: 'Matam',
-    issueDate: '2026-02-15',
-    expiryDate: '2028-02-15',
+    issueDate: '15-02-2026',
+    expiryDate: '15-02-2028',
     status: 'ACTIF',
     signaturePreview: 'AOTUC1.ed25519_2026_01.bdg-001.BADGE.DRIVER_Bah.1771113600.1834272000.7f4a9b...',
   },
   {
     id: 'bdg-002',
-    badgeNumber: 'BDG-2026-00043',
+    badgeNumber: 'CH-2026-00043',
     driverName: 'Mohamed Kourouma',
     nin: '1992082400983',
     licenseNumber: 'PC-GN-2018-4412',
     categories: 'B',
+    routeName: 'L-01 Kaloum-Lambandji',
     commune: 'Kaloum',
-    issueDate: '2026-03-01',
-    expiryDate: '2028-03-01',
+    issueDate: '01-03-2026',
+    expiryDate: '01-03-2028',
     status: 'ACTIF',
     signaturePreview: 'AOTUC1.ed25519_2026_01.bdg-002.BADGE.DRIVER_Kourouma.1772323200.1835481600.a1c89e...',
   },
   {
     id: 'bdg-003',
-    badgeNumber: 'BDG-2025-00911',
+    badgeNumber: 'CH-2025-00911',
     driverName: 'Sékouba Camara',
     nin: '1985110300221',
     licenseNumber: 'PC-GN-2012-1094',
     categories: 'B, D',
+    routeName: 'L-04 Ratoma-Kipé',
     commune: 'Matoto',
-    issueDate: '2025-06-10',
-    expiryDate: '2027-06-10',
+    issueDate: '10-06-2025',
+    expiryDate: '10-06-2027',
     status: 'REVOQUE',
     signaturePreview: 'AOTUC1.ed25519_2026_01.bdg-003.BADGE.DRIVER_Camara.1749513600.1812672000.3e4f71...',
   },
@@ -86,28 +106,47 @@ const SAMPLE_BADGES: BadgeRecord[] = [
 
 const SAMPLE_LICENCES: LicenceRecord[] = [
   {
+    id: 'lic-spec-001',
+    licenceNumber: 'LC-2026-0895',
+    plateNumber: 'RC-1234-AB',
+    lineCode: 'L-01 • KALOUM — LAMBANDJI',
+    vehicleMakeModel: 'Toyota HiAce Minibus (Magbana)',
+    ownerName: 'El Hadj Ousmane Sow',
+    category: 'MINIBUS_URBAIN',
+    seats: 18,
+    commune: 'Kaloum',
+    validYear: 2027,
+    expiryDate: '31/12/2027',
+    status: 'ACTIF',
+    signaturePreview: 'AOTUC1.aotuc-2026-v1.LC-2026-0895.TRANSPORT_LICENCE.v1.1730246400.1830211200.sig_LC_2026_0895_Valid_2027',
+  },
+  {
     id: 'lic-001',
-    licenceNumber: 'LIC-2026-00188',
+    licenceNumber: 'LC-2026-00188',
     plateNumber: 'RC-9844-AB',
+    lineCode: 'L-01 • KALOUM — MATOTO',
     vehicleMakeModel: 'Toyota HiAce Minibus (Magbana)',
     ownerName: 'El Hadj Ousmane Sow',
     category: 'MINIBUS_URBAIN',
     seats: 18,
     commune: 'Matoto',
     validYear: 2026,
+    expiryDate: '31/12/2026',
     status: 'ACTIF',
     signaturePreview: 'AOTUC1.ed25519_2026_01.lic-001.LICENCE.VEH_RC9844AB.1767225600.1798761600.8b22de...',
   },
   {
     id: 'lic-002',
-    licenceNumber: 'LIC-2026-00189',
+    licenceNumber: 'LC-2026-00189',
     plateNumber: 'RC-3122-C',
+    lineCode: 'L-03 • MADINA — ENTA',
     vehicleMakeModel: 'Renault Laguna Taxi Jaune',
     ownerName: 'Mamadou Bhoye Diallo',
     category: 'TAXI_COMMUNAL',
     seats: 5,
     commune: 'Kaloum',
     validYear: 2026,
+    expiryDate: '31/12/2026',
     status: 'ACTIF',
     signaturePreview: 'AOTUC1.ed25519_2026_01.lic-002.LICENCE.VEH_RC3122C.1767225600.1798761600.91ef04...',
   },
@@ -410,120 +449,221 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
             </div>
 
             {activeTab === 'badges' ? (
-              /* CR80 Badge Visual Preview */
-              <div className="relative w-full aspect-[85.6/53.98] bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-xl p-4 shadow-lg border border-slate-700 flex flex-col justify-between overflow-hidden">
-                {/* National Tricolor Top Stripe */}
-                <div className="absolute top-0 left-0 right-0 h-1.5 flex">
-                  <div className="flex-1 bg-[#CE1126]" />
-                  <div className="flex-1 bg-[#FCD116]" />
-                  <div className="flex-1 bg-[#16A34A]" />
+              /* CR80 Badge Visual Preview — Official AOTUC 2026 Specification */
+              <div className="relative w-full aspect-[85.6/53.98] bg-white text-slate-900 rounded-xl p-0 shadow-xl border border-slate-300 flex flex-col justify-between overflow-hidden select-none">
+                {/* Subtle repeating watermark across card background */}
+                <div className="absolute inset-0 opacity-[0.05] pointer-events-none flex flex-col justify-around py-4 text-[7px] font-black tracking-widest text-slate-900 select-none">
+                  <div className="whitespace-nowrap">AOTUC - SÉCURISÉ — AOTUC - SÉCURISÉ — AOTUC - SÉCURISÉ</div>
+                  <div className="whitespace-nowrap pl-6">AOTUC - SÉCURISÉ — AOTUC - SÉCURISÉ — AOTUC - SÉCURISÉ</div>
+                  <div className="whitespace-nowrap">AOTUC - SÉCURISÉ — AOTUC - SÉCURISÉ — AOTUC - SÉCURISÉ</div>
+                  <div className="whitespace-nowrap pl-6">AOTUC - SÉCURISÉ — AOTUC - SÉCURISÉ — AOTUC - SÉCURISÉ</div>
                 </div>
 
-                {/* Header */}
-                <div className="flex items-center justify-between mt-1">
-                  <div className="flex items-center space-x-2">
-                    <img
-                      src="/logo-guinee.png"
-                      alt="Sceau Guinée"
-                      className="w-7 h-7 rounded-full bg-white p-0.5 object-contain shadow-sm border border-slate-600 flex-shrink-0"
-                    />
-                    <div>
-                      <div className="text-[8px] uppercase tracking-wider text-slate-300 font-bold">
-                        RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS
+                {/* Header Section */}
+                <div className="relative z-10">
+                  {/* Top Red Stripe */}
+                  <div className="h-1 bg-[#CE1126] w-full" />
+
+                  {/* Yellow Bar */}
+                  <div className="bg-[#FCD116] px-3 py-1 flex items-center justify-between">
+                    <div className="flex items-center space-x-1.5">
+                      {/* Bus Icon in Circle */}
+                      <div className="w-5 h-5 rounded-full bg-[#FCD116] border border-[#009460] flex items-center justify-center">
+                        <svg className="w-3.5 h-3.5 text-[#009460]" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M4 16c0 .88.39 1.67 1 2.22V20a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1h8v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V6h12v5z"/>
+                        </svg>
                       </div>
-                      <div className="text-[10px] font-black text-[#FCD116] tracking-wide">
-                        AOTUC • CARTE PROFESSIONNELLE DE CONDUCTEUR
+                      <span className="text-base font-black text-[#008751] tracking-tight">AOTUC</span>
+                    </div>
+                    <div className="text-[7px] font-black text-[#065F46] uppercase leading-tight text-right">
+                      <div>AGENCE DE TRANSPORT</div>
+                      <div>DE L'UNION DE CONAKRY</div>
+                    </div>
+                  </div>
+
+                  {/* Green Stripe */}
+                  <div className="h-1 bg-[#009460] w-full" />
+
+                  {/* Sub-ribbon */}
+                  <div className="bg-[#E2E8F0] py-0.5 text-center text-[7px] sm:text-[7.5px] font-bold text-slate-800 tracking-wide border-b border-slate-300">
+                    BADGE CONDUCTEUR PROFESSIONNEL • CONAKRY - RÉPUBLIQUE DE GUINÉE
+                  </div>
+                </div>
+
+                {/* Card Middle Body */}
+                <div className="relative z-10 flex-1 px-3 py-1 flex items-center justify-between gap-3">
+                  {/* Left Column: Photo & QR Code */}
+                  <div className="flex flex-col items-center space-y-1">
+                    {/* Photo Box */}
+                    <div className="w-16 h-18 bg-slate-100 border border-slate-300 rounded flex flex-col items-center justify-center p-1 shadow-inner">
+                      <User className="w-8 h-8 text-slate-400" />
+                      <span className="text-[5.5px] font-bold text-slate-500 uppercase mt-0.5 text-center leading-none">
+                        PHOTO DU CONDUCTEUR
+                      </span>
+                    </div>
+                    {/* QR Code */}
+                    <div className="flex flex-col items-center">
+                      <div className="p-0.5 bg-white border border-slate-200 rounded">
+                        <QrCode className="w-9 h-9 text-slate-900" />
+                      </div>
+                      <span className="text-[5.5px] font-bold text-slate-500 uppercase mt-0.5">QR CODE</span>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Driver Details */}
+                  <div className="flex-1 flex flex-col justify-between h-full py-0.5">
+                    {/* Status Pill Top-Right */}
+                    <div className="flex justify-end">
+                      <span className="px-2 py-0.5 bg-[#DC2626] text-white text-[7.5px] font-black rounded-full uppercase tracking-wider shadow-sm">
+                        VALID / VALIDE
+                      </span>
+                    </div>
+
+                    <div className="space-y-0.5">
+                      <div>
+                        <div className="text-[6.5px] font-bold text-slate-400 uppercase tracking-wider">NOM / NAME</div>
+                        <div className="text-xs sm:text-sm font-black text-[#0B1E36] uppercase tracking-wide leading-tight">
+                          {selectedBadge.driverName}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-[6.5px] font-bold text-slate-400 uppercase tracking-wider">BADGE N°</div>
+                        <div className="text-sm font-black text-slate-950 font-mono tracking-tight leading-tight">
+                          {selectedBadge.badgeNumber}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-[6.5px] font-bold text-slate-400 uppercase tracking-wider">LIGNE / LINE</div>
+                        <div className="text-[10px] font-bold text-slate-900 leading-tight">
+                          {selectedBadge.routeName || 'L-01 Kaloum-Lambandji'}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-[6.5px] font-bold text-slate-400 uppercase tracking-wider">EXPIRATION</div>
+                        <div className="text-xs font-black text-slate-950 font-mono leading-tight">
+                          {selectedBadge.expiryDate}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Hologram & Green Oval Stamp */}
+                    <div className="flex items-center justify-end space-x-2 pt-0.5">
+                      {/* Hologram Seal */}
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-500 border border-amber-600 shadow-sm flex items-center justify-center text-[9px] font-bold text-amber-900">
+                        ★
+                      </div>
+                      {/* Green Oval Stamp */}
+                      <div className="px-2 py-0.5 bg-emerald-100 border-2 border-emerald-600 rounded-full text-[8.5px] font-black text-emerald-800 tracking-wider shadow-sm rotate-[-2deg]">
+                        AUTORISÉ
                       </div>
                     </div>
                   </div>
-                  <div className="text-[9px] font-mono bg-slate-800/80 px-2 py-0.5 rounded border border-slate-600 text-slate-200">
-                    {selectedBadge.badgeNumber}
-                  </div>
                 </div>
 
-                {/* Driver Body */}
-                <div className="flex items-center space-x-3 my-1">
-                  <div className="w-16 h-20 rounded bg-slate-700 border-2 border-slate-500 flex flex-col items-center justify-center text-slate-400 overflow-hidden">
-                    <User className="w-8 h-8 text-slate-400" />
-                    <span className="text-[8px] text-slate-300 font-semibold mt-1">PHOTO</span>
+                {/* Card Bottom / Legal Notice & Tricolor bar */}
+                <div className="relative z-10">
+                  <div className="px-3 pb-0.5 text-[5px] text-slate-500 leading-tight text-center">
+                    Délivré le {selectedBadge.issueDate} • Port du badge obligatoire • Ce badge est la propriété de l'AOTUC — Toute falsification est punie par la loi
                   </div>
-
-                  <div className="flex-1 text-[11px] space-y-0.5">
-                    <div className="font-bold text-white text-xs">{selectedBadge.driverName}</div>
-                    <div className="text-slate-300 text-[10px]">
-                      NIN : <span className="font-mono text-slate-200">{selectedBadge.nin}</span>
-                    </div>
-                    <div className="text-slate-300 text-[10px]">
-                      Permis : <span className="font-mono text-slate-200">{selectedBadge.licenseNumber}</span>
-                    </div>
-                    <div className="text-slate-300 text-[10px]">
-                      Catégories : <span className="font-bold text-[#FCD116]">{selectedBadge.categories}</span>
-                    </div>
-                    <div className="text-slate-400 text-[9px]">
-                      Commune : {selectedBadge.commune}
-                    </div>
-                  </div>
-
-                  {/* QR Code */}
-                  <div className="w-16 h-16 bg-white dark-preserve-light p-1 rounded-lg flex flex-col items-center justify-center shadow-inner">
-                    <QrCode className="w-14 h-14 text-slate-900" />
-                  </div>
-                </div>
-
-                {/* Footer Strip */}
-                <div className="flex items-center justify-between text-[9px] text-slate-400 pt-1 border-t border-slate-700">
-                  <div>Valide jusqu au : <b className="text-slate-200">{selectedBadge.expiryDate}</b></div>
-                  <div className="flex items-center space-x-1 text-emerald-400 font-semibold">
-                    <ShieldCheck className="w-3 h-3" />
-                    <span>Ed25519 Signé</span>
+                  {/* Bottom Tricolor Stripe */}
+                  <div className="h-1 flex w-full">
+                    <div className="flex-1 bg-[#CE1126]" />
+                    <div className="flex-1 bg-[#FCD116]" />
+                    <div className="flex-1 bg-[#009460]" />
                   </div>
                 </div>
               </div>
             ) : (
-              /* Windshield Sticker Visual Preview (Square 100x100 mm) */
-              <div className="relative w-full aspect-square max-w-[280px] mx-auto bg-amber-400 text-slate-950 rounded-2xl p-4 shadow-xl border-4 border-slate-900 flex flex-col justify-between overflow-hidden">
-                {/* Header */}
-                <div className="flex items-center space-x-2 border-b-2 border-slate-900 pb-1.5">
-                  <img
-                    src="/logo-guinee.png"
-                    alt="Sceau République de Guinée"
-                    className="w-9 h-9 rounded-full bg-white p-0.5 object-contain border border-slate-900 flex-shrink-0 shadow-sm"
-                  />
-                  <div className="text-left flex-1 leading-tight">
-                    <div className="text-[8px] uppercase font-bold tracking-wider text-slate-800">
-                      RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS
-                    </div>
-                    <div className="text-[11px] font-black uppercase text-slate-950">
-                      AOTUC • VIGNETTE DE TRANSPORT URBAIN
-                    </div>
+              /* Windshield Sticker Visual Preview (Écusson de Licence 100x100 mm) */
+              <div className="relative w-full aspect-square max-w-[320px] mx-auto bg-white text-slate-950 rounded-2xl shadow-2xl border-2 border-slate-300 flex flex-col justify-between overflow-hidden select-none">
+                {/* 1. Red Header Banner */}
+                <div className="bg-[#CE1126] py-2 px-3 text-center rounded-t-xl">
+                  <div className="text-xs sm:text-sm font-black text-white uppercase tracking-wider">
+                    {selectedLicence.lineCode || 'L-01 • KALOUM — LAMBANDJI'}
                   </div>
                 </div>
 
-                {/* Central Plate */}
-                <div className="text-center my-auto space-y-1">
-                  <div className="text-[10px] font-bold text-slate-800 uppercase">
-                    IMMATRICULATION AUTORISÉE
+                {/* 2. Upper White Section: AOTUC Seal + Agency Title */}
+                <div className="bg-white px-3 py-1.5 flex items-center space-x-3">
+                  {/* AOTUC Circular Seal */}
+                  <div className="w-11 h-11 rounded-full border-2 border-[#0B1E36] p-0.5 flex flex-col items-center justify-center text-center bg-white shadow-sm flex-shrink-0">
+                    <div className="w-full h-full rounded-full border border-dashed border-[#0B1E36] flex flex-col items-center justify-center">
+                      <svg className="w-4 h-4 text-[#0B1E36]" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M4 16c0 .88.39 1.67 1 2.22V20a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1h8v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V6h12v5z"/>
+                      </svg>
+                      <span className="text-[4.5px] font-black text-[#0B1E36] uppercase tracking-tighter">AOTUC</span>
+                    </div>
                   </div>
-                  <div className="text-2xl font-black font-mono tracking-wider bg-white py-1 px-2 rounded-lg border-2 border-slate-900 inline-block shadow-sm">
-                    {selectedLicence.plateNumber}
-                  </div>
-                  <div className="text-[11px] font-bold text-slate-900">
-                    {selectedLicence.vehicleMakeModel}
-                  </div>
-                  <div className="text-[10px] text-slate-800">
-                    Capacité : <b>{selectedLicence.seats} Places</b> • {selectedLicence.commune}
+
+                  {/* Agency Title */}
+                  <div className="text-left font-black text-[#1E3A8A] leading-tight uppercase">
+                    <div className="text-[11px] sm:text-xs tracking-wide">ECUSSON DE LICENCE</div>
+                    <div className="text-[11px] sm:text-xs tracking-wide">TRANSPORT URBAIN</div>
                   </div>
                 </div>
 
-                {/* Footer with Big Year & QR Code */}
-                <div className="flex items-center justify-between pt-2 border-t-2 border-slate-900">
-                  <div>
-                    <div className="text-[9px] font-bold uppercase">EXERCICE</div>
-                    <div className="text-2xl font-black text-slate-900">{selectedLicence.validYear}</div>
+                {/* 3. Middle Yellow Banner */}
+                <div className="bg-[#FCD116] py-1.5 px-3 text-center border-t border-b border-amber-500 shadow-inner">
+                  <div className="text-xs sm:text-sm font-black text-slate-950 font-mono tracking-tight uppercase">
+                    LICENCE N° {selectedLicence.licenceNumber}
                   </div>
+                  <div className="text-[11px] sm:text-xs font-black text-[#047857] font-mono tracking-tight uppercase">
+                    IMMATRICULATION : {selectedLicence.plateNumber}
+                  </div>
+                </div>
 
-                  <div className="w-14 h-14 bg-white dark-preserve-light p-1 rounded-lg border-2 border-slate-900 flex items-center justify-center">
+                {/* 4. Lower White Section: QR Code + Validity */}
+                <div className="bg-white px-3 py-1.5 flex items-center justify-between gap-3">
+                  {/* QR Code */}
+                  <div className="p-1 bg-white border border-slate-200 rounded-lg shadow-sm">
                     <QrCode className="w-12 h-12 text-slate-950" />
+                  </div>
+
+                  {/* Validity Text */}
+                  <div className="flex-1 text-left">
+                    <div className="text-xs sm:text-sm font-black text-[#DC2626] font-mono uppercase tracking-tight">
+                      VALIDITÉ : {selectedLicence.expiryDate}
+                    </div>
+                    <div className="text-[10px] sm:text-[11px] font-black text-slate-950 uppercase tracking-tight">
+                      VALABLE POUR L'ANNÉE {selectedLicence.validYear}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Security Micro-text Ribbon */}
+                <div className="bg-slate-100 py-0.5 text-center text-[5.5px] font-bold text-slate-600 uppercase tracking-wider overflow-hidden whitespace-nowrap border-t border-b border-slate-200">
+                  RÉPUBLIQUE DE GUINÉE • AOTUC • SÉCURITÉ • CONTRÔLE - 2026 • RÉPUBLIQUE DE GUINÉE • AOTUC • SÉCURITÉ • CONTRÔLE - 2026
+                </div>
+
+                {/* 6. Bottom Green Banner: Hologram + CONAKRY TRANSPORT PUBLIC AUTORISÉ + Flag */}
+                <div className="bg-[#047857] py-1.5 px-3 rounded-b-xl flex items-center justify-between text-white">
+                  {/* Gold Hologram Rosette */}
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-yellow-400 via-amber-300 to-yellow-500 border border-amber-700 shadow-md flex flex-col items-center justify-center text-center p-0.5 flex-shrink-0">
+                    <span className="text-[7px] text-amber-950 font-black">★</span>
+                    <span className="text-[3px] text-amber-950 font-bold uppercase leading-none">SÉCURISÉ</span>
+                  </div>
+
+                  {/* Center Titles */}
+                  <div className="text-center flex-1 px-1">
+                    <div className="text-[7px] font-bold text-white uppercase tracking-widest">
+                      —— CONAKRY ——
+                    </div>
+                    <div className="text-[10px] sm:text-[11px] font-black text-[#FCD116] uppercase tracking-wider leading-tight">
+                      TRANSPORT PUBLIC AUTORISÉ
+                    </div>
+                    <div className="text-[4.5px] text-white/90 uppercase tracking-tight">
+                      CE DOCUMENT EST SÉCURISÉ - TOUTE CONTREFAÇON EST PUNIE PAR LA LOI
+                    </div>
+                  </div>
+
+                  {/* Guinea National Flag */}
+                  <div className="w-5 h-3.5 flex rounded-sm overflow-hidden border border-white/40 shadow-sm flex-shrink-0">
+                    <div className="flex-1 bg-[#CE1126]" />
+                    <div className="flex-1 bg-[#FCD116]" />
+                    <div className="flex-1 bg-[#009460]" />
                   </div>
                 </div>
               </div>
