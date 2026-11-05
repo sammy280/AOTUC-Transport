@@ -4,7 +4,155 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-slate-50 text-slate-900;
+  html {
+    color-scheme: light;
   }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-slate-50 text-slate-900 transition-colors duration-200 antialiased;
+  }
+  .dark body {
+    @apply bg-slate-950 text-slate-100;
+  }
+}
+
+/* Comprehensive dark mode component adaptors for institutional styling */
+@layer components {
+  /* Cards & Containers */
+  .dark .bg-white {
+    background-color: #0f172a; /* slate-900 */
+  }
+  .dark .bg-slate-50 {
+    background-color: rgba(30, 41, 59, 0.5); /* slate-800/50 */
+  }
+  .dark .bg-slate-50\/70,
+  .dark .bg-slate-50\/80 {
+    background-color: rgba(30, 41, 59, 0.7);
+  }
+  .dark .bg-slate-100 {
+    background-color: #1e293b; /* slate-800 */
+  }
+  .dark .bg-slate-100\/75 {
+    background-color: rgba(30, 41, 59, 0.85);
+  }
+  .dark .bg-slate-200 {
+    background-color: #334155; /* slate-700 */
+  }
+
+  /* Text & Headings */
+  .dark .text-slate-900 {
+    color: #f8fafc; /* slate-50 */
+  }
+  .dark .text-slate-800 {
+    color: #f1f5f9; /* slate-100 */
+  }
+  .dark .text-slate-700 {
+    color: #e2e8f0; /* slate-200 */
+  }
+  .dark .text-slate-600 {
+    color: #cbd5e1; /* slate-300 */
+  }
+  .dark .text-slate-500 {
+    color: #94a3b8; /* slate-400 */
+  }
+  .dark .text-slate-400 {
+    color: #64748b; /* slate-500 */
+  }
+
+  /* Borders & Dividers */
+  .dark .border-slate-100 {
+    border-color: #1e293b; /* slate-800 */
+  }
+  .dark .border-slate-200 {
+    border-color: #1e293b; /* slate-800 */
+  }
+  .dark .border-slate-300 {
+    border-color: #334155; /* slate-700 */
+  }
+  .dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+  .dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+    border-color: #1e293b;
+  }
+
+  /* Form Elements: Inputs, Selects, Textareas */
+  .dark input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .dark select,
+  .dark textarea {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+  }
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #64748b !important;
+  }
+  .dark select option {
+    background-color: #0f172a;
+    color: #f8fafc;
+  }
+
+  /* Tables */
+  .dark table thead {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+  }
+  .dark table thead th {
+    color: #94a3b8 !important;
+  }
+  .dark table tbody tr:hover {
+    background-color: rgba(30, 41, 59, 0.6) !important;
+  }
+
+  /* Badges & Soft Tints in Dark Mode */
+  .dark .bg-blue-50 {
+    background-color: rgba(30, 58, 138, 0.35);
+    color: #93c5fd;
+  }
+  .dark .bg-emerald-50 {
+    background-color: rgba(6, 78, 59, 0.35);
+    color: #6ee7b7;
+  }
+  .dark .bg-amber-50 {
+    background-color: rgba(120, 53, 15, 0.35);
+    color: #fcd34d;
+  }
+  .dark .bg-red-50 {
+    background-color: rgba(127, 29, 29, 0.35);
+    color: #fca5a5;
+  }
+  .dark .bg-purple-50 {
+    background-color: rgba(88, 28, 135, 0.35);
+    color: #d8b4fe;
+  }
+
+  /* Leaflet Map Tiles in Dark Mode */
+  .dark .leaflet-tile-pane {
+    filter: brightness(0.7) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+  }
+  .dark .leaflet-container {
+    background: #0f172a;
+  }
+  .dark .leaflet-popup-content-wrapper,
+  .dark .leaflet-popup-tip {
+    background: #1e293b;
+    color: #f8fafc;
+  }
+}
+
+/* Custom subtle dark mode scrollbars */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.dark ::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }

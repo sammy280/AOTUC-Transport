@@ -237,7 +237,7 @@ export const App: React.FC = () => {
   const isCurrentTabPermitted = isTabAllowed(currentUser.role, currentTab);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
       <Navbar
         currentUser={currentUser}
         notifications={notifications}

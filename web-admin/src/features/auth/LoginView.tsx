@@ -10,6 +10,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { UserContext, RoleType } from '../../types';
+import ThemeToggle from '../../components/ThemeToggle';
 
 interface LoginViewProps {
   onLoginSuccess: (user: UserContext, token?: string) => void;
@@ -177,7 +178,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col justify-between selection:bg-[#CE1126] selection:text-white">
+    <div className="min-h-screen bg-slate-900 dark:bg-slate-950 flex flex-col justify-between selection:bg-[#CE1126] selection:text-white transition-colors duration-200">
       {/* Guinean Tricolor Banner Top Header */}
       <div className="h-2 w-full flex shadow-md">
         <div className="w-1/3 bg-[#CE1126]" />
@@ -185,11 +186,15 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         <div className="w-1/3 bg-[#009460]" />
       </div>
 
+      <div className="flex justify-end px-6 pt-3">
+        <ThemeToggle showLabel={true} />
+      </div>
+
       <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
         <div className="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           {/* Left Column: Official Institutional Hero */}
           <div className="lg:col-span-5 text-white space-y-6 text-center lg:text-left">
-            <div className="inline-flex items-center space-x-3 bg-slate-800/80 border border-slate-700/80 px-3.5 py-1.5 rounded-full">
+            <div className="inline-flex items-center space-x-3 bg-slate-800/80 dark:bg-slate-800 border border-slate-700/80 dark:border-slate-700 px-3.5 py-1.5 rounded-full">
               <img
                 src="/logo-guinee.png"
                 alt="Sceau Officiel République de Guinée"
@@ -236,19 +241,19 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </div>
 
           {/* Right Column: Secure Login Card (NO certified users shown) */}
-          <div className="lg:col-span-7 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+          <div className="lg:col-span-7 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors duration-200">
             {/* Card Header */}
-            <div className="p-6 sm:p-8 bg-slate-50/70 border-b border-slate-100 flex items-center space-x-4">
+            <div className="p-6 sm:p-8 bg-slate-50/70 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-4">
               <img
                 src="/logo-guinee.png"
                 alt="Logo AOTUC"
-                className="w-14 h-14 object-contain rounded-full bg-white p-1 border border-slate-200 shadow-sm flex-shrink-0"
+                className="w-14 h-14 object-contain rounded-full bg-white dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700 shadow-sm flex-shrink-0"
               />
               <div>
-                <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
                   Portail d Accès Sécurisé
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Veuillez vous authentifier pour accéder à la console de gestion
                 </p>
               </div>
@@ -256,8 +261,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
             {/* Error Alert */}
             {errorMessage && (
-              <div className="mx-6 sm:mx-8 mt-6 p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start space-x-3 text-red-800 text-xs">
-                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="mx-6 sm:mx-8 mt-6 p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-xl flex items-start space-x-3 text-red-800 dark:text-red-300 text-xs">
+                <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                 <span className="leading-relaxed">{errorMessage}</span>
               </div>
             )}
@@ -265,7 +270,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             {/* Login Form */}
             <form onSubmit={handleLogin} className="p-6 sm:p-8 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                   Identifiant Professionnel
                 </label>
                 <div className="relative">
@@ -277,7 +282,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     placeholder="Adresse email ou numéro de téléphone mobile"
-                    className="w-full pl-9 pr-3 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#CE1126] transition"
+                    className="w-full pl-9 pr-3 py-2.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#CE1126] transition"
                     required
                     autoComplete="username"
                   />
@@ -285,7 +290,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                   Mot de Passe
                 </label>
                 <div className="relative">
@@ -297,14 +302,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full pl-9 pr-10 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#CE1126] transition font-mono"
+                    className="w-full pl-9 pr-10 py-2.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#CE1126] transition font-mono"
                     required
                     autoComplete="current-password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                     title={showPassword ? 'Masquer' : 'Afficher'}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -313,16 +318,16 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               </div>
 
               <div className="flex items-center justify-between text-xs pt-1">
-                <label className="flex items-center space-x-2 text-slate-600 cursor-pointer">
+                <label className="flex items-center space-x-2 text-slate-600 dark:text-slate-400 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="rounded border-slate-300 text-[#CE1126] focus:ring-[#CE1126]"
+                    className="rounded border-slate-300 dark:border-slate-700 text-[#CE1126] focus:ring-[#CE1126]"
                   />
                   <span>Mémoriser ma session</span>
                 </label>
-                <span className="text-[11px] text-slate-400">Chiffrement Argon2id / TLS 1.3</span>
+                <span className="text-[11px] text-slate-400 dark:text-slate-500">Chiffrement Argon2id / TLS 1.3</span>
               </div>
 
               <button
