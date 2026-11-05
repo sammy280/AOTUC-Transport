@@ -786,7 +786,10 @@ export const TicketingLedgerView: React.FC<{ currentUser: UserContext }> = ({ cu
                 </span>
               </div>
 
-              <div className="p-4 border-2 border-dashed border-slate-300 rounded-xl space-y-3 bg-slate-50/50 text-xs font-mono">
+              <div
+                className="aotuc-official-document p-4 border-2 border-dashed border-slate-300 rounded-xl space-y-3 bg-white text-xs font-mono text-slate-900 shadow-sm"
+                data-official-document="true"
+              >
                 <div className="text-center border-b border-slate-200 pb-2">
                   <div className="font-bold text-slate-900">RÉPUBLIQUE DE GUINÉE</div>
                   <div className="text-[10px] text-slate-500">AGENCE ORGANISATRICE DU TRANSPORT URBAIN (AOTUC)</div>

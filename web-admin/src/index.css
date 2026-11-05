@@ -210,6 +210,169 @@
     border-color: rgba(249, 115, 22, 0.35) !important;
   }
 
+  /* ==============================================================================
+     AOTUC OFFICIAL PHYSICAL DOCUMENTS — THEME IMMUNITY (LIGHT / DARK / SYSTEM)
+     Official physical documents (Driver Badge CR80, Windshield Licence Sticker,
+     and Secure Transport Ticket) have fixed real-world physical properties.
+     Theme switching (Light / Dark / System) must NEVER invert, dim, or alter
+     document surfaces, text contrast, national tricolor bands, or QR codes.
+     ============================================================================== */
+  .aotuc-official-document,
+  .dark .aotuc-official-document {
+    color-scheme: light !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  .aotuc-official-document *,
+  .dark .aotuc-official-document * {
+    color-scheme: light !important;
+  }
+
+  /* 1. Surfaces & Backgrounds */
+  .dark .aotuc-official-document .bg-white,
+  .aotuc-official-document .bg-white {
+    background-color: #ffffff !important;
+  }
+  .dark .aotuc-official-document .bg-slate-50,
+  .aotuc-official-document .bg-slate-50 {
+    background-color: #f8fafc !important;
+  }
+  .dark .aotuc-official-document .bg-slate-100,
+  .aotuc-official-document .bg-slate-100 {
+    background-color: #f1f5f9 !important;
+  }
+  .dark .aotuc-official-document .bg-slate-200,
+  .aotuc-official-document .bg-slate-200 {
+    background-color: #e2e8f0 !important;
+  }
+
+  /* 2. Official Brand & National Colors */
+  .dark .aotuc-official-document [class*="bg-[#CE1126]"],
+  .aotuc-official-document [class*="bg-[#CE1126]"] {
+    background-color: #ce1126 !important;
+  }
+  .dark .aotuc-official-document [class*="bg-[#FCD116]"],
+  .aotuc-official-document [class*="bg-[#FCD116]"] {
+    background-color: #fcd116 !important;
+  }
+  .dark .aotuc-official-document [class*="bg-[#009460]"],
+  .aotuc-official-document [class*="bg-[#009460]"] {
+    background-color: #009460 !important;
+  }
+  .dark .aotuc-official-document [class*="bg-[#047857]"],
+  .aotuc-official-document [class*="bg-[#047857]"] {
+    background-color: #047857 !important;
+  }
+  .dark .aotuc-official-document [class*="bg-[#DC2626]"],
+  .aotuc-official-document [class*="bg-[#DC2626]"] {
+    background-color: #dc2626 !important;
+  }
+  .dark .aotuc-official-document [class*="bg-[#E2E8F0]"],
+  .aotuc-official-document [class*="bg-[#E2E8F0]"] {
+    background-color: #e2e8f0 !important;
+  }
+  .dark .aotuc-official-document [class*="bg-emerald-100"],
+  .aotuc-official-document [class*="bg-emerald-100"] {
+    background-color: #d1fae5 !important;
+  }
+
+  /* 3. Typography & Text Colors */
+  .dark .aotuc-official-document .text-slate-950,
+  .aotuc-official-document .text-slate-950,
+  .dark .aotuc-official-document .text-slate-900,
+  .aotuc-official-document .text-slate-900 {
+    color: #020617 !important;
+  }
+  .dark .aotuc-official-document .text-slate-800,
+  .aotuc-official-document .text-slate-800 {
+    color: #1e293b !important;
+  }
+  .dark .aotuc-official-document .text-slate-700,
+  .aotuc-official-document .text-slate-700 {
+    color: #334155 !important;
+  }
+  .dark .aotuc-official-document .text-slate-600,
+  .aotuc-official-document .text-slate-600 {
+    color: #475569 !important;
+  }
+  .dark .aotuc-official-document .text-slate-500,
+  .aotuc-official-document .text-slate-500 {
+    color: #64748b !important;
+  }
+  .dark .aotuc-official-document .text-slate-400,
+  .aotuc-official-document .text-slate-400 {
+    color: #94a3b8 !important;
+  }
+  .dark .aotuc-official-document .text-white,
+  .aotuc-official-document .text-white {
+    color: #ffffff !important;
+  }
+
+  /* 4. Brand Text Colors */
+  .dark .aotuc-official-document [class*="text-[#008751]"],
+  .aotuc-official-document [class*="text-[#008751]"] {
+    color: #008751 !important;
+  }
+  .dark .aotuc-official-document [class*="text-[#065F46]"],
+  .aotuc-official-document [class*="text-[#065F46]"] {
+    color: #065f46 !important;
+  }
+  .dark .aotuc-official-document [class*="text-[#1E3A8A]"],
+  .aotuc-official-document [class*="text-[#1E3A8A]"] {
+    color: #1e3a8a !important;
+  }
+  .dark .aotuc-official-document [class*="text-[#0B1E36]"],
+  .aotuc-official-document [class*="text-[#0B1E36]"] {
+    color: #0b1e36 !important;
+  }
+  .dark .aotuc-official-document [class*="text-[#047857]"],
+  .aotuc-official-document [class*="text-[#047857]"] {
+    color: #047857 !important;
+  }
+  .dark .aotuc-official-document [class*="text-[#DC2626]"],
+  .aotuc-official-document [class*="text-[#DC2626]"] {
+    color: #dc2626 !important;
+  }
+  .dark .aotuc-official-document [class*="text-[#FCD116]"],
+  .aotuc-official-document [class*="text-[#FCD116]"] {
+    color: #fcd116 !important;
+  }
+  .dark .aotuc-official-document [class*="text-emerald-800"],
+  .aotuc-official-document [class*="text-emerald-800"] {
+    color: #065f46 !important;
+  }
+
+  /* 5. Borders */
+  .dark .aotuc-official-document .border-slate-200,
+  .aotuc-official-document .border-slate-200 {
+    border-color: #e2e8f0 !important;
+  }
+  .dark .aotuc-official-document .border-slate-300,
+  .aotuc-official-document .border-slate-300 {
+    border-color: #cbd5e1 !important;
+  }
+  .dark .aotuc-official-document [class*="border-[#009460]"],
+  .aotuc-official-document [class*="border-[#009460]"] {
+    border-color: #009460 !important;
+  }
+  .dark .aotuc-official-document [class*="border-[#0B1E36]"],
+  .aotuc-official-document [class*="border-[#0B1E36]"] {
+    border-color: #0b1e36 !important;
+  }
+  .dark .aotuc-official-document [class*="border-emerald-600"],
+  .aotuc-official-document [class*="border-emerald-600"] {
+    border-color: #059669 !important;
+  }
+  .dark .aotuc-official-document [class*="border-amber-500"],
+  .aotuc-official-document [class*="border-amber-500"] {
+    border-color: #f59e0b !important;
+  }
+  .dark .aotuc-official-document [class*="border-amber-600"],
+  .aotuc-official-document [class*="border-amber-600"] {
+    border-color: #d97706 !important;
+  }
+
   /* Preserved light surface elements (physical card preview, QR codes) */
   .dark .dark-preserve-light,
   .dark .dark-preserve-light * {

@@ -302,6 +302,175 @@ export const PublicVerificationView: React.FC<{
                     </div>
                   </div>
 
+                  {/* Physical Document Authentic Reproduction (Theme Immune) */}
+                  <div className="pt-3 border-t border-emerald-200 dark:border-emerald-800/60">
+                    <div className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider mb-2 flex items-center justify-between">
+                      <span>Rendu du Titre Physique Officiel :</span>
+                      <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-mono">Modèle AOTUC Certifié</span>
+                    </div>
+
+                    {result.credentialNumber?.includes('LC-') || (result.documentType && (result.documentType.includes('LICENCE') || result.documentType.includes('ÉCUSSON'))) ? (
+                      /* Windshield Sticker Official Visual Reproduction */
+                      <div
+                        className="aotuc-official-document relative w-full aspect-square max-w-[280px] mx-auto bg-white text-slate-950 rounded-2xl shadow-xl border-2 border-slate-300 flex flex-col justify-between overflow-hidden select-none"
+                        data-official-document="true"
+                      >
+                        {/* Red Header */}
+                        <div className="bg-[#CE1126] py-1.5 px-3 text-center rounded-t-xl">
+                          <div className="text-xs font-black text-white uppercase tracking-wider">
+                            {result.authorizedRoute || 'L-01 • KALOUM — LAMBANDJI'}
+                          </div>
+                        </div>
+
+                        {/* Agency Header */}
+                        <div className="bg-white px-2.5 py-1 flex items-center space-x-2.5">
+                          <div className="w-9 h-9 rounded-full border border-[#0B1E36] p-0.5 flex flex-col items-center justify-center bg-white shadow-sm flex-shrink-0">
+                            <span className="text-[7px] font-black text-[#0B1E36]">AOTUC</span>
+                          </div>
+                          <div className="text-left font-black text-[#1E3A8A] leading-tight uppercase">
+                            <div className="text-[10px] tracking-wide">ECUSSON DE LICENCE</div>
+                            <div className="text-[10px] tracking-wide">TRANSPORT URBAIN</div>
+                          </div>
+                        </div>
+
+                        {/* Yellow Middle Band */}
+                        <div className="bg-[#FCD116] py-1 px-2 text-center border-t border-b border-amber-500 shadow-inner">
+                          <div className="text-xs font-black text-slate-950 font-mono tracking-tight uppercase">
+                            LICENCE N° {result.credentialNumber || 'LC-2026-0895'}
+                          </div>
+                          <div className="text-[10px] font-black text-[#047857] font-mono tracking-tight uppercase">
+                            IMMATRICULATION : {result.holderInfo?.includes('RC-') ? result.holderInfo.match(/RC-[0-9A-Z-]+/)?.[0] || 'RC-1234-AB' : 'RC-1234-AB'}
+                          </div>
+                        </div>
+
+                        {/* White Lower Section */}
+                        <div className="bg-white px-2.5 py-1 flex items-center justify-between gap-2">
+                          <div className="p-0.5 bg-white border border-slate-200 rounded">
+                            <QrCode className="w-10 h-10 text-slate-950" />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <div className="text-[11px] font-black text-[#DC2626] font-mono uppercase tracking-tight">
+                              VALIDITÉ : {result.expiresAt ? new Date(result.expiresAt).toLocaleDateString('fr-FR') : '31/12/2027'}
+                            </div>
+                            <div className="text-[9px] font-black text-slate-950 uppercase tracking-tight">
+                              VALABLE POUR L'ANNÉE {result.expiresAt ? new Date(result.expiresAt).getFullYear() : 2027}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Micro-text Ribbon */}
+                        <div className="bg-slate-100 py-0.5 text-center text-[4.5px] font-bold text-slate-600 uppercase tracking-wider overflow-hidden whitespace-nowrap border-t border-b border-slate-200">
+                          RÉPUBLIQUE DE GUINÉE • AOTUC • SÉCURITÉ • CONTRÔLE - 2026
+                        </div>
+
+                        {/* Green Footer */}
+                        <div className="bg-[#047857] py-1 px-2.5 rounded-b-xl flex items-center justify-between text-white">
+                          <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-yellow-400 to-amber-500 border border-amber-700 flex items-center justify-center text-[8px] font-bold text-amber-950">
+                            ★
+                          </div>
+                          <div className="text-center flex-1 px-1">
+                            <div className="text-[6px] font-bold text-white uppercase tracking-widest leading-none">—— CONAKRY ——</div>
+                            <div className="text-[9px] font-black text-[#FCD116] uppercase tracking-wider leading-tight">TRANSPORT PUBLIC AUTORISÉ</div>
+                          </div>
+                          <div className="w-4 h-3 flex rounded-sm overflow-hidden border border-white/40">
+                            <div className="flex-1 bg-[#CE1126]" />
+                            <div className="flex-1 bg-[#FCD116]" />
+                            <div className="flex-1 bg-[#009460]" />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      /* CR80 Driver Badge Official Visual Reproduction */
+                      <div
+                        className="aotuc-official-document relative w-full aspect-[85.6/53.98] max-w-[320px] mx-auto bg-white text-slate-900 rounded-xl p-0 shadow-xl border border-slate-300 flex flex-col justify-between overflow-hidden select-none"
+                        data-official-document="true"
+                      >
+                        {/* Header Tricolor */}
+                        <div>
+                          <div className="h-1 bg-[#CE1126] w-full" />
+                          <div className="bg-[#FCD116] px-2.5 py-0.5 flex items-center justify-between">
+                            <div className="flex items-center space-x-1">
+                              <span className="text-xs font-black text-[#008751] tracking-tight">AOTUC</span>
+                            </div>
+                            <div className="text-[6px] font-black text-[#065F46] uppercase leading-tight text-right">
+                              <div>AGENCE DE TRANSPORT</div>
+                              <div>DE L'UNION DE CONAKRY</div>
+                            </div>
+                          </div>
+                          <div className="h-0.5 bg-[#009460] w-full" />
+                          <div className="bg-[#E2E8F0] py-0.5 text-center text-[6px] font-bold text-slate-800 tracking-wide border-b border-slate-300">
+                            BADGE CONDUCTEUR PROFESSIONNEL • CONAKRY - RÉPUBLIQUE DE GUINÉE
+                          </div>
+                        </div>
+
+                        {/* Body */}
+                        <div className="flex-1 px-2.5 py-1 flex items-center justify-between gap-2">
+                          <div className="flex flex-col items-center space-y-1">
+                            <div className="w-12 h-14 bg-slate-100 border border-slate-300 rounded flex flex-col items-center justify-center p-0.5 shadow-inner">
+                              <User className="w-6 h-6 text-slate-400" />
+                              <span className="text-[4.5px] font-bold text-slate-500 uppercase mt-0.5 leading-none">PHOTO</span>
+                            </div>
+                            <div className="p-0.5 bg-white border border-slate-200 rounded">
+                              <QrCode className="w-7 h-7 text-slate-900" />
+                            </div>
+                          </div>
+
+                          <div className="flex-1 flex flex-col justify-between h-full py-0.5">
+                            <div className="flex justify-end">
+                              <span className="px-1.5 py-0.2 bg-[#DC2626] text-white text-[6.5px] font-black rounded-full uppercase tracking-wider">
+                                VALID / VALIDE
+                              </span>
+                            </div>
+                            <div className="space-y-0.5">
+                              <div>
+                                <div className="text-[5.5px] font-bold text-slate-400 uppercase">NOM / NAME</div>
+                                <div className="text-[11px] font-black text-[#0B1E36] uppercase leading-tight">
+                                  {result.holderInfo || 'CAMARA Moussa'}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-[5.5px] font-bold text-slate-400 uppercase">BADGE N°</div>
+                                <div className="text-xs font-black text-slate-950 font-mono leading-tight">
+                                  {result.credentialNumber || 'CH-2026-1452'}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-[5.5px] font-bold text-slate-400 uppercase">LIGNE / LINE</div>
+                                <div className="text-[8.5px] font-bold text-slate-900 leading-tight">
+                                  {result.authorizedRoute || 'L-01 Kaloum-Lambandji'}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-[5.5px] font-bold text-slate-400 uppercase">EXPIRATION</div>
+                                <div className="text-[10px] font-black text-slate-950 font-mono leading-tight">
+                                  {result.expiresAt ? new Date(result.expiresAt).toLocaleDateString('fr-FR') : '30-10-2027'}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-end space-x-1.5 pt-0.5">
+                              <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-amber-400 to-yellow-500 border border-amber-600 flex items-center justify-center text-[7px] text-amber-950">
+                                ★
+                              </div>
+                              <div className="px-1.5 py-0.2 bg-emerald-100 border border-emerald-600 rounded-full text-[7px] font-black text-emerald-800">
+                                AUTORISÉ
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div>
+                          <div className="h-0.5 flex w-full">
+                            <div className="flex-1 bg-[#CE1126]" />
+                            <div className="flex-1 bg-[#FCD116]" />
+                            <div className="flex-1 bg-[#009460]" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="text-[10px] text-emerald-700 dark:text-emerald-400 pt-2 border-t border-emerald-200 dark:border-emerald-800/60 flex items-center justify-between">
                     <span>Sceau Cryptographique : Ed25519 Intègre</span>
                     <span>Horodatage : {new Date(result.verifiedAt).toLocaleTimeString('fr-FR')}</span>

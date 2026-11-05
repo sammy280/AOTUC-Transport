@@ -449,8 +449,11 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
             </div>
 
             {activeTab === 'badges' ? (
-              /* CR80 Badge Visual Preview — Official AOTUC 2026 Specification */
-              <div className="relative w-full aspect-[85.6/53.98] bg-white text-slate-900 rounded-xl p-0 shadow-xl border border-slate-300 flex flex-col justify-between overflow-hidden select-none">
+              /* CR80 Badge Visual Preview — Official AOTUC 2026 Specification (Theme Immune) */
+              <div
+                className="aotuc-official-document relative w-full aspect-[85.6/53.98] bg-white text-slate-900 rounded-xl p-0 shadow-xl border border-slate-300 flex flex-col justify-between overflow-hidden select-none"
+                data-official-document="true"
+              >
                 {/* Subtle repeating watermark across card background */}
                 <div className="absolute inset-0 opacity-[0.05] pointer-events-none flex flex-col justify-around py-4 text-[7px] font-black tracking-widest text-slate-900 select-none">
                   <div className="whitespace-nowrap">AOTUC - SÉCURISÉ — AOTUC - SÉCURISÉ — AOTUC - SÉCURISÉ</div>
@@ -577,8 +580,11 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
                 </div>
               </div>
             ) : (
-              /* Windshield Sticker Visual Preview (Écusson de Licence 100x100 mm) */
-              <div className="relative w-full aspect-square max-w-[320px] mx-auto bg-white text-slate-950 rounded-2xl shadow-2xl border-2 border-slate-300 flex flex-col justify-between overflow-hidden select-none">
+              /* Windshield Sticker Visual Preview (Écusson de Licence 100x100 mm - Theme Immune) */
+              <div
+                className="aotuc-official-document relative w-full aspect-square max-w-[320px] mx-auto bg-white text-slate-950 rounded-2xl shadow-2xl border-2 border-slate-300 flex flex-col justify-between overflow-hidden select-none"
+                data-official-document="true"
+              >
                 {/* 1. Red Header Banner */}
                 <div className="bg-[#CE1126] py-2 px-3 text-center rounded-t-xl">
                   <div className="text-xs sm:text-sm font-black text-white uppercase tracking-wider">
