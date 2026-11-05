@@ -19,7 +19,9 @@ import UserManagementView from './features/users/UserManagementView';
 import ToastContainer from './components/ToastContainer';
 import LoginView from './features/auth/LoginView';
 import AccessDenied from './components/AccessDenied';
+import PublicVerificationView from './features/verification/PublicVerificationView';
 import { isTabAllowed, getDefaultTab } from './utils/permissions';
+import { useTheme } from './context/ThemeContext';
 
 const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
@@ -64,9 +66,24 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
 ];
 
 export const App: React.FC = () => {
+  const { setUser } = useTheme();
+
   // Strict Security Gate: The user MUST authenticate to access the system
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return sessionStorage.getItem('aotuc_session_active') === 'true';
+  });
+
+  // Public QR Code Verification Portal check (no login required for roadside checks)
+  const [showPublicVerification, setShowPublicVerification] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    return window.location.pathname.startsWith('/verify') || params.has('verify') || params.has('code');
+  });
+
+  const [verifyInitialCode] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    const params = new URLSearchParams(window.location.search);
+    return params.get('verify') || params.get('code') || '';
   });
 
   const [currentUser, setCurrentUser] = useState<UserContext>(() => {
@@ -89,6 +106,15 @@ export const App: React.FC = () => {
       phoneNumber: '+224 620 00 00 02',
     };
   });
+
+  // Keep ThemeContext synchronized with the authenticated user
+  React.useEffect(() => {
+    if (isAuthenticated && currentUser?.id) {
+      setUser(currentUser.id);
+    } else {
+      setUser(null);
+    }
+  }, [isAuthenticated, currentUser?.id, setUser]);
 
   const [currentTab, setCurrentTab] = useState<string>(() => {
     return getDefaultTab(currentUser.role);
@@ -119,6 +145,7 @@ export const App: React.FC = () => {
     sessionStorage.setItem('aotuc_session_active', 'true');
     sessionStorage.setItem('aotuc_user', JSON.stringify(user));
     setCurrentUser(user);
+    setUser(user.id);
     setIsAuthenticated(true);
     setCurrentTab(getDefaultTab(user.role));
     showToast('success', 'Authentification Réussie', `Bienvenue ${user.name} (${user.roleLabel}).`);
@@ -129,6 +156,7 @@ export const App: React.FC = () => {
     sessionStorage.removeItem('aotuc_user');
     localStorage.removeItem('aotuc_auth_token');
     localStorage.removeItem('aotuc_user');
+    setUser(null);
     setIsAuthenticated(false);
     showToast('info', 'Session Clôturée', 'Vous avez été déconnecté avec succès du système AOTUC.');
   };
@@ -223,11 +251,24 @@ export const App: React.FC = () => {
     );
   };
 
+  // If public verification was requested (via URL or button), show public verification screen
+  if (showPublicVerification) {
+    return (
+      <PublicVerificationView
+        initialCode={verifyInitialCode}
+        onGoToLogin={() => setShowPublicVerification(false)}
+      />
+    );
+  }
+
   // If user is not authenticated, render Login Page
   if (!isAuthenticated) {
     return (
       <>
-        <LoginView onLoginSuccess={handleLoginSuccess} />
+        <LoginView
+          onLoginSuccess={handleLoginSuccess}
+          onOpenPublicVerification={() => setShowPublicVerification(true)}
+        />
         <ToastContainer toasts={toasts} onDismiss={handleDismissToast} />
       </>
     );

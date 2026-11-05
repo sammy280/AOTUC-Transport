@@ -12,6 +12,30 @@ router.post('/logout', AuthController.logout);
 // Protected Identity & Profile
 router.get('/me', authenticateToken, AuthController.me);
 
+// User Theme & Appearance Preferences Synchronization (Device Independent)
+const userThemePreferences = new Map();
+
+router.get('/preferences/theme', authenticateToken, (req, res) => {
+  const theme = userThemePreferences.get(req.user.id) || 'system';
+  res.status(200).json({ success: true, data: { theme } });
+});
+
+router.put('/preferences/theme', authenticateToken, (req, res) => {
+  const { theme } = req.body;
+  if (!['light', 'dark', 'system'].includes(theme)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Thème invalide. Valeurs autorisées: light, dark, system.',
+    });
+  }
+  userThemePreferences.set(req.user.id, theme);
+  res.status(200).json({
+    success: true,
+    message: 'Préférence d apparence synchronisée avec succès sur votre compte.',
+    data: { theme },
+  });
+});
+
 // Verification Route: Test Role & Scope Authorization
 router.get(
   '/test-scope/:communeId',

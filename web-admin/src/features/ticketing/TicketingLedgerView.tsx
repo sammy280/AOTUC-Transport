@@ -16,6 +16,7 @@ import {
   Lock,
   Smartphone,
   Coins,
+  Download,
 } from 'lucide-react';
 import { UserContext } from '../../types';
 
@@ -344,6 +345,42 @@ export const TicketingLedgerView: React.FC<{ currentUser: UserContext }> = ({ cu
     setSaleFeedback(
       `✓ TRANSACTION CONTRE-PASSÉE : Le reçu ${targetSale.receiptNumber} a été annulé avec motif "${reason}". Contre-passation comptable générée et tickets réintégrés en stock.`
     );
+  };
+
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
+
+  const handleDownloadTicketPdf = async (saleId?: string, receiptNum?: string) => {
+    setIsDownloadingPdf(true);
+    const targetId = saleId || (sales[0] ? sales[0].id : 's-default');
+    const targetReceipt = receiptNum || (sales[0] ? sales[0].receiptNumber : 'REC-2026-00042');
+
+    try {
+      const token = localStorage.getItem('aotuc_auth_token') || sessionStorage.getItem('aotuc_auth_token');
+      const response = await fetch(`/api/v1/ticketing/sales/${targetId}/pdf`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `AOTUC_Billet_${targetReceipt}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        setSaleFeedback(`✓ Billet de transport PDF généré et téléchargé avec succès (${targetReceipt}).`);
+        return;
+      }
+    } catch {
+      // Fallback
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+
+    // Direct browser print fallback
+    window.print();
   };
 
   // Calculations for Distributor KPI
@@ -784,6 +821,20 @@ export const TicketingLedgerView: React.FC<{ currentUser: UserContext }> = ({ cu
                 </div>
               </div>
 
+              <button
+                type="button"
+                onClick={() => handleDownloadTicketPdf()}
+                disabled={isDownloadingPdf}
+                className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-2 shadow-sm transition cursor-pointer disabled:opacity-50"
+              >
+                <Download className="w-4 h-4 text-[#FCD116]" />
+                <span>
+                  {isDownloadingPdf
+                    ? 'Génération du billet PDF...'
+                    : 'Télécharger Billet Sécurisé (PDF Thermique 74×140mm)'}
+                </span>
+              </button>
+
               {saleFeedback && (
                 <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs rounded-lg flex items-center space-x-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
@@ -868,18 +919,29 @@ export const TicketingLedgerView: React.FC<{ currentUser: UserContext }> = ({ cu
                       )}
                     </td>
                     <td className="p-3 text-right">
-                      {sale.status === 'PAYE' ? (
+                      <div className="flex items-center justify-end space-x-2">
                         <button
-                          onClick={() => handleRequestReversal(sale.id)}
-                          className="px-2.5 py-1 text-[11px] text-rose-600 hover:text-rose-800 font-semibold hover:bg-rose-50 rounded border border-rose-200 transition flex items-center space-x-1 ml-auto"
-                          title="Lancer une procédure d annulation / remboursement avec écriture de contre-passation"
+                          onClick={() => handleDownloadTicketPdf(sale.id, sale.receiptNumber)}
+                          className="px-2 py-1 text-[11px] text-blue-600 hover:text-blue-800 font-semibold hover:bg-blue-50 dark:hover:bg-slate-800 rounded border border-blue-200 dark:border-blue-900 transition flex items-center space-x-1"
+                          title="Télécharger le billet PDF officiel"
                         >
-                          <RotateCcw className="w-3 h-3" />
-                          <span>Annuler / Rembourser</span>
+                          <Download className="w-3 h-3" />
+                          <span>PDF</span>
                         </button>
-                      ) : (
-                        <span className="text-[11px] text-slate-400 italic">Clôturé</span>
-                      )}
+
+                        {sale.status === 'PAYE' ? (
+                          <button
+                            onClick={() => handleRequestReversal(sale.id)}
+                            className="px-2.5 py-1 text-[11px] text-rose-600 hover:text-rose-800 font-semibold hover:bg-rose-50 dark:hover:bg-slate-800 rounded border border-rose-200 dark:border-rose-900 transition flex items-center space-x-1"
+                            title="Lancer une procédure d annulation / remboursement avec écriture de contre-passation"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            <span>Annuler</span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 italic">Clôturé</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

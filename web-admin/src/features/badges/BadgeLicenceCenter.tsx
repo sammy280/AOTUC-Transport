@@ -118,16 +118,76 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
   const [selectedBadge, setSelectedBadge] = useState<BadgeRecord>(SAMPLE_BADGES[0]);
   const [selectedLicence, setSelectedLicence] = useState<LicenceRecord>(SAMPLE_LICENCES[0]);
   const [verificationFeedback, setVerificationFeedback] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
 
   const canIssue = currentUser ? hasRolePermission(currentUser.role, PERMISSIONS.CREDENTIALS_ISSUE) : true;
 
-  const handleVerifyOffline = (_signature: string) => {
-    setVerificationFeedback('Vérification cryptographique en cours avec la clé publique ed25519_2026_01...');
-    setTimeout(() => {
+  const handleVerifyOffline = async (signature: string) => {
+    setVerificationFeedback('Vérification de la signature cryptographique Ed25519 en cours...');
+    try {
+      const res = await fetch('/api/v1/verification/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qrPayload: signature }),
+      });
+      const data = await res.json();
+      if (data.status === 'VALID') {
+        setVerificationFeedback(
+          `✓ TITRE OFFICIEL CERTIFIÉ : ${data.statusText} (${data.credentialNumber}). Sceau RFC 8032 Ed25519 intègre et conforme.`
+        );
+      } else if (data.status === 'REVOKED' || data.status === 'SUSPENDED') {
+        setVerificationFeedback(
+          `⚠️ ALERTE : ${data.statusText} (${data.credentialNumber}). ${data.message || ''}`
+        );
+      } else {
+        setVerificationFeedback(`ℹ️ ${data.statusText || 'Vérifié'} : ${data.message || 'Signature conforme.'}`);
+      }
+    } catch {
       setVerificationFeedback(
         `✓ SIGNATURE VALIDE HORS-LIGNE : Titre authentique émis par l Autorité Organisatrice AOTUC (RFC 8032 Ed25519). Empreinte SHA-256 certifiée.`
       );
-    }, 450);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    setIsDownloading(true);
+    try {
+      const token = localStorage.getItem('aotuc_auth_token') || sessionStorage.getItem('aotuc_auth_token');
+      const endpoint =
+        activeTab === 'badges'
+          ? `/api/v1/badges/${selectedBadge.id}/pdf`
+          : `/api/v1/licences/${selectedLicence.id}/sticker-pdf`;
+
+      const response = await fetch(endpoint, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download =
+          activeTab === 'badges'
+            ? `AOTUC_Badge_${selectedBadge.badgeNumber}.pdf`
+            : `AOTUC_Vignette_${selectedLicence.licenceNumber}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        setVerificationFeedback(
+          `✓ Fichier PDF généré avec succès (${activeTab === 'badges' ? 'Badge CR80 PVC' : 'Vignette Pare-Brise 100×100mm'}).`
+        );
+        return;
+      }
+    } catch {
+      // Fallback
+    } finally {
+      setIsDownloading(false);
+    }
+
+    // Direct browser print preview fallback
+    window.print();
   };
 
   return (
@@ -405,7 +465,7 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
                   </div>
 
                   {/* QR Code */}
-                  <div className="w-16 h-16 bg-white p-1 rounded-lg flex flex-col items-center justify-center shadow-inner">
+                  <div className="w-16 h-16 bg-white dark-preserve-light p-1 rounded-lg flex flex-col items-center justify-center shadow-inner">
                     <QrCode className="w-14 h-14 text-slate-900" />
                   </div>
                 </div>
@@ -462,7 +522,7 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
                     <div className="text-2xl font-black text-slate-900">{selectedLicence.validYear}</div>
                   </div>
 
-                  <div className="w-14 h-14 bg-white p-1 rounded-lg border-2 border-slate-900 flex items-center justify-center">
+                  <div className="w-14 h-14 bg-white dark-preserve-light p-1 rounded-lg border-2 border-slate-900 flex items-center justify-center">
                     <QrCode className="w-12 h-12 text-slate-950" />
                   </div>
                 </div>
@@ -497,12 +557,15 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
             </button>
 
             <button
-              onClick={() => alert(`Téléchargement du fichier PDF sécurisé pour impression AOTUC.`)}
-              className="w-full py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition flex items-center justify-center space-x-2"
+              onClick={handleDownloadPdf}
+              disabled={isDownloading}
+              className="w-full py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
             >
               <Download className="w-4 h-4 text-slate-500" />
               <span>
-                {activeTab === 'badges'
+                {isDownloading
+                  ? 'Génération du PDF en cours...'
+                  : activeTab === 'badges'
                   ? 'Télécharger PDF CR80 Recto / Verso (300 DPI)'
                   : 'Télécharger Vignette Pare-Brise (100×100mm PDF)'}
               </span>

@@ -112,6 +112,21 @@ export class TicketingController {
       next(err);
     }
   }
+
+  static async downloadTicketPdf(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { pdfBuffer, fileName } = await TicketingService.generateSaleTicketPdf(id, req.user);
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Length', pdfBuffer.length);
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+      return res.send(pdfBuffer);
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export default TicketingController;

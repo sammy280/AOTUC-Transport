@@ -8,12 +8,14 @@ import {
   AlertCircle,
   Building2,
   ArrowRight,
+  QrCode,
 } from 'lucide-react';
 import { UserContext, RoleType } from '../../types';
-import ThemeToggle from '../../components/ThemeToggle';
+import ThemeSelector from '../../components/ThemeSelector';
 
 interface LoginViewProps {
   onLoginSuccess: (user: UserContext, token?: string) => void;
+  onOpenPublicVerification?: () => void;
 }
 
 // Internal credentials mapping (never rendered to UI)
@@ -83,7 +85,7 @@ const CERTIFIED_DIRECTORY = [
   },
 ];
 
-export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
+export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenPublicVerification }) => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -187,7 +189,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       </div>
 
       <div className="flex justify-end px-6 pt-3">
-        <ThemeToggle showLabel={true} />
+        <ThemeSelector variant="dropdown" />
       </div>
 
       <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
@@ -344,6 +346,22 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   </>
                 )}
               </button>
+
+              {onOpenPublicVerification && (
+                <div className="pt-2 text-center">
+                  <button
+                    type="button"
+                    onClick={onOpenPublicVerification}
+                    className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center space-x-2 border border-slate-200 dark:border-slate-700 transition cursor-pointer"
+                  >
+                    <QrCode className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>Contrôle Public de Validité (Scanner QR)</span>
+                  </button>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5">
+                    Accès libre pour forces de l ordre, contrôleurs routiers et usagers
+                  </p>
+                </div>
+              )}
             </form>
           </div>
         </div>

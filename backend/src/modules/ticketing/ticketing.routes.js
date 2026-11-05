@@ -57,6 +57,12 @@ router.post(
   TicketingController.reverseSale
 );
 
+router.get(
+  '/sales/:id/pdf',
+  requirePermissions(PERMISSIONS.TRANSACTIONS_READ_OWN, PERMISSIONS.TRANSACTIONS_READ_ALL, PERMISSIONS.TICKETS_SELL),
+  TicketingController.downloadTicketPdf
+);
+
 // 4. Double-Entry Financial Ledger (Strictly Append-Only)
 router.get(
   '/ledger/summary',

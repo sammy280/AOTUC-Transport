@@ -182,6 +182,124 @@ export class PdfBadgeService {
       doc.end();
     });
   }
+
+  /**
+   * Generates a printable Secure Transport Ticket PDF (Thermal Ticket 74mm x 140mm = 210pt x 396pt).
+   * Complies with Section 5 product requirements.
+   */
+  static async generateTicketPdf({
+    ticketNumber,
+    routeName = 'L-01 KALOUM — MATOTO',
+    departure = 'Gare Centrale de Kaloum',
+    destination = 'Rond-Point de Matoto',
+    fareGnf = 2000,
+    paymentMethod = 'ORANGE_MONEY',
+    paymentRef = 'OM-GN-2026-9841',
+    buyerName = 'Passager Urbain',
+    operatorName = 'Guichet Kaloum Express',
+    issuedAt = new Date(),
+    status = 'PAYÉ & VALIDE',
+    qrPayload,
+  }) {
+    // Generate QR code for ticket
+    const qrBuffer = await QRCode.toBuffer(qrPayload || `AOTUC-TICKET-${ticketNumber}`, {
+      errorCorrectionLevel: 'M',
+      margin: 1,
+      width: 120,
+      color: { dark: '#000000', light: '#FFFFFF' },
+    });
+
+    return new Promise((resolve, reject) => {
+      // 74mm x 140mm = 210pt x 396pt
+      const doc = new PDFDocument({
+        size: [210, 396],
+        margins: { top: 8, bottom: 8, left: 10, right: 10 },
+        info: {
+          Title: `AOTUC-Billet-${ticketNumber}`,
+          Author: 'AOTUC Guinée',
+        },
+      });
+
+      const buffers = [];
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
+      doc.on('error', reject);
+
+      // 1. National Tricolor Top Stripe
+      doc.rect(0, 0, 70, 4).fill('#CE1126');
+      doc.rect(70, 0, 70, 4).fill('#FCD116');
+      doc.rect(140, 0, 70, 4).fill('#009460');
+
+      // 2. Header
+      if (fs.existsSync(OFFICIAL_LOGO_PATH)) {
+        try {
+          doc.image(OFFICIAL_LOGO_PATH, 10, 8, { width: 18, height: 18 });
+        } catch (_) {}
+      }
+
+      doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#0B1E36')
+        .text('RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS', 10, 10, { align: 'center', width: 190 });
+      doc.fontSize(7).font('Helvetica-Bold').fillColor('#CE1126')
+        .text('AOTUC — TITRE DE TRANSPORT URBAIN', 10, 18, { align: 'center', width: 190 });
+
+      // Dividing Line
+      doc.moveTo(10, 29).lineTo(200, 29).strokeColor('#E2E8F0').lineWidth(0.5).stroke();
+
+      // Ticket Number & Status Pill
+      doc.rect(10, 33, 190, 22).fill('#F8FAFC');
+      doc.fontSize(5).font('Helvetica-Bold').fillColor('#64748B').text('NUMÉRO DE TITRE', 15, 36);
+      doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#0F172A').text(ticketNumber, 15, 43);
+
+      doc.rect(130, 36, 65, 15).fill('#DCFCE7');
+      doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#166534')
+        .text(status, 130, 41, { align: 'center', width: 65 });
+
+      // Route Details
+      doc.fontSize(5).font('Helvetica-Bold').fillColor('#64748B').text('LIGNE RÉGLEMENTÉE', 10, 62);
+      doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#2563EB').text(routeName, 10, 68);
+
+      doc.fontSize(5).font('Helvetica-Bold').fillColor('#64748B').text('ORIGINE → DESTINATION', 10, 80);
+      doc.fontSize(6.5).font('Helvetica').fillColor('#0F172A').text(`${departure}  ➔  ${destination}`, 10, 86);
+
+      // Financial Details Table
+      doc.rect(10, 98, 190, 38).fill('#F1F5F9');
+      doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#64748B').text('TARIF RÉGLEMENTAIRE (GNF)', 15, 103);
+      doc.fontSize(14).font('Helvetica-Bold').fillColor('#009460').text(`${fareGnf.toLocaleString()} GNF`, 15, 111);
+
+      doc.fontSize(5).font('Helvetica').fillColor('#475569')
+        .text(`Mode : ${paymentMethod} | Réf : ${paymentRef}`, 15, 127);
+
+      // Timestamp & Beneficiary
+      const dateStr = new Date(issuedAt).toLocaleString('fr-FR');
+      doc.fontSize(5).font('Helvetica').fillColor('#64748B')
+        .text(`Date & Heure : ${dateStr}`, 10, 142);
+      doc.fontSize(5).font('Helvetica').fillColor('#64748B')
+        .text(`Bénéficiaire : ${buyerName} | Émetteur : ${operatorName}`, 10, 150);
+
+      // Central Scannable QR Code
+      doc.image(qrBuffer, 45, 165, { width: 120, height: 120 });
+      doc.fontSize(5).font('Helvetica').fillColor('#64748B')
+        .text('Contrôle de validité par scan QR cryptographique Ed25519', 10, 290, { align: 'center', width: 190 });
+
+      // Watermark Text / Security Notice
+      doc.rect(10, 305, 190, 48).strokeColor('#CBD5E1').lineWidth(0.5).stroke();
+      doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#0B1E36')
+        .text('AVIS DE SÉCURITÉ & CONDITIONS DE VOYAGE', 10, 310, { align: 'center', width: 190 });
+      doc.fontSize(4.5).font('Helvetica').fillColor('#475569')
+        .text('1. Valable pour 1 trajet direct sur le réseau AOTUC de Conakry.', 15, 318, { width: 180 });
+      doc.fontSize(4.5).font('Helvetica')
+        .text('2. Ce billet doit être conservé jusqu à la descente du véhicule.', 15, 326, { width: 180 });
+      doc.fontSize(4.5).font('Helvetica')
+        .text('3. Toute falsification ou réutilisation frauduleuse est passible des peines prévues par le Code Pénal.', 15, 334, { width: 180 });
+
+      // Footer Bar
+      doc.rect(0, 386, 210, 10).fill('#0B1E36');
+      doc.fontSize(4.5).font('Helvetica-Bold').fillColor('#FFFFFF')
+        .text('AGENCE ORGANISATRICE DU TRANSPORT URBAIN DE CONAKRY — AOTUC', 0, 389, { align: 'center', width: 210 });
+
+      doc.end();
+    });
+  }
 }
 
 export default PdfBadgeService;

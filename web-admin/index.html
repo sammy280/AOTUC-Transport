@@ -6,8 +6,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AOTUC-TRANSPORT — République de Guinée</title>
     <meta name="description" content="Plateforme Intégrée de Gestion du Transport Urbain de Conakry (AOTUC)" />
+
+    <!-- Anti-Flash Script: Immediately resolves and sets theme before first render -->
+    <script>
+      (function() {
+        try {
+          var activeUser = null;
+          var savedSession = sessionStorage.getItem('aotuc_user');
+          if (savedSession) {
+            try { activeUser = JSON.parse(savedSession); } catch(e) {}
+          }
+          var userKey = activeUser && activeUser.id ? 'aotuc_theme_user_' + activeUser.id : 'aotuc_theme_global';
+          var themeMode = localStorage.getItem(userKey) || localStorage.getItem('aotuc_theme_global') || 'system';
+          var isDark = themeMode === 'dark' || (themeMode === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.style.colorScheme = 'dark';
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.style.colorScheme = 'light';
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body class="bg-[#F8FAFC] text-slate-900 font-sans antialiased min-h-screen">
+  <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased min-h-screen transition-colors duration-200">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
