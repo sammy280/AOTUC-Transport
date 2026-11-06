@@ -111,13 +111,6 @@ export const PublicVerificationView: React.FC<{
     }
   }, [initialCode]);
 
-  const sampleBadges = [
-    { label: 'Badge Chauffeur Moussa (CH-2026-1452)', code: 'CH-2026-1452' },
-    { label: 'Écusson Licence Véhicule (LC-2026-0895)', code: 'LC-2026-0895' },
-    { label: 'Badge Chauffeur Révoqué', code: 'CH-2025-00911' },
-    { label: 'Billet de Transport Valide', code: 'REC-2026-00042' },
-  ];
-
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between font-sans transition-colors duration-200">
       {/* Top National Header Bar */}
@@ -217,26 +210,6 @@ export const PublicVerificationView: React.FC<{
               )}
             </button>
           </form>
-
-          {/* Quick Demo Test Pills */}
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-            <div className="text-[11px] font-semibold text-slate-400 mb-2">Exemples de démonstration pour contrôle :</div>
-            <div className="flex flex-wrap gap-2">
-              {sampleBadges.map((sample, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => {
-                    setInputCode(sample.code);
-                    performVerification(sample.code);
-                  }}
-                  className="px-2.5 py-1 text-[11px] font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-700 transition cursor-pointer"
-                >
-                  {sample.label}
-                </button>
-              ))}
-            </div>
-          </div>
 
           {/* Verification Results Panel */}
           {result && (
