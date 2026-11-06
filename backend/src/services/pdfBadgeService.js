@@ -8,7 +8,7 @@ import { AOTUC_BRANDING } from '../config/branding.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const OFFICIAL_SEAL_PATH = path.resolve(__dirname, '../../assets/aotuc-official-seal.png');
-const OFFICIAL_LOGO_PATH = path.resolve(__dirname, '../../assets/logo-guinee.png');
+const OFFICIAL_LOGO_PATH = path.resolve(__dirname, '../../assets/aotuc-logo.png');
 
 export class PdfBadgeService {
   /**
@@ -16,12 +16,14 @@ export class PdfBadgeService {
    * Returns a Buffer containing the complete PDF document.
    */
   static async generateDriverBadgePdf({
-    badgeNumber = 'BDG-2026-00042',
-    driverName = 'Abdoulaye Bah',
-    licenseNumber = 'PC-GN-2015-8841',
-    category = 'B, C1',
-    expiresAt = new Date('2028-02-15'),
-    qrPayload = 'AOTUC1.ed25519_2026_01.bdg-001.BADGE.DRIVER_Bah',
+    badgeNumber = 'CH-2026-1452',
+    driverName = 'CAMARA Moussa',
+    licenseNumber = 'DL-9844-GN',
+    category = 'B, D1',
+    routeName = 'L-01 Kaloum-Lambandji',
+    issueDate = '30-10-2024',
+    expiresAt = new Date('2027-10-30'),
+    qrPayload = 'AOTUC1.aotuc-2026-v1.CH-2026-1452.DRIVER_BADGE.d1.1730246400.1824854400.sig_Camara_Moussa_Valid_2027',
   }) {
     // Generate QR code data buffer
     const qrBuffer = await QRCode.toBuffer(qrPayload, {
@@ -35,7 +37,7 @@ export class PdfBadgeService {
       // CR80 dimensions: 242.65pt x 153pt (85.6mm x 53.98mm)
       const doc = new PDFDocument({
         size: [242.65, 153],
-        margins: { top: 6, bottom: 6, left: 8, right: 8 },
+        margins: { top: 0, bottom: 0, left: 0, right: 0 },
         info: {
           Title: `AOTUC-Badge-${badgeNumber}`,
           Author: 'AOTUC Guinée',
@@ -48,54 +50,78 @@ export class PdfBadgeService {
       doc.on('error', reject);
 
       // --- RECTO (FRONT) ---
-      // 1. Guinea Flag Tricolor Top Stripe
-      doc.rect(0, 0, 80.88, 4).fill('#CE1126');
-      doc.rect(80.88, 0, 80.88, 4).fill('#FCD116');
-      doc.rect(161.76, 0, 80.89, 4).fill('#009460');
+      // 1. Top Red Stripe
+      doc.rect(0, 0, 242.65, 3).fill('#CE1126');
 
-      // 2. Header
+      // 2. Yellow Header Ribbon with AOTUC
+      doc.rect(0, 3, 242.65, 18).fill('#FCD116');
       if (fs.existsSync(OFFICIAL_LOGO_PATH)) {
         try {
-          doc.image(OFFICIAL_LOGO_PATH, 10, 6, { width: 15, height: 15 });
+          doc.image(OFFICIAL_LOGO_PATH, 8, 4.5, { width: 15, height: 15 });
         } catch (_) {}
       }
+      doc.fontSize(10).font('Helvetica-Bold').fillColor('#008751').text('AOTUC', 26, 7);
+      doc.fontSize(4.5).font('Helvetica-Bold').fillColor('#065F46')
+        .text('AGENCE DE TRANSPORT DE L UNION DE CONAKRY', 60, 9, { align: 'right', width: 174 });
 
-      doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#0B1E36')
-        .text('RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS', 8, 8, { align: 'center', width: 226.65 });
-      doc.fontSize(6.5).font('Helvetica-Bold').fillColor('#CE1126')
-        .text('AOTUC — CARTE PROFESSIONNELLE DE CONDUCTEUR', 8, 15, { align: 'center', width: 226.65 });
+      // 3. Green Stripe
+      doc.rect(0, 21, 242.65, 2.5).fill('#009460');
 
-      // Subtle dividing line
-      doc.moveTo(8, 24).lineTo(234.65, 24).strokeColor('#E2E8F0').lineWidth(0.5).stroke();
+      // 4. Sub-ribbon
+      doc.rect(0, 23.5, 242.65, 8).fill('#E2E8F0');
+      doc.fontSize(4.5).font('Helvetica-Bold').fillColor('#1E293B')
+        .text('BADGE CONDUCTEUR PROFESSIONNEL • CONAKRY - RÉPUBLIQUE DE GUINÉE', 0, 25.5, { align: 'center', width: 242.65 });
 
-      // 3. Photo Box (Left)
-      doc.rect(8, 28, 52, 65).fillAndStroke('#F1F5F9', '#CBD5E1');
-      doc.fontSize(6).fillColor('#64748B').text('PHOTO', 8, 55, { align: 'center', width: 52 });
+      // 5. Card Background (White)
+      doc.rect(0, 31.5, 242.65, 115).fill('#FFFFFF');
 
-      // 4. Details (Center)
-      const leftCol = 66;
-      doc.fontSize(5).font('Helvetica-Bold').fillColor('#64748B').text('NOM & PRÉNOM', leftCol, 28);
-      doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#0F172A').text(driverName.toUpperCase(), leftCol, 34, { width: 100 });
+      // 6. Photo Box (Left)
+      doc.rect(10, 36, 50, 62).fillAndStroke('#F8FAFC', '#CBD5E1');
+      doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#64748B')
+        .text('PHOTO DU', 10, 60, { align: 'center', width: 50 });
+      doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#64748B')
+        .text('CONDUCTEUR', 10, 68, { align: 'center', width: 50 });
 
-      doc.fontSize(5).font('Helvetica-Bold').fillColor('#64748B').text('N° DE BADGE', leftCol, 48);
-      doc.fontSize(8).font('Helvetica-Bold').fillColor('#0B1E36').text(badgeNumber, leftCol, 54);
+      // QR Code below Photo
+      doc.image(qrBuffer, 16, 102, { width: 38, height: 38 });
+      doc.fontSize(3.5).font('Helvetica-Bold').fillColor('#64748B')
+        .text('QR CODE', 10, 141, { align: 'center', width: 50 });
 
-      doc.fontSize(5).font('Helvetica-Bold').fillColor('#64748B').text('PERMIS DE CONDUIRE', leftCol, 66);
-      doc.fontSize(6.5).font('Helvetica').fillColor('#0F172A').text(`Cat. ${category} • N° ${licenseNumber}`, leftCol, 72);
+      // 7. Right Details
+      // Red Status Pill
+      doc.rect(170, 36, 62, 10).fill('#DC2626');
+      doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#FFFFFF')
+        .text('VALID / VALIDE', 170, 38.5, { align: 'center', width: 62 });
 
-      doc.fontSize(5).font('Helvetica-Bold').fillColor('#64748B').text('VALIDE JUSQU AU', leftCol, 82);
-      const expDate = new Date(expiresAt).toLocaleDateString('fr-FR');
-      doc.fontSize(7).font('Helvetica-Bold').fillColor('#009460').text(expDate, leftCol, 88);
+      const detailsX = 66;
+      doc.fontSize(4.5).font('Helvetica-Bold').fillColor('#94A3B8').text('NOM / NAME', detailsX, 48);
+      doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#0B1E36').text(driverName.toUpperCase(), detailsX, 54, { width: 165 });
 
-      // 5. Scannable QR Code (Right)
-      doc.image(qrBuffer, 172, 28, { width: 62, height: 62 });
-      doc.fontSize(4).font('Helvetica').fillColor('#64748B')
-        .text('Scannable Hors-Ligne', 172, 92, { align: 'center', width: 62 });
+      doc.fontSize(4.5).font('Helvetica-Bold').fillColor('#94A3B8').text('BADGE N°', detailsX, 67);
+      doc.fontSize(9.5).font('Helvetica-Bold').fillColor('#0F172A').text(badgeNumber, detailsX, 73);
 
-      // 6. Security Footer Bar
-      doc.rect(0, 145, 242.65, 8).fill('#0B1E36');
-      doc.fontSize(4.5).font('Helvetica').fillColor('#FFFFFF')
-        .text('Titulaire autorisé au transport public urbain dans la Région Spéciale de Conakry', 0, 147, { align: 'center', width: 242.65 });
+      doc.fontSize(4.5).font('Helvetica-Bold').fillColor('#94A3B8').text('LIGNE / LINE', detailsX, 86);
+      doc.fontSize(7).font('Helvetica-Bold').fillColor('#0F172A').text(routeName, detailsX, 92);
+
+      doc.fontSize(4.5).font('Helvetica-Bold').fillColor('#94A3B8').text('EXPIRATION', detailsX, 104);
+      const expStr = typeof expiresAt === 'string' ? expiresAt : new Date(expiresAt).toLocaleDateString('fr-FR');
+      doc.fontSize(8).font('Helvetica-Bold').fillColor('#0F172A').text(expStr, detailsX, 110);
+
+      // Gold Hologram Rosette & Green Stamp
+      doc.circle(182, 120, 9).fillAndStroke('#FCD116', '#D97706');
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#78350F').text('★', 178, 114);
+
+      doc.rect(198, 113, 34, 14).fillAndStroke('#DCFCE7', '#16A34A');
+      doc.fontSize(6).font('Helvetica-Bold').fillColor('#15803D')
+        .text('AUTORISÉ', 198, 117, { align: 'center', width: 34 });
+
+      // 8. Legal Notice & Bottom Tricolor Stripe
+      doc.fontSize(3.8).font('Helvetica').fillColor('#64748B')
+        .text(`Délivré le ${issueDate} • Port du badge obligatoire • Propriété exclusive de l AOTUC — Falsification punie par la loi`, 0, 144, { align: 'center', width: 242.65 });
+
+      doc.rect(0, 150, 80.88, 3).fill('#CE1126');
+      doc.rect(80.88, 150, 80.88, 3).fill('#FCD116');
+      doc.rect(161.76, 150, 80.89, 3).fill('#009460');
 
       // --- VERSO (BACK) ---
       doc.addPage();
@@ -127,12 +153,12 @@ export class PdfBadgeService {
    * Generates a printable Windshield Transport Licence Sticker PDF (100mm x 100mm).
    */
   static async generateLicenceStickerPdf({
-    licenceNumber = 'LIC-2026-00188',
-    plateNumber = 'RC-9844-AB',
-    lineCode = 'L-01 KALOUM — MATOTO',
+    licenceNumber = 'LC-2026-0895',
+    plateNumber = 'RC-1234-AB',
+    lineCode = 'L-01 • KALOUM — LAMBANDJI',
     vehicleType = 'MINIBUS_URBAIN',
-    expiresAt = new Date('2026-12-31'),
-    qrPayload = 'AOTUC1.ed25519_2026_01.lic-001.LICENCE.VEH_RC9844AB',
+    expiresAt = new Date('2027-12-31'),
+    qrPayload = 'AOTUC1.aotuc-2026-v1.LC-2026-0895.TRANSPORT_LICENCE.v1.1730246400.1830211200.sig_LC_2026_0895_Valid_2027',
   }) {
     const qrBuffer = await QRCode.toBuffer(qrPayload, {
       errorCorrectionLevel: 'M',
@@ -145,7 +171,7 @@ export class PdfBadgeService {
       // 100mm x 100mm = 283.46pt x 283.46pt
       const doc = new PDFDocument({
         size: [283.46, 283.46],
-        margins: { top: 8, bottom: 8, left: 8, right: 8 },
+        margins: { top: 6, bottom: 6, left: 6, right: 6 },
         info: {
           Title: `AOTUC-Licence-${licenceNumber}`,
           Author: 'AOTUC Guinée',
@@ -160,40 +186,58 @@ export class PdfBadgeService {
       // Outer border (Adhesive cut line)
       doc.rect(4, 4, 275.46, 275.46).strokeColor('#0B1E36').lineWidth(2).stroke();
 
-      // Top Header
-      doc.rect(6, 6, 271.46, 32).fill('#0B1E36');
+      // 1. Top Red Header Banner: Line Code
+      doc.rect(6, 6, 271.46, 28).fill('#CE1126');
+      doc.fontSize(12).font('Helvetica-Bold').fillColor('#FFFFFF')
+        .text(lineCode || 'L-01 • KALOUM — LAMBANDJI', 6, 14, { align: 'center', width: 271.46 });
 
+      // 2. Upper White Section: AOTUC Seal + Agency Title
+      doc.rect(6, 34, 271.46, 36).fill('#FFFFFF');
       if (fs.existsSync(OFFICIAL_LOGO_PATH)) {
         try {
-          doc.image(OFFICIAL_LOGO_PATH, 10, 8, { width: 26, height: 26 });
+          doc.image(OFFICIAL_LOGO_PATH, 16, 37, { width: 30, height: 30 });
         } catch (_) {}
       }
+      doc.fontSize(11).font('Helvetica-Bold').fillColor('#1E3A8A')
+        .text('ECUSSON DE LICENCE', 56, 40);
+      doc.fontSize(11).font('Helvetica-Bold').fillColor('#1E3A8A')
+        .text('TRANSPORT URBAIN', 56, 53);
 
-      doc.fontSize(8).font('Helvetica-Bold').fillColor('#FFFFFF')
-        .text('RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS', 6, 12, { align: 'center', width: 271.46 });
-      doc.fontSize(9.5).font('Helvetica-Bold').fillColor('#FCD116')
-        .text('AOTUC — LICENCE D EXPLOITATION URBAINE', 6, 23, { align: 'center', width: 271.46 });
+      // 3. Middle Yellow Banner (Exclusively Yellow)
+      doc.rect(6, 70, 271.46, 40).fill('#FCD116');
+      doc.fontSize(13).font('Helvetica-Bold').fillColor('#0F172A')
+        .text(`LICENCE N° ${licenceNumber}`, 6, 78, { align: 'center', width: 271.46 });
+      doc.fontSize(11).font('Helvetica-Bold').fillColor('#047857')
+        .text(`IMMATRICULATION : ${plateNumber}`, 6, 94, { align: 'center', width: 271.46 });
 
-      // Route Code Badge
-      doc.rect(20, 48, 80, 36).fill('#CE1126');
-      doc.fontSize(6).font('Helvetica-Bold').fillColor('#FFFFFF').text('LIGNE AFFECTÉE', 20, 52, { align: 'center', width: 80 });
-      doc.fontSize(16).font('Helvetica-Bold').fillColor('#FFFFFF').text(lineCode || 'TOUS AXES', 20, 62, { align: 'center', width: 80 });
+      // 4. Lower White Section: QR Code + Validity
+      doc.rect(6, 110, 271.46, 122).fill('#FFFFFF');
+      doc.image(qrBuffer, 16, 116, { width: 110, height: 110 });
 
-      // Plate & Details
-      doc.fontSize(6).font('Helvetica-Bold').fillColor('#64748B').text('IMMATRICULATION', 110, 48);
-      doc.fontSize(14).font('Helvetica-Bold').fillColor('#0F172A').text(plateNumber, 110, 56);
-      doc.fontSize(6).font('Helvetica').fillColor('#64748B').text(`Type : ${vehicleType}`, 110, 74);
+      const expDate = typeof expiresAt === 'string' ? expiresAt : new Date(expiresAt).toLocaleDateString('fr-FR');
+      const validYear = typeof expiresAt === 'string' ? '2027' : new Date(expiresAt).getFullYear();
 
-      // Central High-Contrast QR Code
-      doc.image(qrBuffer, 66, 92, { width: 150, height: 150 });
+      doc.fontSize(11).font('Helvetica-Bold').fillColor('#DC2626')
+        .text(`VALIDITÉ : ${expDate}`, 134, 150);
+      doc.fontSize(9.5).font('Helvetica-Bold').fillColor('#0F172A')
+        .text(`VALABLE POUR L ANNÉE ${validYear}`, 134, 168);
 
-      // Footer: Licence Number & Expiry
-      doc.fontSize(6).font('Helvetica-Bold').fillColor('#64748B')
-        .text('N° DE LICENCE : ' + licenceNumber, 8, 248, { align: 'center', width: 267.46 });
+      // 5. Security Micro-text Ribbon
+      doc.rect(6, 232, 271.46, 8).fill('#F1F5F9');
+      doc.fontSize(4).font('Helvetica-Bold').fillColor('#475569')
+        .text('RÉPUBLIQUE DE GUINÉE • AOTUC • SÉCURITÉ • CONTRÔLE - 2026', 6, 234.5, { align: 'center', width: 271.46 });
 
-      const expDate = new Date(expiresAt).toLocaleDateString('fr-FR');
-      doc.fontSize(8).font('Helvetica-Bold').fillColor('#009460')
-        .text('EXPIRATION : ' + expDate, 8, 258, { align: 'center', width: 267.46 });
+      // 6. Bottom Green Banner: Gold Hologram + CONAKRY TRANSPORT PUBLIC AUTORISÉ + Flag
+      doc.rect(6, 240, 271.46, 37.46).fill('#047857');
+      doc.circle(24, 258, 10).fillAndStroke('#FCD116', '#B45309');
+      doc.fontSize(10).font('Helvetica-Bold').fillColor('#78350F').text('★', 21, 253);
+
+      doc.fontSize(6).font('Helvetica-Bold').fillColor('#FFFFFF')
+        .text('—— CONAKRY ——', 6, 244, { align: 'center', width: 271.46 });
+      doc.fontSize(10).font('Helvetica-Bold').fillColor('#FCD116')
+        .text('TRANSPORT PUBLIC AUTORISÉ', 6, 253, { align: 'center', width: 271.46 });
+      doc.fontSize(4.5).font('Helvetica').fillColor('#FFFFFF')
+        .text('CE DOCUMENT EST SÉCURISÉ - TOUTE CONTREFAÇON EST PUNIE PAR LA LOI', 6, 267, { align: 'center', width: 271.46 });
 
       doc.end();
     });

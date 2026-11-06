@@ -196,28 +196,26 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenPubl
         <div className="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           {/* Left Column: Official Institutional Hero */}
           <div className="lg:col-span-5 text-white space-y-6 text-center lg:text-left">
-            <div className="inline-flex items-center space-x-3 bg-slate-800/80 dark:bg-slate-800 border border-slate-700/80 dark:border-slate-700 px-3.5 py-1.5 rounded-full">
+            {/* Official Brand Banner Hero */}
+            <div className="rounded-2xl overflow-hidden shadow-2xl border border-slate-700/80 bg-[#0B1E36] p-3">
               <img
-                src="/aotuc-logo.png"
-                alt="Sceau Officiel République de Guinée"
-                className="w-6 h-6 object-contain rounded-full"
+                src="/aotuc-official-banner.png"
+                alt="AOTUC — Autorité Organisatrice des Transports Urbains de Conakry"
+                className="w-full h-auto object-contain rounded-xl select-none"
               />
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                République de Guinée
-              </span>
             </div>
 
-            <div>
+            <div className="space-y-2">
               <div className="text-xs uppercase font-extrabold tracking-widest text-[#FCD116]">
-                Ministère des Transports
+                RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1">
-                AOTUC-TRANSPORT
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                Portail Numérique Officiel AOTUC
               </h1>
-              <div className="mt-2 inline-flex items-center px-2.5 py-1 rounded-md bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-semibold italic">
+              <div className="inline-flex items-center px-3 py-1 rounded-lg bg-blue-500/20 border border-blue-400/40 text-sky-300 text-xs font-semibold italic">
                 « Pour une Mobilité Urbaine Participative &amp; Durable »
               </div>
-              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+              <p className="text-xs text-slate-300 leading-relaxed">
                 Plateforme Numérique Intégrée d Organisation, d Immatriculation et de Régulation des Transports Urbains de Conakry.
               </p>
             </div>
@@ -248,18 +246,18 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenPubl
           {/* Right Column: Secure Login Card (NO certified users shown) */}
           <div className="lg:col-span-7 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors duration-200">
             {/* Card Header */}
-            <div className="p-6 sm:p-8 bg-slate-50/70 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-4">
+            <div className="p-4 sm:p-6 bg-[#0B1E36] text-white border-b border-slate-700/80 flex items-center justify-between gap-3">
               <img
-                src="/aotuc-logo.png"
-                alt="Logo AOTUC"
-                className="w-14 h-14 object-contain rounded-full bg-white dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700 shadow-sm flex-shrink-0"
+                src="/aotuc-header-brand.png"
+                alt="Logo Officiel AOTUC"
+                className="h-12 sm:h-14 w-auto object-contain rounded select-none"
               />
-              <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+              <div className="text-right">
+                <h2 className="text-sm sm:text-base font-bold text-white tracking-tight">
                   Portail d Accès Sécurisé
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Veuillez vous authentifier pour accéder à la console de gestion
+                <p className="text-[10px] sm:text-xs text-[#FCD116] font-semibold mt-0.5">
+                  Console d Exploitation Réglementaire
                 </p>
               </div>
             </div>

@@ -51,6 +51,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 min-h-[calc(100vh-4.5rem)] p-4 flex flex-col justify-between transition-colors duration-200">
       <div className="space-y-1">
+        {/* Official Brand Identity Card */}
+        <div className="mb-3 p-2 rounded-xl bg-[#0B1E36] border border-slate-700/60 shadow-md">
+          <img
+            src="/aotuc-header-brand.png"
+            alt="AOTUC — Autorité Organisatrice des Transports Urbains de Conakry"
+            className="w-full h-auto object-contain rounded-lg select-none"
+          />
+        </div>
         <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
           Modules Opérationnels Habilités
         </div>
@@ -112,3 +120,4 @@ export const Sidebar: React.FC<SidebarProps> = ({
 };
 
 export default Sidebar;
+

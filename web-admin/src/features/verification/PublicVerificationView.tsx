@@ -124,19 +124,21 @@ export const PublicVerificationView: React.FC<{
 
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <img
-              src="/aotuc-logo.png"
-              alt="Logo Officiel AOTUC"
-              className="w-11 h-11 rounded-full object-contain p-0.5 border border-slate-200 shadow-sm bg-white flex-shrink-0"
-            />
+            <div className="bg-[#0B1E36] px-2.5 py-1 rounded-xl border border-slate-700/60 shadow-sm flex items-center">
+              <img
+                src="/aotuc-header-brand.png"
+                alt="Logo Officiel AOTUC"
+                className="h-10 sm:h-11 w-auto object-contain select-none"
+              />
+            </div>
             <div>
               <div className="text-[9px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400">
                 RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS
               </div>
-              <h1 className="text-sm font-black text-slate-900 dark:text-white tracking-tight">
-                Autorité Organisatrice des Transports Urbains de Conakry (AOTUC)
+              <h1 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white tracking-tight">
+                Vérification Officielle des Titres de Transport (AOTUC)
               </h1>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 italic font-medium">
+              <div className="text-[10px] text-blue-600 dark:text-sky-400 italic font-medium">
                 « Pour une Mobilité Urbaine Participative &amp; Durable »
               </div>
             </div>
