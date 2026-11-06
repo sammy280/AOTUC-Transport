@@ -239,11 +239,11 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
             }}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center space-x-2 transition ${
               activeTab === 'licences'
-                ? 'bg-[#FCD116] text-slate-950 font-black border border-amber-500 shadow-sm'
+                ? 'bg-white text-slate-900 shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <FileCheck2 className={`w-4 h-4 ${activeTab === 'licences' ? 'text-slate-950' : 'text-slate-500'}`} />
+            <FileCheck2 className="w-4 h-4" />
             <span>Licences Véhicules (Vignettes)</span>
           </button>
         </div>
@@ -399,18 +399,13 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
           <div>
             <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
               <h2 className="text-xs font-bold uppercase tracking-wider flex items-center space-x-2">
-                <Printer className={`w-4 h-4 ${activeTab === 'licences' ? 'text-amber-600' : 'text-slate-600'}`} />
-                {activeTab === 'badges' ? (
-                  <span className="text-slate-800">Aperçu Badge CR80 PVC</span>
-                ) : (
-                  <span className="px-2.5 py-1 rounded-md bg-[#FCD116] text-slate-950 font-black border border-amber-500 shadow-sm inline-flex items-center space-x-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
-                    <span>Aperçu Vignette Pare-Brise (100×100)</span>
-                  </span>
-                )}
+                <Printer className="w-4 h-4 text-slate-600" />
+                <span>
+                  {activeTab === 'badges' ? 'Aperçu Badge CR80 PVC' : 'Aperçu Vignette Pare-Brise (100×100)'}
+                </span>
               </h2>
-              <span className={`text-[10px] font-semibold ${activeTab === 'licences' ? 'text-amber-700 font-bold' : 'text-slate-400'}`}>
-                {activeTab === 'badges' ? 'Norme ISO 7810' : 'Format Officiel Vignette Jaune'}
+              <span className="text-[10px] font-semibold text-slate-400">
+                Norme ISO 7810
               </span>
             </div>
 
@@ -587,19 +582,15 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
             <button
               onClick={handleDownloadPdf}
               disabled={isDownloading}
-              className={`w-full py-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50 ${
-                activeTab === 'licences'
-                  ? 'bg-[#FCD116] hover:bg-[#ebc414] text-slate-950 border border-amber-600 shadow-sm'
-                  : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
-              }`}
+              className="w-full py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
             >
-              <Download className={`w-4 h-4 ${activeTab === 'licences' ? 'text-slate-950' : 'text-slate-500'}`} />
+              <Download className="w-4 h-4 text-slate-500" />
               <span>
                 {isDownloading
                   ? 'Génération du PDF en cours...'
                   : activeTab === 'badges'
                   ? 'Télécharger PDF CR80 Recto / Verso (300 DPI)'
-                  : 'Télécharger Vignette Pare-Brise Jaune (100×100mm PDF)'}
+                  : 'Télécharger Vignette Pare-Brise (100×100mm PDF)'}
               </span>
             </button>
           </div>
