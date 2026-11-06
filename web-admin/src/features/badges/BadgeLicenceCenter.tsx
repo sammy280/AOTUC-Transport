@@ -438,8 +438,8 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
                 <div className="flex items-center justify-between mt-1">
                   <div className="flex items-center space-x-2">
                     <img
-                      src="/logo-guinee.png"
-                      alt="Sceau Guinée"
+                      src="/aotuc-logo.png"
+                      alt="Logo Officiel AOTUC"
                       className="w-7 h-7 rounded-full bg-white p-0.5 object-contain shadow-sm border border-slate-600 flex-shrink-0"
                     />
                     <div>
@@ -513,8 +513,8 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
                 {/* Header */}
                 <div className="flex items-center space-x-2 border-b-2 border-slate-900 pb-1.5">
                   <img
-                    src="/logo-guinee.png"
-                    alt="Sceau République de Guinée"
+                    src="/aotuc-logo.png"
+                    alt="Logo Officiel AOTUC"
                     className="w-9 h-9 rounded-full bg-white p-0.5 object-contain border border-slate-900 flex-shrink-0 shadow-sm"
                   />
                   <div className="text-left flex-1 leading-tight">

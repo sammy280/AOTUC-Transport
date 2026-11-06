@@ -148,7 +148,7 @@ export class CryptoSignatureService {
         algorithm: 'Ed25519',
         publicKeyPem: keys.publicKey,
         validFrom: keys.createdAt,
-        issuer: 'Agence Organisatrice du Transport Urbain de Conakry (AOTUC)',
+        issuer: 'Autorité Organisatrice des Transports Urbains de Conakry (AOTUC)',
       },
     ];
   }

@@ -198,7 +198,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenPubl
           <div className="lg:col-span-5 text-white space-y-6 text-center lg:text-left">
             <div className="inline-flex items-center space-x-3 bg-slate-800/80 dark:bg-slate-800 border border-slate-700/80 dark:border-slate-700 px-3.5 py-1.5 rounded-full">
               <img
-                src="/logo-guinee.png"
+                src="/aotuc-logo.png"
                 alt="Sceau Officiel République de Guinée"
                 className="w-6 h-6 object-contain rounded-full"
               />
@@ -250,7 +250,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenPubl
             {/* Card Header */}
             <div className="p-6 sm:p-8 bg-slate-50/70 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-4">
               <img
-                src="/logo-guinee.png"
+                src="/aotuc-logo.png"
                 alt="Logo AOTUC"
                 className="w-14 h-14 object-contain rounded-full bg-white dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700 shadow-sm flex-shrink-0"
               />
@@ -372,7 +372,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenPubl
 
       {/* Footer Legal & Security */}
       <footer className="p-4 text-center text-slate-500 text-[11px] border-t border-slate-800 space-y-0.5">
-        <div>République de Guinée • Ministère des Transports • Agence Organisatrice du Transport Urbain de Conakry (AOTUC) © 2026</div>
+        <div>République de Guinée • Ministère des Transports • Autorité Organisatrice des Transports Urbains de Conakry (AOTUC) © 2026</div>
         <div className="italic text-slate-400">« Pour une Mobilité Urbaine Participative &amp; Durable »</div>
       </footer>
     </div>

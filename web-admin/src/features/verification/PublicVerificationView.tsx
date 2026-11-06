@@ -131,9 +131,9 @@ export const PublicVerificationView: React.FC<{
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <img
-              src="/logo-guinee.png"
-              alt="Armoiries République de Guinée"
-              className="w-10 h-10 rounded-full object-contain p-0.5 border border-slate-200 shadow-sm flex-shrink-0"
+              src="/aotuc-logo.png"
+              alt="Logo Officiel AOTUC"
+              className="w-11 h-11 rounded-full object-contain p-0.5 border border-slate-200 shadow-sm bg-white flex-shrink-0"
             />
             <div>
               <div className="text-[9px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400">
@@ -326,11 +326,18 @@ export const PublicVerificationView: React.FC<{
                       >
                         {/* Header */}
                         <div className="flex items-center space-x-2 border-b-2 border-slate-900 pb-1.5">
-                          <img
-                            src="/logo-guinee.png"
-                            alt="Sceau République de Guinée"
-                            className="w-8 h-8 rounded-full bg-white p-0.5 object-contain border border-slate-900 flex-shrink-0 shadow-sm"
-                          />
+                          <div className="flex items-center space-x-1 flex-shrink-0">
+                            <img
+                              src="/aotuc-logo.png"
+                              alt="Sceau Officiel AOTUC"
+                              className="w-8 h-8 rounded-full bg-white p-0.5 object-contain border border-slate-900 shadow-sm"
+                            />
+                            <img
+                              src="/aotuc-logo.png"
+                              alt="Sceau République de Guinée"
+                              className="w-7 h-7 rounded-full bg-white p-0.5 object-contain border border-slate-900 shadow-sm"
+                            />
+                          </div>
                           <div className="text-left flex-1 leading-tight">
                             <div className="text-[7.5px] uppercase font-bold tracking-wider text-slate-900">
                               RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS
@@ -419,11 +426,18 @@ export const PublicVerificationView: React.FC<{
                         {/* Header */}
                         <div className="flex items-center justify-between mt-1">
                           <div className="flex items-center space-x-1.5">
-                            <img
-                              src="/logo-guinee.png"
-                              alt="Sceau Guinée"
-                              className="w-6 h-6 rounded-full bg-white p-0.5 object-contain shadow-sm border border-slate-600 flex-shrink-0"
-                            />
+                            <div className="flex items-center space-x-1 flex-shrink-0">
+                              <img
+                                src="/aotuc-logo.png"
+                                alt="Sceau Officiel AOTUC"
+                                className="w-6 h-6 rounded-full bg-white p-0.5 object-contain shadow-sm border border-slate-600"
+                              />
+                              <img
+                                src="/aotuc-logo.png"
+                                alt="Sceau Guinée"
+                                className="w-5 h-5 rounded-full bg-white p-0.5 object-contain shadow-sm border border-slate-600"
+                              />
+                            </div>
                             <div>
                               <div className="text-[6.5px] uppercase tracking-wider text-slate-300 font-bold">
                                 RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS

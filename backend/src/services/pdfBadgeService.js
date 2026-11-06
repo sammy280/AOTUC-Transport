@@ -3,9 +3,11 @@ import QRCode from 'qrcode';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { AOTUC_BRANDING } from '../config/branding.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const OFFICIAL_SEAL_PATH = path.resolve(__dirname, '../../assets/aotuc-official-seal.png');
 const OFFICIAL_LOGO_PATH = path.resolve(__dirname, '../../assets/logo-guinee.png');
 
 export class PdfBadgeService {
@@ -308,8 +310,8 @@ export class PdfBadgeService {
 
       // Footer Bar
       doc.rect(0, 386, 210, 10).fill('#0B1E36');
-      doc.fontSize(4.5).font('Helvetica-Bold').fillColor('#FFFFFF')
-        .text('AGENCE ORGANISATRICE DU TRANSPORT URBAIN DE CONAKRY — AOTUC', 0, 389, { align: 'center', width: 210 });
+      doc.fontSize(4.2).font('Helvetica-Bold').fillColor('#FFFFFF')
+        .text('AUTORITÉ ORGANISATRICE DES TRANSPORTS URBAINS DE CONAKRY — AOTUC', 0, 389, { align: 'center', width: 210 });
 
       doc.end();
     });
