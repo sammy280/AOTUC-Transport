@@ -72,21 +72,21 @@ export const PublicVerificationView: React.FC<{
           message: 'Ce titre officiel a été révoqué par la Direction Générale suite à une infraction routière.',
           verifiedAt: new Date().toISOString(),
         });
-      } else if (cleaned.includes('1452') || cleaned.includes('CH-') || cleaned.includes('BDG-') || cleaned.includes('LIC-') || cleaned.includes('0895') || cleaned.includes('REC-') || cleaned.startsWith('AOTUC1')) {
-        const isLicence = cleaned.includes('LIC') || cleaned.includes('0895');
-        const isTicket = cleaned.includes('REC') || cleaned.includes('TICKET');
+      } else if (cleaned.includes('1452') || cleaned.includes('CH-') || cleaned.includes('BDG-') || cleaned.includes('LIC-') || cleaned.includes('0895') || cleaned.includes('REC-') || cleaned.includes('TKT-') || cleaned.startsWith('AOTUC1')) {
+        const isLicence = cleaned.includes('LIC') || cleaned.includes('0895') || cleaned.includes('LC-');
+        const isTicket = cleaned.includes('REC') || cleaned.includes('TKT') || cleaned.includes('TICKET');
         setResult({
           success: true,
           status: 'VALID',
           statusText: 'DOCUMENT AUTHENTIQUE & VALIDE',
-          documentType: isLicence ? 'ÉCUSSON DE LICENCE TRANSPORT URBAIN' : isTicket ? 'BILLET DE TRANSPORT URBAIN' : 'BADGE CONDUCTEUR PROFESSIONNEL (CR80)',
-          credentialNumber: isLicence ? 'LC-2026-0895' : isTicket ? 'REC-2026-00042' : 'CH-2026-1452',
-          holderInfo: isLicence ? 'Véhicule Minibus (RC-1234-AB)' : isTicket ? 'Passager Urbain' : 'CAMARA Moussa',
-          authorizedRoute: isLicence ? 'L-01 • KALOUM — LAMBANDJI' : 'L-01 Kaloum-Lambandji',
-          issuedAt: '2024-10-30',
-          expiresAt: isLicence ? '2027-12-31' : '2027-10-30',
+          documentType: isLicence ? 'VIGNETTE DE LICENCE DE TRANSPORT URBAIN' : isTicket ? 'BILLET DE TRANSPORT URBAIN' : 'CARTE PROFESSIONNELLE CONDUCTEUR (CR80)',
+          credentialNumber: isLicence ? 'LIC-2026-00188' : isTicket ? 'TKT-2026-00042' : 'BDG-2026-00042',
+          holderInfo: isLicence ? 'El Hadj Ousmane Sow • Toyota HiAce (RC-9844-AB)' : isTicket ? 'Passager Urbain' : 'Abdoulaye Bah',
+          authorizedRoute: isLicence ? 'L-01 • KALOUM — MATOTO' : 'Réseau Urbain Grand Conakry',
+          issuedAt: '2026-02-15',
+          expiresAt: isLicence ? '2026-12-31' : '2028-02-15',
           issuingAuthority: 'AOTUC — Direction Générale (Conakry)',
-          securitySeal: 'Signature Cryptographique RFC 8032 Ed25519 Certifiée & Hologramme Inaltérable',
+          securitySeal: 'Signature Cryptographique RFC 8032 Ed25519 Certifiée & Sceau Officiel Inaltérable',
           verifiedAt: new Date().toISOString(),
           message: 'Ce document officiel est conforme, authentique et enregistré au registre central de l AOTUC.',
         });
@@ -111,6 +111,13 @@ export const PublicVerificationView: React.FC<{
     }
   }, [initialCode]);
 
+  const sampleBadges = [
+    { label: 'Badge Chauffeur Abdoulaye Bah (BDG-2026-00042)', code: 'BDG-2026-00042' },
+    { label: 'Vignette Licence HiAce (LIC-2026-00188)', code: 'LIC-2026-00188' },
+    { label: 'Badge Chauffeur Révoqué', code: 'BDG-2025-00911' },
+    { label: 'Billet de Transport Valide', code: 'TKT-2026-00042' },
+  ];
+
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between font-sans transition-colors duration-200">
       {/* Top National Header Bar */}
@@ -133,9 +140,9 @@ export const PublicVerificationView: React.FC<{
                 RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS
               </div>
               <h1 className="text-sm font-black text-slate-900 dark:text-white tracking-tight">
-                Portail Public de Vérification & Contrôle Routier AOTUC
+                Autorité Organisatrice des Transports Urbains de Conakry (AOTUC)
               </h1>
-              <div className="text-[10px] text-slate-400 dark:text-slate-400 italic font-medium">
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 italic font-medium">
                 « Pour une Mobilité Urbaine Participative &amp; Durable »
               </div>
             </div>
@@ -211,6 +218,26 @@ export const PublicVerificationView: React.FC<{
             </button>
           </form>
 
+          {/* Quick Demo Test Pills */}
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="text-[11px] font-semibold text-slate-400 mb-2">Exemples de démonstration pour contrôle :</div>
+            <div className="flex flex-wrap gap-2">
+              {sampleBadges.map((sample, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setInputCode(sample.code);
+                    performVerification(sample.code);
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-700 transition cursor-pointer"
+                >
+                  {sample.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Verification Results Panel */}
           {result && (
             <div className="pt-4 border-t border-slate-100 dark:border-slate-800 animate-in fade-in duration-200">
@@ -285,162 +312,165 @@ export const PublicVerificationView: React.FC<{
                       <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-mono">Modèle AOTUC Certifié</span>
                     </div>
 
-                    {result.credentialNumber?.includes('LC-') || (result.documentType && (result.documentType.includes('LICENCE') || result.documentType.includes('ÉCUSSON'))) ? (
-                      /* Windshield Sticker Official Visual Reproduction */
+                    {result.credentialNumber?.includes('LIC-') || result.credentialNumber?.includes('LC-') || (result.documentType && (result.documentType.includes('LICENCE') || result.documentType.includes('VIGNETTE') || result.documentType.includes('ÉCUSSON'))) ? (
+                      /* Windshield Sticker Official Visual Reproduction (Strictly Theme Immune) */
                       <div
-                        className="aotuc-official-document relative w-full aspect-square max-w-[280px] mx-auto bg-white text-slate-950 rounded-2xl shadow-xl border-2 border-slate-300 flex flex-col justify-between overflow-hidden select-none"
+                        className="aotuc-official-document relative w-full aspect-square max-w-[260px] mx-auto rounded-2xl p-4 shadow-xl border-4 flex flex-col justify-between overflow-hidden select-none"
                         data-official-document="true"
+                        style={{
+                          backgroundColor: '#FCD116',
+                          borderColor: '#0F172A',
+                          color: '#020617',
+                          colorScheme: 'light',
+                        }}
                       >
-                        {/* Red Header */}
-                        <div className="bg-[#CE1126] py-1.5 px-3 text-center rounded-t-xl">
-                          <div className="text-xs font-black text-white uppercase tracking-wider">
-                            {result.authorizedRoute || 'L-01 • KALOUM — LAMBANDJI'}
+                        {/* Header */}
+                        <div className="flex items-center space-x-2 border-b-2 border-slate-900 pb-1.5">
+                          <img
+                            src="/logo-guinee.png"
+                            alt="Sceau République de Guinée"
+                            className="w-8 h-8 rounded-full bg-white p-0.5 object-contain border border-slate-900 flex-shrink-0 shadow-sm"
+                          />
+                          <div className="text-left flex-1 leading-tight">
+                            <div className="text-[7.5px] uppercase font-bold tracking-wider text-slate-900">
+                              RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS
+                            </div>
+                            <div className="text-[10px] font-black uppercase text-slate-950">
+                              AOTUC • VIGNETTE DE TRANSPORT URBAIN
+                            </div>
                           </div>
                         </div>
 
-                        {/* Agency Header */}
-                        <div className="bg-white px-2.5 py-1 flex items-center space-x-2.5">
-                          <div className="w-9 h-9 rounded-full border border-[#0B1E36] p-0.5 flex flex-col items-center justify-center bg-white shadow-sm flex-shrink-0">
-                            <span className="text-[7px] font-black text-[#0B1E36]">AOTUC</span>
+                        {/* Central Plate */}
+                        <div className="text-center my-auto space-y-1">
+                          <div className="text-[9px] font-bold text-slate-900 uppercase">
+                            IMMATRICULATION AUTORISÉE
                           </div>
-                          <div className="text-left font-black text-[#1E3A8A] leading-tight uppercase">
-                            <div className="text-[10px] tracking-wide">ECUSSON DE LICENCE</div>
-                            <div className="text-[10px] tracking-wide">TRANSPORT URBAIN</div>
+                          <div className="text-xl font-black font-mono tracking-wider bg-white text-slate-950 py-1 px-3 rounded-lg border-2 border-slate-900 inline-block shadow-sm">
+                            {result.holderInfo?.match(/\(([^)]+)\)/)?.[1] || 'RC-9844-AB'}
                           </div>
-                        </div>
-
-                        {/* Yellow Middle Band */}
-                        <div className="bg-[#FCD116] py-1 px-2 text-center border-t border-b border-amber-500 shadow-inner">
-                          <div className="text-xs font-black text-slate-950 font-mono tracking-tight uppercase">
-                            LICENCE N° {result.credentialNumber || 'LC-2026-0895'}
+                          <div className="text-[10px] font-bold text-slate-900">
+                            {result.holderInfo?.split('•')?.[1] || 'Toyota HiAce Minibus'}
                           </div>
-                          <div className="text-[10px] font-black text-[#047857] font-mono tracking-tight uppercase">
-                            IMMATRICULATION : {result.holderInfo?.includes('RC-') ? result.holderInfo.match(/RC-[0-9A-Z-]+/)?.[0] || 'RC-1234-AB' : 'RC-1234-AB'}
+                          <div className="text-[9px] text-slate-800">
+                            Ligne : <b>{result.authorizedRoute || 'Grand Conakry'}</b>
                           </div>
                         </div>
 
-                        {/* White Lower Section */}
-                        <div className="bg-white px-2.5 py-1 flex items-center justify-between gap-2">
-                          <div className="p-0.5 bg-white border border-slate-200 rounded">
+                        {/* Footer with Big Year & QR Code */}
+                        <div className="flex items-center justify-between pt-2 border-t-2 border-slate-900">
+                          <div>
+                            <div className="text-[8px] font-bold uppercase text-slate-900">EXERCICE</div>
+                            <div className="text-xl font-black text-slate-950">2026</div>
+                          </div>
+
+                          <div className="w-12 h-12 bg-white p-1 rounded-lg border-2 border-slate-900 flex items-center justify-center shadow-sm">
                             <QrCode className="w-10 h-10 text-slate-950" />
-                          </div>
-                          <div className="flex-1 text-left">
-                            <div className="text-[11px] font-black text-[#DC2626] font-mono uppercase tracking-tight">
-                              VALIDITÉ : {result.expiresAt ? new Date(result.expiresAt).toLocaleDateString('fr-FR') : '31/12/2027'}
-                            </div>
-                            <div className="text-[9px] font-black text-slate-950 uppercase tracking-tight">
-                              VALABLE POUR L'ANNÉE {result.expiresAt ? new Date(result.expiresAt).getFullYear() : 2027}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Micro-text Ribbon */}
-                        <div className="bg-slate-100 py-0.5 text-center text-[4.5px] font-bold text-slate-600 uppercase tracking-wider overflow-hidden whitespace-nowrap border-t border-b border-slate-200">
-                          RÉPUBLIQUE DE GUINÉE • AOTUC • SÉCURITÉ • CONTRÔLE - 2026
-                        </div>
-
-                        {/* Green Footer */}
-                        <div className="bg-[#047857] py-1 px-2.5 rounded-b-xl flex items-center justify-between text-white">
-                          <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-yellow-400 to-amber-500 border border-amber-700 flex items-center justify-center text-[8px] font-bold text-amber-950">
-                            ★
-                          </div>
-                          <div className="text-center flex-1 px-1">
-                            <div className="text-[6px] font-bold text-white uppercase tracking-widest leading-none">—— CONAKRY ——</div>
-                            <div className="text-[9px] font-black text-[#FCD116] uppercase tracking-wider leading-tight">TRANSPORT PUBLIC AUTORISÉ</div>
-                          </div>
-                          <div className="w-4 h-3 flex rounded-sm overflow-hidden border border-white/40">
-                            <div className="flex-1 bg-[#CE1126]" />
-                            <div className="flex-1 bg-[#FCD116]" />
-                            <div className="flex-1 bg-[#009460]" />
                           </div>
                         </div>
                       </div>
-                    ) : (
-                      /* CR80 Driver Badge Official Visual Reproduction */
+                    ) : result.documentType?.includes('BILLET') ? (
+                      /* Thermal Transport Ticket Preview (Theme Immune) */
                       <div
-                        className="aotuc-official-document relative w-full aspect-[85.6/53.98] max-w-[320px] mx-auto bg-white text-slate-900 rounded-xl p-0 shadow-xl border border-slate-300 flex flex-col justify-between overflow-hidden select-none"
+                        className="aotuc-official-document max-w-[240px] mx-auto p-3 border-2 border-dashed border-slate-400 rounded-xl space-y-2 bg-white text-slate-900 shadow-md font-mono text-[10px]"
                         data-official-document="true"
+                        style={{ backgroundColor: '#FFFFFF', color: '#0F172A', colorScheme: 'light' }}
                       >
-                        {/* Header Tricolor */}
-                        <div>
-                          <div className="h-1 bg-[#CE1126] w-full" />
-                          <div className="bg-[#FCD116] px-2.5 py-0.5 flex items-center justify-between">
-                            <div className="flex items-center space-x-1">
-                              <span className="text-xs font-black text-[#008751] tracking-tight">AOTUC</span>
-                            </div>
-                            <div className="text-[6px] font-black text-[#065F46] uppercase leading-tight text-right">
-                              <div>AGENCE DE TRANSPORT</div>
-                              <div>DE L'UNION DE CONAKRY</div>
+                        <div className="text-center border-b border-slate-300 pb-1">
+                          <div className="font-bold">AOTUC • BILLET DE TRANSPORT</div>
+                          <div className="text-[8px] text-slate-500">Pour une Mobilité Urbaine Participative & Durable</div>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>N° Billet :</span>
+                          <span className="font-bold">{result.credentialNumber}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Trajet :</span>
+                          <span className="font-bold">{result.authorizedRoute}</span>
+                        </div>
+                        <div className="flex justify-between font-bold text-[#009460]">
+                          <span>Tarif :</span>
+                          <span>2 500 GNF</span>
+                        </div>
+                        <div className="flex justify-center pt-1">
+                          <QrCode className="w-16 h-16 text-slate-900" />
+                        </div>
+                      </div>
+                    ) : (
+                      /* CR80 Badge Visual Preview (Authentic Slate-Navy - Strictly Theme Immune) */
+                      <div
+                        className="aotuc-official-document relative w-full aspect-[85.6/53.98] rounded-xl p-3 shadow-xl border flex flex-col justify-between overflow-hidden select-none"
+                        data-official-document="true"
+                        style={{
+                          backgroundColor: '#0F172A',
+                          backgroundImage: 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0B1E36 100%)',
+                          borderColor: '#334155',
+                          color: '#FFFFFF',
+                          colorScheme: 'light',
+                        }}
+                      >
+                        {/* National Tricolor Top Stripe */}
+                        <div className="absolute top-0 left-0 right-0 h-1 flex z-10">
+                          <div className="flex-1" style={{ backgroundColor: '#CE1126' }} />
+                          <div className="flex-1" style={{ backgroundColor: '#FCD116' }} />
+                          <div className="flex-1" style={{ backgroundColor: '#009460' }} />
+                        </div>
+
+                        {/* Header */}
+                        <div className="flex items-center justify-between mt-1">
+                          <div className="flex items-center space-x-1.5">
+                            <img
+                              src="/logo-guinee.png"
+                              alt="Sceau Guinée"
+                              className="w-6 h-6 rounded-full bg-white p-0.5 object-contain shadow-sm border border-slate-600 flex-shrink-0"
+                            />
+                            <div>
+                              <div className="text-[6.5px] uppercase tracking-wider text-slate-300 font-bold">
+                                RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS
+                              </div>
+                              <div className="text-[8.5px] font-black text-[#FCD116] tracking-wide">
+                                AOTUC • CARTE PROFESSIONNELLE DE CONDUCTEUR
+                              </div>
                             </div>
                           </div>
-                          <div className="h-0.5 bg-[#009460] w-full" />
-                          <div className="bg-[#E2E8F0] py-0.5 text-center text-[6px] font-bold text-slate-800 tracking-wide border-b border-slate-300">
-                            BADGE CONDUCTEUR PROFESSIONNEL • CONAKRY - RÉPUBLIQUE DE GUINÉE
+                          <div className="text-[8px] font-mono bg-slate-800/90 px-1.5 py-0.5 rounded border border-slate-600 text-slate-200">
+                            {result.credentialNumber}
                           </div>
                         </div>
 
-                        {/* Body */}
-                        <div className="flex-1 px-2.5 py-1 flex items-center justify-between gap-2">
-                          <div className="flex flex-col items-center space-y-1">
-                            <div className="w-12 h-14 bg-slate-100 border border-slate-300 rounded flex flex-col items-center justify-center p-0.5 shadow-inner">
-                              <User className="w-6 h-6 text-slate-400" />
-                              <span className="text-[4.5px] font-bold text-slate-500 uppercase mt-0.5 leading-none">PHOTO</span>
+                        {/* Driver Body */}
+                        <div className="flex items-center space-x-2 my-1">
+                          <div className="w-12 h-14 rounded bg-slate-800 border border-slate-600 flex flex-col items-center justify-center text-slate-400 overflow-hidden shadow-inner flex-shrink-0">
+                            <User className="w-6 h-6 text-slate-400" />
+                            <span className="text-[6px] text-slate-300 font-semibold mt-0.5">PHOTO</span>
+                          </div>
+
+                          <div className="flex-1 text-[9.5px] space-y-0.5 min-w-0">
+                            <div className="font-bold text-white text-[11px] truncate">{result.holderInfo}</div>
+                            <div className="text-slate-300 text-[8.5px]">
+                              Ligne : <span className="font-semibold text-slate-200">{result.authorizedRoute}</span>
                             </div>
-                            <div className="p-0.5 bg-white border border-slate-200 rounded">
-                              <QrCode className="w-7 h-7 text-slate-900" />
+                            <div className="text-slate-300 text-[8.5px]">
+                              Statut : <span className="font-bold text-emerald-400">CERTIFIÉ CONFORME</span>
                             </div>
                           </div>
 
-                          <div className="flex-1 flex flex-col justify-between h-full py-0.5">
-                            <div className="flex justify-end">
-                              <span className="px-1.5 py-0.2 bg-[#DC2626] text-white text-[6.5px] font-black rounded-full uppercase tracking-wider">
-                                VALID / VALIDE
-                              </span>
-                            </div>
-                            <div className="space-y-0.5">
-                              <div>
-                                <div className="text-[5.5px] font-bold text-slate-400 uppercase">NOM / NAME</div>
-                                <div className="text-[11px] font-black text-[#0B1E36] uppercase leading-tight">
-                                  {result.holderInfo || 'CAMARA Moussa'}
-                                </div>
-                              </div>
-                              <div>
-                                <div className="text-[5.5px] font-bold text-slate-400 uppercase">BADGE N°</div>
-                                <div className="text-xs font-black text-slate-950 font-mono leading-tight">
-                                  {result.credentialNumber || 'CH-2026-1452'}
-                                </div>
-                              </div>
-                              <div>
-                                <div className="text-[5.5px] font-bold text-slate-400 uppercase">LIGNE / LINE</div>
-                                <div className="text-[8.5px] font-bold text-slate-900 leading-tight">
-                                  {result.authorizedRoute || 'L-01 Kaloum-Lambandji'}
-                                </div>
-                              </div>
-                              <div>
-                                <div className="text-[5.5px] font-bold text-slate-400 uppercase">EXPIRATION</div>
-                                <div className="text-[10px] font-black text-slate-950 font-mono leading-tight">
-                                  {result.expiresAt ? new Date(result.expiresAt).toLocaleDateString('fr-FR') : '30-10-2027'}
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center justify-end space-x-1.5 pt-0.5">
-                              <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-amber-400 to-yellow-500 border border-amber-600 flex items-center justify-center text-[7px] text-amber-950">
-                                ★
-                              </div>
-                              <div className="px-1.5 py-0.2 bg-emerald-100 border border-emerald-600 rounded-full text-[7px] font-black text-emerald-800">
-                                AUTORISÉ
-                              </div>
-                            </div>
+                          {/* Scannable QR Code */}
+                          <div className="w-12 h-12 bg-white p-1 rounded-lg border border-slate-700 flex items-center justify-center flex-shrink-0 shadow-md">
+                            <QrCode className="w-10 h-10 text-slate-950" />
                           </div>
                         </div>
 
                         {/* Footer */}
-                        <div>
-                          <div className="h-0.5 flex w-full">
-                            <div className="flex-1 bg-[#CE1126]" />
-                            <div className="flex-1 bg-[#FCD116]" />
-                            <div className="flex-1 bg-[#009460]" />
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-700 text-[7.5px]">
+                          <div className="text-slate-400">
+                            Expire : <span className="text-white font-mono font-bold">{result.expiresAt ? new Date(result.expiresAt).toLocaleDateString('fr-FR') : '31/12/2028'}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <span className="px-1.5 py-0.2 rounded text-[7px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                              VALIDE
+                            </span>
+                            <span className="text-slate-400 text-[7px]">Ed25519 Certifié</span>
                           </div>
                         </div>
                       </div>
@@ -545,7 +575,7 @@ export const PublicVerificationView: React.FC<{
       <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-4 text-center text-xs text-slate-500 dark:text-slate-400">
         <div className="max-w-4xl mx-auto px-4 space-y-1">
           <div>
-            <b>AGENCE ORGANISATRICE DU TRANSPORT URBAIN DE CONAKRY (AOTUC)</b> • Système Sécurisé v2.0
+            <b>AUTORITÉ ORGANISATRICE DES TRANSPORTS URBAINS DE CONAKRY (AOTUC)</b> • Système Sécurisé v2.0
           </div>
           <div className="italic text-[11px] text-slate-500 dark:text-slate-400">
             « Pour une Mobilité Urbaine Participative &amp; Durable »

@@ -89,7 +89,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
-                Ministère des Transports • AOTUC — <span className="italic font-medium text-slate-600 dark:text-slate-300">« Pour une Mobilité Urbaine Participative & Durable »</span>
+                Autorité Organisatrice des Transports Urbains de Conakry (AOTUC) • <span className="italic font-medium text-slate-600 dark:text-slate-300">« Pour une Mobilité Urbaine Participative & Durable »</span>
               </p>
             </div>
           </div>

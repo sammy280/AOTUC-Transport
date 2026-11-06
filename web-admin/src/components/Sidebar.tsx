@@ -103,7 +103,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
         <div className="text-slate-600 dark:text-slate-300">{currentUser.roleLabel}</div>
         <div className="text-[10px] text-slate-400 dark:text-slate-500 pt-1 border-t border-slate-200 dark:border-slate-700 leading-tight">
-          <div className="font-semibold text-slate-500 dark:text-slate-400">Système officiel AOTUC v2.0</div>
+          <div className="font-semibold text-slate-500 dark:text-slate-400">Autorité Organisatrice des Transports (AOTUC)</div>
           <div className="italic text-[9.5px] text-slate-400 dark:text-slate-500 mt-0.5">« Pour une Mobilité Urbaine Participative & Durable »</div>
         </div>
       </div>
