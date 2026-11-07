@@ -136,7 +136,7 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
     );
 
     // Call backend API in background if server is online
-    fetch(`http://localhost:5000/api/v1/users/${user.id}/${updatedStatus ? 'reactivate' : 'deactivate'}`, {
+    fetch(`/api/v1/users/${user.id}/${updatedStatus ? 'reactivate' : 'deactivate'}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

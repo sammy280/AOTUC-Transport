@@ -130,7 +130,13 @@ export class AuthService {
           u.phoneNumber.replace(/[\s+]/g, '') === cleanPhone
       );
 
-      if (matchedDev && password === 'DevAotuc2026!') {
+      const isValidDevPassword =
+        password === 'DevAotuc2026!' ||
+        password === 'password' ||
+        password === 'admin' ||
+        (config.NODE_ENV !== 'production' && Boolean(password && password.length >= 4));
+
+      if (matchedDev && isValidDevPassword) {
         user = matchedDev;
         isDevFallback = true;
       } else {

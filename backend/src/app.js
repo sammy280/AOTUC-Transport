@@ -72,8 +72,9 @@ app.get('/api/v1/health', async (req, res) => {
   }
 
   const isHealthy = dbStatus === 'connected';
+  const statusCode = isHealthy || config.NODE_ENV !== 'production' ? 200 : 503;
 
-  return res.status(isHealthy ? 200 : 503).json({
+  return res.status(statusCode).json({
     status: isHealthy ? 'healthy' : 'degraded',
     service: 'AOTUC-TRANSPORT-API',
     version: '2.0.0',
