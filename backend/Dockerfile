@@ -2,8 +2,7 @@
 # AOTUC-TRANSPORT v2.0 — Production Backend Dockerfile
 # Base: Node.js 22 LTS (Debian slim for native argon2 & PostGIS Prisma engines)
 # ==============================================================================
-
-FROM node:22-bullseye-slim AS base
+FROM node:22-bookworm-slim AS base
 WORKDIR /app
 
 # Install openssl for Prisma engine
