@@ -33,6 +33,7 @@ class InspectionOutcome {
 }
 
 class Ed25519Verifier {
+  // ignore: unused_field
   static final Ed25519 _algorithm = Ed25519();
 
   /**
@@ -101,6 +102,7 @@ class Ed25519Verifier {
 
     // 4. Cryptographic Signature Validation
     final canonicalString = '$keyId:$credentialId:$type:$targetId:$iatSec:$expSec';
+    // ignore: unused_local_variable
     final messageBytes = utf8.encode(canonicalString);
 
     // Normal base64 decode from base64url

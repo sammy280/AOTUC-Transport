@@ -203,7 +203,7 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _categorie,
+                    initialValue: _categorie,
                     decoration: const InputDecoration(
                       labelText: 'Catégorie Permis',
                       border: OutlineInputBorder(),
@@ -222,7 +222,7 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
             const SizedBox(height: 12),
 
             DropdownButtonFormField<String>(
-              value: _commune,
+              initialValue: _commune,
               decoration: const InputDecoration(
                 labelText: 'Commune d Affectation Terrain *',
                 border: OutlineInputBorder(),
