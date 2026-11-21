@@ -1,7 +1,58 @@
+import crypto from 'crypto';
 import prisma from '../../utils/prisma.js';
 import { AppError } from '../../middlewares/errorHandler.js';
 import DocumentStorageService from '../../services/documentStorageService.js';
 import { normalizeGuineanPhone } from './registration.schemas.js';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Resolves a commune UUID from either a UUID, a commune code (e.g. 'MTT', 'KLM'), or a commune name (e.g. 'Matoto').
+ */
+async function resolveCommuneId(rawCommune, fallbackCommuneId = null) {
+  if (fallbackCommuneId && UUID_REGEX.test(String(fallbackCommuneId).trim())) {
+    return String(fallbackCommuneId).trim();
+  }
+  if (!rawCommune) return fallbackCommuneId || null;
+  const trimmed = String(rawCommune).trim();
+  if (!trimmed) return fallbackCommuneId || null;
+  if (UUID_REGEX.test(trimmed)) return trimmed;
+
+  const found = await prisma.commune.findFirst({
+    where: {
+      OR: [
+        { id: trimmed },
+        { code: { equals: trimmed, mode: 'insensitive' } },
+        { name: { equals: trimmed, mode: 'insensitive' } },
+      ],
+    },
+    select: { id: true },
+  });
+
+  return found ? found.id : fallbackCommuneId || null;
+}
+
+/**
+ * Pre-validates inline base64 documents (size, magic bytes, optional SHA-256 hash)
+ * BEFORE starting any database transaction so invalid/corrupted photographs or documents
+ * do not leave partial or orphaned driver/owner/vehicle records.
+ */
+function validateInlineDocuments(documents, actorUserId) {
+  if (!Array.isArray(documents) || documents.length === 0) return;
+
+  for (const doc of documents) {
+    if (!doc.base64Data || !doc.category) continue;
+    const cleanBase64 = doc.base64Data.replace(/^data:[^;]+;base64,/, '');
+    const fileBuffer = Buffer.from(cleanBase64, 'base64');
+    DocumentStorageService.validateFileBuffer({
+      fileBuffer,
+      originalName: doc.originalName || `${doc.category.toLowerCase()}.jpg`,
+      declaredMime: doc.mimeType || 'image/jpeg',
+      expectedSha256: doc.fileHashSha256 || null,
+      uploadedByUserId: actorUserId,
+    });
+  }
+}
 
 async function saveInlineDocuments(documents, { actorUserId, personId = null, vehicleId = null }) {
   if (!Array.isArray(documents) || documents.length === 0) return [];
@@ -18,6 +69,7 @@ async function saveInlineDocuments(documents, { actorUserId, personId = null, ve
       uploadedByUserId: actorUserId,
       personId,
       vehicleId,
+      expectedSha256: doc.fileHashSha256 || null,
     });
     saved.push(record);
   }
@@ -111,8 +163,22 @@ export class RegistrationService {
    */
   static async registerDriver(data, actorUser) {
     const normalizedPhone = normalizeGuineanPhone(data.phoneNumber);
+    const normalizedEmergencyPhone = data.emergencyContactPhone
+      ? normalizeGuineanPhone(data.emergencyContactPhone)
+      : null;
     const cleanedNin = data.nin.trim().toUpperCase();
     const cleanedLicense = data.drivingLicenseNumber.trim().toUpperCase();
+
+    if (normalizedEmergencyPhone && normalizedEmergencyPhone === normalizedPhone) {
+      throw new AppError(
+        "Le numéro d'urgence doit être différent du numéro de téléphone principal du chauffeur.",
+        400,
+        'EMERGENCY_PHONE_SAME_AS_PRIMARY'
+      );
+    }
+
+    // 0. Pre-validate any inline documents (photograph, CNI, permis) before opening DB transaction
+    validateInlineDocuments(data.documents, actorUser.id);
 
     // 1. Duplicate checks
     const existingPerson = await prisma.person.findFirst({
@@ -130,6 +196,22 @@ export class RegistrationService {
       );
     }
 
+    if (existingPerson && existingPerson.nin !== cleanedNin) {
+      throw new AppError(
+        'Ce numéro de téléphone est déjà associé à une autre personne (NIN différent).',
+        409,
+        'PHONE_ALREADY_EXISTS'
+      );
+    }
+
+    if (existingPerson && existingPerson.phoneNumber !== normalizedPhone) {
+      throw new AppError(
+        'Ce numéro NIN est déjà enregistré avec un autre numéro de téléphone.',
+        409,
+        'NIN_ALREADY_EXISTS'
+      );
+    }
+
     const existingLicense = await prisma.driver.findUnique({
       where: { drivingLicenseNumber: cleanedLicense },
     });
@@ -142,15 +224,18 @@ export class RegistrationService {
       );
     }
 
-    // Assign actor's commune if field agent has one and none provided
-    const communeId = actorUser.communeId || data.communeId || null;
+    // Resolve communeId from actorUser.communeId, data.communeId, or data.commune
+    const communeId = await resolveCommuneId(
+      actorUser.communeId || data.communeId || data.commune,
+      actorUser.communeId
+    );
     const hasGps =
       data.latitude !== undefined &&
       data.latitude !== null &&
       data.longitude !== undefined &&
       data.longitude !== null;
 
-    // 2. Atomic creation of Person and Driver profile
+    // 2. Atomic creation of Person, Driver profile, and ValidationRequest
     const result = await prisma.$transaction(async (tx) => {
       let personId;
 
@@ -187,41 +272,89 @@ export class RegistrationService {
           licenseCategory: data.licenseCategory || 'B',
           licenseExpirationDate: new Date(data.licenseExpirationDate),
           status: 'EN_ATTENTE_VALIDATION',
+          emergencyContactName: data.emergencyContactName ? data.emergencyContactName.trim() : null,
+          emergencyContactPhone: normalizedEmergencyPhone,
+          emergencyContactRelation: data.emergencyContactRelation
+            ? data.emergencyContactRelation.trim()
+            : null,
           unionId: data.unionId || null,
         },
         include: {
-          person: { include: { commune: true } },
+          person: { include: { commune: true, documents: true } },
           union: true,
         },
       });
 
-      await tx.auditLog.create({
-        data: {
-          actorId: actorUser.id,
-          action: 'DRIVER_ENROLLED',
-          targetModule: 'REGISTRATION',
-          targetRecordId: driver.id,
-          newValues: {
-            driverId: driver.id,
-            nin: cleanedNin,
-            license: cleanedLicense,
-            communeId,
-            latitude: hasGps ? Number(data.latitude) : null,
-            longitude: hasGps ? Number(data.longitude) : null,
+      if (tx.validationRequest) {
+        const requestNumber = `VAL-${new Date().getFullYear()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+        await Promise.all([
+          tx.validationRequest.create({
+            data: {
+              requestNumber,
+              entityType: 'DRIVER_ENROLMENT',
+              targetEntityId: driver.id,
+              submitterId: actorUser.id,
+              currentLevel: 2,
+              currentStatus: 'SOUMIS_NIVEAU2',
+              communeId,
+              submittedAt: new Date(),
+            },
+          }),
+          tx.auditLog.create({
+            data: {
+              actorId: actorUser.id,
+              action: 'DRIVER_ENROLLED',
+              targetModule: 'REGISTRATION',
+              targetRecordId: driver.id,
+              newValues: {
+                driverId: driver.id,
+                nin: cleanedNin,
+                license: cleanedLicense,
+                emergencyContactPhone: normalizedEmergencyPhone,
+                emergencyContactName: data.emergencyContactName || null,
+                emergencyContactRelation: data.emergencyContactRelation || null,
+                communeId,
+                latitude: hasGps ? Number(data.latitude) : null,
+                longitude: hasGps ? Number(data.longitude) : null,
+              },
+            },
+          }),
+        ]);
+      } else {
+        await tx.auditLog.create({
+          data: {
+            actorId: actorUser.id,
+            action: 'DRIVER_ENROLLED',
+            targetModule: 'REGISTRATION',
+            targetRecordId: driver.id,
+            newValues: {
+              driverId: driver.id,
+              nin: cleanedNin,
+              license: cleanedLicense,
+              emergencyContactPhone: normalizedEmergencyPhone,
+              emergencyContactName: data.emergencyContactName || null,
+              emergencyContactRelation: data.emergencyContactRelation || null,
+              communeId,
+              latitude: hasGps ? Number(data.latitude) : null,
+              longitude: hasGps ? Number(data.longitude) : null,
+            },
           },
-        },
-      });
+        });
+      }
 
       return driver;
-    });
+    }, { maxWait: 10000, timeout: 25000 });
 
     if (Array.isArray(data.documents) && data.documents.length > 0) {
       result.documents = await saveInlineDocuments(data.documents, {
         actorUserId: actorUser.id,
         personId: result.personId,
       });
+      if (result.person) {
+        result.person.documents = result.documents;
+      }
     } else {
-      result.documents = [];
+      result.documents = result.person?.documents || [];
     }
 
     return result;
@@ -233,6 +366,8 @@ export class RegistrationService {
   static async registerOwner(data, actorUser) {
     const normalizedPhone = normalizeGuineanPhone(data.phoneNumber);
     const cleanedNin = data.nin.trim().toUpperCase();
+
+    validateInlineDocuments(data.documents, actorUser.id);
 
     const existingPerson = await prisma.person.findFirst({
       where: {
@@ -249,7 +384,18 @@ export class RegistrationService {
       );
     }
 
-    const communeId = actorUser.communeId || data.communeId || null;
+    if (existingPerson && existingPerson.nin !== cleanedNin) {
+      throw new AppError(
+        'Ce numéro de téléphone est déjà associé à une autre personne (NIN différent).',
+        409,
+        'PHONE_ALREADY_EXISTS'
+      );
+    }
+
+    const communeId = await resolveCommuneId(
+      actorUser.communeId || data.communeId || data.commune,
+      actorUser.communeId
+    );
     const hasGps =
       data.latitude !== undefined &&
       data.latitude !== null &&
@@ -297,23 +443,55 @@ export class RegistrationService {
         },
       });
 
-      await tx.auditLog.create({
-        data: {
-          actorId: actorUser.id,
-          action: 'OWNER_ENROLLED',
-          targetModule: 'REGISTRATION',
-          targetRecordId: owner.id,
-          newValues: {
-            ownerId: owner.id,
-            nin: cleanedNin,
-            latitude: hasGps ? Number(data.latitude) : null,
-            longitude: hasGps ? Number(data.longitude) : null,
+      if (tx.validationRequest) {
+        const requestNumber = `VAL-${new Date().getFullYear()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+        await Promise.all([
+          tx.validationRequest.create({
+            data: {
+              requestNumber,
+              entityType: 'OWNER_ENROLMENT',
+              targetEntityId: owner.id,
+              submitterId: actorUser.id,
+              currentLevel: 2,
+              currentStatus: 'SOUMIS_NIVEAU2',
+              communeId,
+              submittedAt: new Date(),
+            },
+          }),
+          tx.auditLog.create({
+            data: {
+              actorId: actorUser.id,
+              action: 'OWNER_ENROLLED',
+              targetModule: 'REGISTRATION',
+              targetRecordId: owner.id,
+              newValues: {
+                ownerId: owner.id,
+                nin: cleanedNin,
+                latitude: hasGps ? Number(data.latitude) : null,
+                longitude: hasGps ? Number(data.longitude) : null,
+              },
+            },
+          }),
+        ]);
+      } else {
+        await tx.auditLog.create({
+          data: {
+            actorId: actorUser.id,
+            action: 'OWNER_ENROLLED',
+            targetModule: 'REGISTRATION',
+            targetRecordId: owner.id,
+            newValues: {
+              ownerId: owner.id,
+              nin: cleanedNin,
+              latitude: hasGps ? Number(data.latitude) : null,
+              longitude: hasGps ? Number(data.longitude) : null,
+            },
           },
-        },
-      });
+        });
+      }
 
       return owner;
-    });
+    }, { maxWait: 10000, timeout: 25000 });
 
     if (Array.isArray(data.documents) && data.documents.length > 0) {
       result.documents = await saveInlineDocuments(data.documents, {
@@ -334,6 +512,9 @@ export class RegistrationService {
     const cleanedPlate = data.plateNumber.trim().toUpperCase();
     const cleanedCard = data.registrationCardNumber.trim().toUpperCase();
     const cleanedVin = data.chassisVin.trim().toUpperCase();
+
+    // 0. Pre-validate any inline documents before DB writes
+    validateInlineDocuments(data.documents, actorUser.id);
 
     // 1. Verify owner exists
     const owner = await prisma.owner.findUnique({
@@ -376,6 +557,11 @@ export class RegistrationService {
         'VEHICLE_ALREADY_EXISTS'
       );
     }
+
+    const communeId = await resolveCommuneId(
+      actorUser.communeId || owner.person?.communeId || data.communeId || data.commune,
+      actorUser.communeId
+    );
 
     const hasGps =
       data.latitude !== undefined &&
@@ -439,6 +625,22 @@ export class RegistrationService {
       });
     }
 
+    if (prisma.validationRequest) {
+      const requestNumber = `VAL-${new Date().getFullYear()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+      await prisma.validationRequest.create({
+        data: {
+          requestNumber,
+          entityType: 'VEHICLE_ENROLMENT',
+          targetEntityId: vehicle.id,
+          submitterId: actorUser.id,
+          currentLevel: 2,
+          currentStatus: 'SOUMIS_NIVEAU2',
+          communeId,
+          submittedAt: new Date(),
+        },
+      });
+    }
+
     if (Array.isArray(data.documents) && data.documents.length > 0) {
       vehicle.documents = await saveInlineDocuments(data.documents, {
         actorUserId: actorUser.id,
@@ -475,11 +677,23 @@ export class RegistrationService {
     const filterCommuneId = actorUser.communeId || communeId || undefined;
 
     const where = {
-      ...(filterCommuneId ? { person: { communeId: filterCommuneId } } : {}),
+      ...(filterCommuneId
+        ? {
+            person: {
+              OR: [
+                { communeId: filterCommuneId },
+                { registeredByUserId: actorUser.id },
+                { communeId: null },
+              ],
+            },
+          }
+        : {}),
       ...(search
         ? {
             OR: [
               { drivingLicenseNumber: { contains: search, mode: 'insensitive' } },
+              { emergencyContactPhone: { contains: search, mode: 'insensitive' } },
+              { emergencyContactName: { contains: search, mode: 'insensitive' } },
               { person: { firstName: { contains: search, mode: 'insensitive' } } },
               { person: { lastName: { contains: search, mode: 'insensitive' } } },
               { person: { nin: { contains: search, mode: 'insensitive' } } },
@@ -522,7 +736,17 @@ export class RegistrationService {
     const filterCommuneId = actorUser.communeId || communeId || undefined;
 
     const where = {
-      ...(filterCommuneId ? { person: { communeId: filterCommuneId } } : {}),
+      ...(filterCommuneId
+        ? {
+            person: {
+              OR: [
+                { communeId: filterCommuneId },
+                { registeredByUserId: actorUser.id },
+                { communeId: null },
+              ],
+            },
+          }
+        : {}),
       ...(search
         ? {
             OR: [
@@ -570,7 +794,15 @@ export class RegistrationService {
     const filterCommuneId = actorUser.communeId || communeId || undefined;
 
     const where = {
-      ...(filterCommuneId ? { owner: { person: { communeId: filterCommuneId } } } : {}),
+      ...(filterCommuneId
+        ? {
+            OR: [
+              { owner: { person: { communeId: filterCommuneId } } },
+              { registeredByUserId: actorUser.id },
+              { owner: { person: { communeId: null } } },
+            ],
+          }
+        : {}),
       ...(search
         ? {
             OR: [
@@ -590,7 +822,7 @@ export class RegistrationService {
         skip,
         take: limit,
         include: {
-          owner: { include: { person: true } },
+          owner: { include: { person: { include: { commune: true } } } },
           documents: true,
           assignments: {
             where: { isActive: true },

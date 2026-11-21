@@ -67,3 +67,11 @@ export function storeAuthToken(token: string, persistToLocalStorage = false): vo
     localStorage.setItem('aotuc_auth_token', token);
   }
 }
+
+export async function parseApiResponse<T = any>(response: Response): Promise<T | null> {
+  try {
+    return (await response.json()) as T;
+  } catch (_) {
+    return null;
+  }
+}

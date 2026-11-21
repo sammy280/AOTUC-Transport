@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import request from 'supertest';
 import { jest } from '@jest/globals';
 import app from '../src/app.js';
@@ -25,6 +26,16 @@ describe('Phase 3 — Registration (Drivers, Owners, Vehicles), Documents, GPS &
   const driverPhone = `+224623${suffix}`;
   const driverLicense = `PC-P3-${suffix}`;
 
+  const emergDriverNin = `NIN-EMG-DRV-${suffix}`;
+  const emergDriverPhone = `+224625${suffix}`;
+  const emergContactPhone = `628${suffix}`;
+  const emergDriverLicense = `PC-EMG-${suffix}`;
+
+  const syncDriverNin = `NIN-SNC-DRV-${suffix}`;
+  const syncDriverPhone = `+224626${suffix}`;
+  const syncEmergPhone = `+224627${suffix}`;
+  const syncDriverLicense = `PC-SNC-${suffix}`;
+
   const ownerNin = `NIN-P3-OWN-${suffix}`;
   const ownerPhone = `+224624${suffix}`;
 
@@ -33,6 +44,8 @@ describe('Phase 3 — Registration (Drivers, Owners, Vehicles), Documents, GPS &
   const vehicleVin = `VIN-P3-2026-${suffix}`;
 
   let createdDriverId = null;
+  let createdEmergDriverId = null;
+  let createdSyncDriverId = null;
   let createdOwnerId = null;
   let createdVehicleId = null;
   const uploadedDocIds = [];
@@ -77,6 +90,12 @@ describe('Phase 3 — Registration (Drivers, Owners, Vehicles), Documents, GPS &
       if (createdDriverId) {
         await prisma.validationRequest.deleteMany({ where: { targetEntityId: createdDriverId } });
       }
+      if (createdEmergDriverId) {
+        await prisma.validationRequest.deleteMany({ where: { targetEntityId: createdEmergDriverId } });
+      }
+      if (createdSyncDriverId) {
+        await prisma.validationRequest.deleteMany({ where: { targetEntityId: createdSyncDriverId } });
+      }
       if (createdOwnerId) {
         await prisma.validationRequest.deleteMany({ where: { targetEntityId: createdOwnerId } });
       }
@@ -84,7 +103,7 @@ describe('Phase 3 — Registration (Drivers, Owners, Vehicles), Documents, GPS &
         where: {
           OR: [
             { vehicle: { plateNumber: vehiclePlate } },
-            { person: { nin: { in: [driverNin, ownerNin] } } },
+            { person: { nin: { in: [driverNin, emergDriverNin, syncDriverNin, ownerNin] } } },
           ],
         },
       });
@@ -92,12 +111,14 @@ describe('Phase 3 — Registration (Drivers, Owners, Vehicles), Documents, GPS &
         where: { vehicle: { plateNumber: vehiclePlate } },
       });
       await prisma.vehicle.deleteMany({ where: { plateNumber: vehiclePlate } });
-      await prisma.driver.deleteMany({ where: { drivingLicenseNumber: driverLicense } });
+      await prisma.driver.deleteMany({
+        where: { drivingLicenseNumber: { in: [driverLicense, emergDriverLicense, syncDriverLicense] } },
+      });
       await prisma.owner.deleteMany({
-        where: { person: { nin: { in: [driverNin, ownerNin] } } },
+        where: { person: { nin: { in: [driverNin, emergDriverNin, syncDriverNin, ownerNin] } } },
       });
       await prisma.person.deleteMany({
-        where: { nin: { in: [driverNin, ownerNin] } },
+        where: { nin: { in: [driverNin, emergDriverNin, syncDriverNin, ownerNin] } },
       });
     } catch (_) {
       // Ignore cleanup errors
@@ -398,6 +419,195 @@ describe('Phase 3 — Registration (Drivers, Owners, Vehicles), Documents, GPS &
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.items.some((o) => o.id === createdOwnerId)).toBe(true);
+    });
+  });
+
+  describe('4. Emergency Contact Validation, Photograph Verification, Offline Sync & Re-login Visibility', () => {
+    it('should reject driver creation when emergency contact phone equals primary phone (400)', async () => {
+      const res = await request(app)
+        .post('/api/v1/registration/drivers')
+        .set('Authorization', `Bearer ${agentToken}`)
+        .send({
+          firstName: 'Ousmane',
+          lastName: 'Sylla',
+          nin: `NIN-SAME-PH-${suffix}`,
+          phoneNumber: '+224620998877',
+          emergencyContactPhone: '620 99 88 77',
+          emergencyContactName: 'Même Numéro',
+          emergencyContactRelation: 'Famille',
+          drivingLicenseNumber: `PC-SAME-${suffix}`,
+          licenseExpirationDate: '2029-12-31',
+        });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.code).toBe('VALIDATION_ERROR');
+      expect(
+        res.body.errors.some((e) => e.field.includes('emergencyContactPhone'))
+      ).toBe(true);
+    });
+
+    it('should reject driver creation when inline photograph has invalid magic bytes and not persist orphan driver', async () => {
+      const badPhotoNin = `NIN-BAD-IMG-${suffix}`;
+      const fakeJpegBase64 = Buffer.from('FAKE_CORRUPTED_IMAGE_BYTES').toString('base64');
+
+      const res = await request(app)
+        .post('/api/v1/registration/drivers')
+        .set('Authorization', `Bearer ${agentToken}`)
+        .send({
+          firstName: 'Moussa',
+          lastName: 'Kourouma',
+          nin: badPhotoNin,
+          phoneNumber: `+224629${suffix}`,
+          emergencyContactPhone: `+224628${suffix}`,
+          drivingLicenseNumber: `PC-BADIMG-${suffix}`,
+          licenseExpirationDate: '2029-12-31',
+          documents: [
+            {
+              category: 'PHOTO_PORTRAIT',
+              originalName: 'fake_portrait.jpg',
+              mimeType: 'image/jpeg',
+              base64Data: fakeJpegBase64,
+            },
+          ],
+        });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.code).toBe('INVALID_FILE_SIGNATURE');
+
+      const checkPerson = await prisma.person.findUnique({ where: { nin: badPhotoNin } });
+      expect(checkPerson).toBeNull();
+    });
+
+    it('should register a Driver with normalized emergency contact details and portrait photograph and persist in PostgreSQL', async () => {
+      const res = await request(app)
+        .post('/api/v1/registration/drivers')
+        .set('Authorization', `Bearer ${agentToken}`)
+        .send({
+          firstName: 'Sékou',
+          lastName: 'Touré',
+          nin: emergDriverNin,
+          phoneNumber: emergDriverPhone,
+          emergencyContactPhone: emergContactPhone,
+          emergencyContactName: 'Mariama Touré',
+          emergencyContactRelation: 'Conjoint(e)',
+          commune: 'Matoto',
+          drivingLicenseNumber: emergDriverLicense,
+          licenseCategory: 'C1',
+          licenseExpirationDate: '2030-06-30',
+          documents: [
+            {
+              category: 'PHOTO_PORTRAIT',
+              originalName: 'sekou_portrait.jpg',
+              mimeType: 'image/jpeg',
+              base64Data: VALID_JPEG_BASE64,
+            },
+          ],
+        });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body.success).toBe(true);
+      createdEmergDriverId = res.body.data.id;
+      expect(res.body.data.emergencyContactPhone).toBe(`+224${emergContactPhone}`);
+      expect(res.body.data.emergencyContactName).toBe('Mariama Touré');
+      expect(res.body.data.emergencyContactRelation).toBe('Conjoint(e)');
+      expect(res.body.data.documents.length).toBe(1);
+      expect(res.body.data.documents[0].category).toBe('PHOTO_PORTRAIT');
+
+      // Verify existing driver without emergency contact remains valid in PostgreSQL
+      const existingDriverWithoutEmergency = await prisma.driver.findUnique({
+        where: { id: createdDriverId },
+      });
+      expect(existingDriverWithoutEmergency).not.toBeNull();
+      expect(existingDriverWithoutEmergency.emergencyContactPhone).toBeNull();
+    });
+
+    it('should synchronize an offline Driver draft with emergency contact details and portrait photo via POST /api/v1/sync/push', async () => {
+      const clientGeneratedId = crypto.randomUUID();
+      const res = await request(app)
+        .post('/api/v1/sync/push')
+        .set('Authorization', `Bearer ${agentToken}`)
+        .send({
+          deviceId: `DEV-TEST-${suffix}`,
+          items: [
+            {
+              clientGeneratedId,
+              entityType: 'DRIVER',
+              createdOfflineAt: new Date().toISOString(),
+              payload: {
+                firstName: 'Alpha',
+                lastName: 'Condé',
+                nin: syncDriverNin,
+                phoneNumber: syncDriverPhone,
+                emergencyContactPhone: syncEmergPhone,
+                emergencyContactName: 'Kadiatou Condé',
+                emergencyContactRelation: 'Famille',
+                commune: 'Matoto',
+                drivingLicenseNumber: syncDriverLicense,
+                licenseCategory: 'B',
+                licenseExpirationDate: '2029-12-31',
+                documents: [
+                  {
+                    category: 'PHOTO_PORTRAIT',
+                    originalName: 'alpha_offline_portrait.jpg',
+                    mimeType: 'image/jpeg',
+                    base64Data: VALID_JPEG_BASE64,
+                  },
+                ],
+              },
+            },
+          ],
+        });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.accepted).toBe(1);
+      createdSyncDriverId = res.body.data.results[0].serverRecordId;
+      expect(createdSyncDriverId).toBeDefined();
+
+      const syncedDriver = await prisma.driver.findUnique({
+        where: { id: createdSyncDriverId },
+        include: { person: { include: { documents: true } } },
+      });
+      expect(syncedDriver.emergencyContactPhone).toBe(syncEmergPhone);
+      expect(syncedDriver.emergencyContactName).toBe('Kadiatou Condé');
+      expect(syncedDriver.emergencyContactRelation).toBe('Famille');
+      expect(syncedDriver.person.documents.some((d) => d.category === 'PHOTO_PORTRAIT')).toBe(true);
+    });
+
+    it('should keep driver and vehicle records visible after a fresh login session (including SUPER_ADMIN and AGENT_TERRAIN)', async () => {
+      const freshSuperAdminToken = jwt.sign(
+        {
+          sub: agentUser.id,
+          email: 'superadmin@aotuc.gov.gn',
+          roles: ['SUPER_ADMIN'],
+          communeId: null,
+        },
+        config.JWT_ACCESS_SECRET,
+        { expiresIn: '15m' }
+      );
+
+      const driversRes = await request(app)
+        .get('/api/v1/registration/drivers')
+        .set('Authorization', `Bearer ${freshSuperAdminToken}`)
+        .query({ search: emergDriverNin });
+
+      expect(driversRes.statusCode).toBe(200);
+      const foundDriver = driversRes.body.data.items.find((d) => d.id === createdEmergDriverId);
+      expect(foundDriver).toBeDefined();
+      expect(foundDriver.emergencyContactPhone).toBe(`+224${emergContactPhone}`);
+      expect(foundDriver.person.documents.some((doc) => doc.category === 'PHOTO_PORTRAIT')).toBe(
+        true
+      );
+
+      const vehiclesRes = await request(app)
+        .get('/api/v1/registration/vehicles')
+        .set('Authorization', `Bearer ${freshSuperAdminToken}`)
+        .query({ search: vehiclePlate });
+
+      expect(vehiclesRes.statusCode).toBe(200);
+      const foundVehicle = vehiclesRes.body.data.items.find((v) => v.id === createdVehicleId);
+      expect(foundVehicle).toBeDefined();
+      expect(foundVehicle.plateNumber).toBe(vehiclePlate);
     });
   });
 });

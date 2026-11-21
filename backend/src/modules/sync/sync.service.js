@@ -274,6 +274,28 @@ export class SyncService {
           validateInlineDocuments(payload.documents, actorUser.id);
 
           const normalizedPhone = normalizeGuineanPhone(rawPhone);
+          const rawEmergencyPhone = (payload.emergencyContactPhone || '').trim();
+          const normalizedEmergencyPhone = rawEmergencyPhone
+            ? normalizeGuineanPhone(rawEmergencyPhone)
+            : null;
+          if (normalizedEmergencyPhone && normalizedEmergencyPhone === normalizedPhone) {
+            pushResult({
+              clientGeneratedId,
+              entityType,
+              status: 'ERROR',
+              errorCode: 'EMERGENCY_PHONE_SAME_AS_PRIMARY',
+              error:
+                "Le numéro d'urgence doit être différent du numéro de téléphone principal du chauffeur.",
+            });
+            failed++;
+            continue;
+          }
+          const emergencyContactName = payload.emergencyContactName
+            ? String(payload.emergencyContactName).trim()
+            : null;
+          const emergencyContactRelation = payload.emergencyContactRelation
+            ? String(payload.emergencyContactRelation).trim()
+            : null;
           const licenseCategory = Array.isArray(payload.licenseCategories)
             ? payload.licenseCategories[0] || 'B'
             : payload.licenseCategory || 'B';
@@ -392,6 +414,9 @@ export class SyncService {
                 licenseCategory,
                 licenseExpirationDate,
                 status: 'EN_ATTENTE_VALIDATION',
+                emergencyContactName,
+                emergencyContactPhone: normalizedEmergencyPhone,
+                emergencyContactRelation,
                 unionId: payload.unionId || null,
               },
             });
@@ -413,7 +438,7 @@ export class SyncService {
             }
 
             return { driver, person };
-          });
+          }, { maxWait: 10000, timeout: 25000 });
 
           // Store any inline documents attached to the driver draft
           const documentIds = await storeInlineDocuments(payload.documents, {
@@ -576,7 +601,7 @@ export class SyncService {
             }
 
             return { owner, person };
-          });
+          }, { maxWait: 10000, timeout: 25000 });
 
           const documentIds = await storeInlineDocuments(payload.documents, {
             actorUserId: actorUser.id,
@@ -808,7 +833,7 @@ export class SyncService {
             }
 
             return vehicle;
-          });
+          }, { maxWait: 10000, timeout: 25000 });
 
           const documentIds = await storeInlineDocuments(payload.documents, {
             actorUserId: actorUser.id,

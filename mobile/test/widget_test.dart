@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:aotuc_mobile/main.dart';
 import 'package:aotuc_mobile/core/auth/auth_models.dart';
 import 'package:aotuc_mobile/core/auth/auth_service.dart';
@@ -570,16 +571,20 @@ void main() {
         expect(find.textContaining('9.59841'), findsOneWidget);
 
         // 2. Capture Driver Portrait via Camera button
+        await tester.ensureVisible(find.byKey(const Key('cam_btn_PHOTO_PORTRAIT')));
         await tester.tap(find.byKey(const Key('cam_btn_PHOTO_PORTRAIT')));
         await tester.pumpAndSettle();
         expect(find.textContaining('photo_portrait.jpg'), findsOneWidget);
 
         // 3. Fill & Submit Driver Online
+        await tester.ensureVisible(find.byKey(const Key('driver_firstname_input')));
         await tester.enterText(find.byKey(const Key('driver_firstname_input')), 'Mamadou');
         await tester.enterText(find.byKey(const Key('driver_lastname_input')), 'Sylla');
         await tester.enterText(find.byKey(const Key('driver_nin_input')), 'NIN-SYLLA-001');
         await tester.enterText(find.byKey(const Key('driver_phone_input')), '+224621001122');
+        await tester.ensureVisible(find.byKey(const Key('driver_license_input')));
         await tester.enterText(find.byKey(const Key('driver_license_input')), 'PC-GN-7788');
+        await tester.ensureVisible(find.byKey(const Key('submit_driver_online_button')));
         await tester.tap(find.byKey(const Key('submit_driver_online_button')));
         await tester.pumpAndSettle();
 
@@ -589,6 +594,7 @@ void main() {
         expect((serverDrivers.first['documents'] as List).length, 1);
 
         // 4. Switch to Owner tab (2. Propriétaire) and register a Company Owner (ENTREPRISE)
+        await tester.ensureVisible(find.byKey(const Key('tab_owner_registration')));
         await tester.tap(find.byKey(const Key('tab_owner_registration')));
         await tester.pumpAndSettle();
 
@@ -1447,6 +1453,130 @@ void main() {
           find.textContaining('Permis suspendu suite à infraction routière'),
           findsWidgets,
         );
+      },
+    );
+
+    testWidgets(
+      '9. Driver Registration with Emergency Contact Validation, Camera Capture, Preview, Retake & Offline Persistence',
+      (WidgetTester tester) async {
+        int captureCount = 0;
+        MediaAndGpsService.setTestOverrides(
+          cameraPermissionOverride: () async => const CameraPermissionResult(
+            status: 'GRANTED',
+            message: 'Permission caméra accordée.',
+          ),
+          mediaOverride: ({
+            required String category,
+            required String label,
+            required ImageSource source,
+          }) async {
+            captureCount++;
+            return CapturedDocument(
+              category: category,
+              label: label,
+              originalName: 'portrait_capture_$captureCount.jpg',
+              mimeType: 'image/jpeg',
+              base64Data: '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAA==',
+              sizeBytes: 3200 + captureCount * 100,
+            );
+          },
+        );
+
+        final store = InMemorySecureStore();
+        await store.write(
+          'aotuc_secure_access_token',
+          _buildTestJwt(
+            sub: 'usr-agt-matoto',
+            expSecondsFromNow: 900,
+          ),
+        );
+        await store.write(
+          'aotuc_secure_user_profile',
+          const MobileUser(
+            id: 'usr-agt-matoto',
+            phoneNumber: '+224620000005',
+            firstName: 'Sekou',
+            lastName: 'Conte',
+            roles: ['AGENT_TERRAIN'],
+            permissions: [
+              'drivers.create',
+              'drivers.read',
+              'documents.upload',
+              'applications.submit',
+            ],
+            communeId: 'cm-matoto',
+            commune: MobileCommune(id: 'cm-matoto', code: 'MTT', name: 'Matoto'),
+          ).toRawJson(),
+        );
+
+        final mockClient = MockClient((http.Request req) async {
+          throw Exception('Offline mode');
+        });
+
+        final authService = AuthService(credentialStore: store, httpClient: mockClient);
+        await authService.restoreSession();
+
+        await tester.pumpWidget(
+          AotucMobileApp(authService: authService, autoRestoreSession: false),
+        );
+        await tester.pumpAndSettle();
+
+        // Navigate to Enrolment tab
+        await tester.tap(find.text('Enrôlement Terrain'));
+        await tester.pumpAndSettle();
+
+        // Fill driver identity & emergency contact
+        await tester.enterText(find.byKey(const Key('driver_firstname_input')), 'Thierno');
+        await tester.enterText(find.byKey(const Key('driver_lastname_input')), 'Barry');
+        await tester.enterText(find.byKey(const Key('driver_nin_input')), 'NIN-EMG-MOB-001');
+        await tester.enterText(find.byKey(const Key('driver_phone_input')), '+224 622 33 44 55');
+        await tester.enterText(
+          find.byKey(const Key('driver_emergency_phone_input')),
+          '+224 628 77 88 99',
+        );
+        await tester.enterText(
+          find.byKey(const Key('driver_emergency_name_input')),
+          'Aissatou Barry',
+        );
+        await tester.enterText(find.byKey(const Key('driver_license_input')), 'PC-EMG-2026-01');
+
+        // Capture Driver Portrait via Camera button
+        final camBtn = find.byKey(const Key('cam_btn_PHOTO_PORTRAIT'));
+        await tester.ensureVisible(camBtn);
+        await tester.tap(camBtn);
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('portrait_capture_1.jpg'), findsOneWidget);
+        expect(find.byKey(const Key('retake_btn_PHOTO_PORTRAIT')), findsOneWidget);
+
+        // Retake the photograph before submitting
+        final retakeBtn = find.byKey(const Key('retake_btn_PHOTO_PORTRAIT'));
+        await tester.ensureVisible(retakeBtn);
+        await tester.tap(retakeBtn);
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('portrait_capture_2.jpg'), findsOneWidget);
+
+        // Save encrypted offline draft
+        final saveOfflineBtn = find.byKey(const Key('save_offline_draft_button'));
+        await tester.ensureVisible(saveOfflineBtn);
+        await tester.tap(saveOfflineBtn);
+        await tester.pumpAndSettle();
+
+        // Verify encrypted SQLite draft contains emergency contact and retaken photograph
+        final pending = await OfflineDatabase.instance.getPendingSyncDrafts(
+          agentUserId: 'usr-agt-matoto',
+        );
+        expect(pending.length, 1);
+        final payload = jsonDecode(pending.first['payload_json'] as String) as Map<String, dynamic>;
+        expect(payload['firstName'], 'Thierno');
+        expect(payload['phoneNumber'], '+224 622 33 44 55');
+        expect(payload['emergencyContactPhone'], '+224 628 77 88 99');
+        expect(payload['emergencyContactName'], 'Aissatou Barry');
+        expect(payload['emergencyContactRelation'], 'Famille');
+        final docs = payload['documents'] as List<dynamic>;
+        expect(docs.length, 1);
+        expect((docs.first as Map)['originalName'], 'portrait_capture_2.jpg');
       },
     );
   });

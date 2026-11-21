@@ -195,11 +195,29 @@ class RegistrationApiService {
 
       if (serialized.contains(q)) {
         if (entityType == 'DRIVER') {
+          final docs = payload['documents'] as List<dynamic>? ?? [];
+          String? photoBase64;
+          for (final doc in docs) {
+            if (doc is Map && doc['category'] == 'PHOTO_PORTRAIT') {
+              photoBase64 = doc['base64Data']?.toString();
+              break;
+            }
+          }
+          final emergPhone = payload['emergencyContactPhone']?.toString();
+          final emergName = payload['emergencyContactName']?.toString();
+          final emergRel = payload['emergencyContactRelation']?.toString();
+          final emergText = (emergPhone != null && emergPhone.isNotEmpty)
+              ? ' • Urgence: $emergPhone${(emergName != null && emergName.isNotEmpty) ? ' ($emergName)' : ''}'
+              : '';
           matches.add({
             'type': 'CHAUFFEUR (Hors-ligne)',
             'title': '${payload['firstName']} ${payload['lastName']}',
             'subtitle':
-                'NIN: ${payload['nin']} • Permis: ${payload['drivingLicenseNumber']} • Tél: ${payload['phoneNumber']}',
+                'NIN: ${payload['nin']} • Permis: ${payload['drivingLicenseNumber']} • Tél: ${payload['phoneNumber']}$emergText',
+            'emergencyContactPhone': emergPhone,
+            'emergencyContactName': emergName,
+            'emergencyContactRelation': emergRel,
+            'photoBase64': photoBase64,
           });
         } else if (entityType == 'OWNER') {
           matches.add({
@@ -235,11 +253,20 @@ class RegistrationApiService {
             ((jsonDecode(drvRes.body) as Map<String, dynamic>)['data']?['items'] as List?) ?? [];
         for (final d in items) {
           final p = d['person'] as Map<String, dynamic>? ?? {};
+          final emergPhone = d['emergencyContactPhone']?.toString();
+          final emergName = d['emergencyContactName']?.toString();
+          final emergRel = d['emergencyContactRelation']?.toString();
+          final emergText = (emergPhone != null && emergPhone.isNotEmpty)
+              ? ' • Urgence: $emergPhone${(emergName != null && emergName.isNotEmpty) ? ' ($emergName)' : ''}'
+              : '';
           matches.add({
             'type': 'CHAUFFEUR (Serveur)',
             'title': '${p['firstName']} ${p['lastName']}',
             'subtitle':
-                'NIN: ${p['nin']} • Permis: ${d['drivingLicenseNumber']} • Tél: ${p['phoneNumber']}',
+                'NIN: ${p['nin']} • Permis: ${d['drivingLicenseNumber']} • Tél: ${p['phoneNumber']}$emergText',
+            'emergencyContactPhone': emergPhone,
+            'emergencyContactName': emergName,
+            'emergencyContactRelation': emergRel,
           });
         }
       }
@@ -367,6 +394,22 @@ class RegistrationApiService {
         mode: 'REJECTED',
         message: 'Accès refusé : votre rôle ne vous autorise pas à enregistrer des dossiers.',
       );
+    }
+
+    // 0. If DRIVER has emergencyContactPhone, ensure it is distinct from primary phoneNumber
+    if (entityType == 'DRIVER') {
+      final primaryPhone =
+          payload['phoneNumber']?.toString().replaceAll(RegExp(r'[\s\-\.\(\)]'), '') ?? '';
+      final emergencyPhone =
+          payload['emergencyContactPhone']?.toString().replaceAll(RegExp(r'[\s\-\.\(\)]'), '') ?? '';
+      if (emergencyPhone.isNotEmpty && primaryPhone.isNotEmpty && emergencyPhone == primaryPhone) {
+        return const RegistrationSubmissionResult(
+          success: false,
+          mode: 'REJECTED',
+          message:
+              "Le numéro d'urgence doit être différent du numéro de téléphone principal du chauffeur.",
+        );
+      }
     }
 
     // 1. Check local duplicates first

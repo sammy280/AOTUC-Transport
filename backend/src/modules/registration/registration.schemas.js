@@ -24,30 +24,61 @@ const inlineDocumentSchema = z.object({
   originalName: z.string().optional(),
   mimeType: z.string().optional(),
   base64Data: z.string(),
+  fileHashSha256: z.string().optional().nullable(),
 });
 
-export const registerDriverSchema = z.object({
-  firstName: z.string().min(2, 'Le prénom doit contenir au moins 2 caractères.'),
-  lastName: z.string().min(2, 'Le nom doit contenir au moins 2 caractères.'),
-  nin: z.string().min(5, 'Le Numéro d Identification National (NIN) est obligatoire.'),
-  phoneNumber: z
-    .string()
-    .transform((v) => v.replace(/[\s\-\.\(\)]/g, ''))
-    .refine((v) => phoneRegex.test(v), 'Numéro de téléphone guinéen invalide (ex: +224 620 12 34 56).'),
-  email: z.string().email('Adresse email invalide.').optional().or(z.literal('')).nullable(),
-  dateOfBirth: z.string().optional().nullable(),
-  address: z.string().optional().nullable(),
-  communeId: z.string().uuid('Commune invalide.').optional().nullable(),
+export const registerDriverSchema = z
+  .object({
+    firstName: z.string().min(2, 'Le prénom doit contenir au moins 2 caractères.'),
+    lastName: z.string().min(2, 'Le nom doit contenir au moins 2 caractères.'),
+    nin: z.string().min(5, 'Le Numéro d Identification National (NIN) est obligatoire.'),
+    phoneNumber: z
+      .string()
+      .transform((v) => v.replace(/[\s\-\.\(\)]/g, ''))
+      .refine((v) => phoneRegex.test(v), 'Numéro de téléphone guinéen invalide (ex: +224 620 12 34 56).'),
+    emergencyContactPhone: z
+      .string()
+      .optional()
+      .nullable()
+      .transform((v) => (v && v.trim() ? v.replace(/[\s\-\.\(\)]/g, '') : null))
+      .refine((v) => !v || phoneRegex.test(v), "Numéro de téléphone d'urgence guinéen invalide (ex: +224 620 12 34 56).")
+      .transform((v) => (v ? normalizeGuineanPhone(v) : null)),
+    emergencyContactName: z
+      .string()
+      .max(120, "Nom du contact d'urgence trop long.")
+      .optional()
+      .nullable()
+      .transform((v) => (v && v.trim() ? v.trim() : null)),
+    emergencyContactRelation: z
+      .string()
+      .max(80, 'Lien de parenté trop long.')
+      .optional()
+      .nullable()
+      .transform((v) => (v && v.trim() ? v.trim() : null)),
+    email: z.string().email('Adresse email invalide.').optional().or(z.literal('')).nullable(),
+    dateOfBirth: z.string().optional().nullable(),
+    address: z.string().optional().nullable(),
+    communeId: z.string().optional().nullable(),
+    commune: z.string().optional().nullable(),
 
-  drivingLicenseNumber: z.string().min(4, 'Le numéro de permis de conduire est obligatoire.'),
-  licenseCategory: z.enum(['A', 'B', 'C', 'C1', 'D', 'E']).default('B'),
-  licenseExpirationDate: z.string({
-    required_error: 'La date d expiration du permis est obligatoire.',
-  }),
-  unionId: z.string().uuid('Syndicat invalide.').optional().nullable(),
-  documents: z.array(inlineDocumentSchema).optional(),
-  ...gpsFields,
-});
+    drivingLicenseNumber: z.string().min(4, 'Le numéro de permis de conduire est obligatoire.'),
+    licenseCategory: z.enum(['A', 'B', 'C', 'C1', 'D', 'E']).default('B'),
+    licenseExpirationDate: z.string({
+      required_error: 'La date d expiration du permis est obligatoire.',
+    }),
+    unionId: z.string().uuid('Syndicat invalide.').optional().nullable(),
+    documents: z.array(inlineDocumentSchema).optional(),
+    ...gpsFields,
+  })
+  .refine(
+    (data) =>
+      !data.emergencyContactPhone ||
+      normalizeGuineanPhone(data.emergencyContactPhone) !== normalizeGuineanPhone(data.phoneNumber),
+    {
+      message: "Le numéro d'urgence doit être différent du numéro de téléphone principal du chauffeur.",
+      path: ['emergencyContactPhone'],
+    }
+  );
 
 export const registerOwnerSchema = z.object({
   firstName: z.string().min(2, 'Le prénom doit contenir au moins 2 caractères.'),
@@ -60,7 +91,8 @@ export const registerOwnerSchema = z.object({
   email: z.string().email().optional().or(z.literal('')).nullable(),
   dateOfBirth: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
-  communeId: z.string().uuid().optional().nullable(),
+  communeId: z.string().optional().nullable(),
+  commune: z.string().optional().nullable(),
 
   ownerType: z.enum(['INDIVIDU', 'ENTREPRISE']).default('INDIVIDU'),
   businessName: z.string().optional().nullable(),
@@ -81,6 +113,8 @@ export const registerVehicleSchema = z.object({
   seatingCapacity: z.coerce.number().int().min(1).max(120).optional().nullable(),
   driverId: z.string().uuid().optional().nullable(),
   transportLineId: z.string().uuid().optional().nullable(),
+  communeId: z.string().optional().nullable(),
+  commune: z.string().optional().nullable(),
   inspectionCertificateNumber: z.string().optional().nullable(),
   inspectionCenter: z.string().optional().nullable(),
   inspectionExpirationDate: z.string().optional().nullable(),

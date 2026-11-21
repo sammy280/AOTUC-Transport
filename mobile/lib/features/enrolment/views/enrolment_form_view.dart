@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/auth/auth_models.dart';
@@ -54,6 +56,9 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
   final _drvLastNameCtrl = TextEditingController();
   final _drvNinCtrl = TextEditingController();
   final _drvPhoneCtrl = TextEditingController(text: '+224 ');
+  final _drvEmergencyPhoneCtrl = TextEditingController(text: '+224 ');
+  final _drvEmergencyNameCtrl = TextEditingController();
+  String _drvEmergencyRelation = 'Famille';
   final _drvEmailCtrl = TextEditingController();
   final _drvDobCtrl = TextEditingController(text: '1990-01-15');
   final _drvAddressCtrl = TextEditingController();
@@ -120,6 +125,8 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
     _drvLastNameCtrl.dispose();
     _drvNinCtrl.dispose();
     _drvPhoneCtrl.dispose();
+    _drvEmergencyPhoneCtrl.dispose();
+    _drvEmergencyNameCtrl.dispose();
     _drvEmailCtrl.dispose();
     _drvDobCtrl.dispose();
     _drvAddressCtrl.dispose();
@@ -186,6 +193,21 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
     required String label,
     required ImageSource source,
   }) async {
+    if (source == ImageSource.camera) {
+      final perm = await MediaAndGpsService.requestCameraPermission();
+      if (!perm.isGranted) {
+        if (mounted) {
+          setState(() {
+            _statusIsError = true;
+            _statusMessage = perm.message.isNotEmpty
+                ? perm.message
+                : 'Accès à la caméra refusé. Veuillez autoriser la caméra pour prendre la photo.';
+          });
+        }
+        return;
+      }
+    }
+
     final doc = await MediaAndGpsService.pickDocumentImage(
       category: category,
       label: label,
@@ -249,11 +271,21 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
         ? (user.assignedCommuneName ?? _drvSelectedCommune)
         : (_drvSelectedCommune ?? _allCommunes.first);
 
+    final rawEmergencyPhone = _drvEmergencyPhoneCtrl.text.trim();
+    final cleanedEmergencyPhone =
+        (rawEmergencyPhone.isEmpty || rawEmergencyPhone == '+224') ? null : rawEmergencyPhone;
+
     final payload = <String, dynamic>{
       'firstName': _drvFirstNameCtrl.text.trim(),
       'lastName': _drvLastNameCtrl.text.trim(),
       'nin': _drvNinCtrl.text.trim().toUpperCase(),
       'phoneNumber': _drvPhoneCtrl.text.trim(),
+      'emergencyContactPhone': cleanedEmergencyPhone,
+      'emergencyContactName': _drvEmergencyNameCtrl.text.trim().isEmpty
+          ? null
+          : _drvEmergencyNameCtrl.text.trim(),
+      'emergencyContactRelation':
+          cleanedEmergencyPhone != null ? _drvEmergencyRelation : null,
       'email': _drvEmailCtrl.text.trim().isEmpty ? null : _drvEmailCtrl.text.trim(),
       'dateOfBirth': _drvDobCtrl.text.trim().isEmpty ? null : _drvDobCtrl.text.trim(),
       'address': _drvAddressCtrl.text.trim().isEmpty ? null : _drvAddressCtrl.text.trim(),
@@ -290,6 +322,9 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
           _drvLastNameCtrl.clear();
           _drvNinCtrl.clear();
           _drvPhoneCtrl.text = '+224 ';
+          _drvEmergencyPhoneCtrl.text = '+224 ';
+          _drvEmergencyNameCtrl.clear();
+          _drvEmergencyRelation = 'Famille';
           _drvEmailCtrl.clear();
           _drvAddressCtrl.clear();
           _drvLicenseCtrl.clear();
@@ -770,6 +805,17 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
     required String label,
   }) {
     final captured = docsMap[category];
+    Uint8List? previewBytes;
+    if (captured != null && captured.base64Data.isNotEmpty) {
+      try {
+        final cleanB64 =
+            captured.base64Data.replaceFirst(RegExp(r'^data:[^;]+;base64,'), '');
+        previewBytes = base64Decode(cleanB64);
+      } catch (_) {
+        previewBytes = null;
+      }
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -782,11 +828,28 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
       ),
       child: Row(
         children: [
-          Icon(
-            captured != null ? Icons.check_circle : Icons.camera_alt_outlined,
-            size: 18,
-            color: captured != null ? const Color(0xFF16A34A) : Colors.black54,
-          ),
+          if (previewBytes != null && previewBytes.isNotEmpty)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.memory(
+                previewBytes,
+                key: Key('preview_img_$category'),
+                width: 42,
+                height: 42,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.check_circle,
+                  size: 22,
+                  color: Color(0xFF16A34A),
+                ),
+              ),
+            )
+          else
+            Icon(
+              captured != null ? Icons.check_circle : Icons.camera_alt_outlined,
+              size: 18,
+              color: captured != null ? const Color(0xFF16A34A) : Colors.black54,
+            ),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -804,6 +867,25 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
               ],
             ),
           ),
+          if (captured != null)
+            TextButton.icon(
+              key: Key('retake_btn_$category'),
+              onPressed: () => _handlePickDocument(
+                targetMap: docsMap,
+                category: category,
+                label: label,
+                source: ImageSource.camera,
+              ),
+              icon: const Icon(Icons.replay, size: 14, color: Color(0xFFB45309)),
+              label: const Text(
+                'Reprendre',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFB45309),
+                ),
+              ),
+            ),
           IconButton(
             key: Key('cam_btn_$category'),
             onPressed: () => _handlePickDocument(
@@ -957,7 +1039,79 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
+          // Emergency Contact Row (Primary Phone vs Emergency Contact clearly distinguished)
+          Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: TextFormField(
+                  key: const Key('driver_emergency_phone_input'),
+                  controller: _drvEmergencyPhoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: "Tél. Urgence (+224)",
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  ),
+                  validator: (v) {
+                    final raw = (v ?? '').trim();
+                    if (raw.isEmpty || raw == '+224') return null;
+                    final cleaned = raw.replaceAll(RegExp(r'[\s\-\.\(\)]'), '');
+                    if (!RegExp(r'^(\+224|00224)?[6][0-9]{8}$').hasMatch(cleaned)) {
+                      return "Numéro d'urgence invalide";
+                    }
+                    final primaryCleaned =
+                        _drvPhoneCtrl.text.replaceAll(RegExp(r'[\s\-\.\(\)]'), '');
+                    if (cleaned == primaryCleaned ||
+                        cleaned.replaceFirst(RegExp(r'^(\+224|00224)'), '') ==
+                            primaryCleaned.replaceFirst(RegExp(r'^(\+224|00224)'), '')) {
+                      return "Différent du N° principal";
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                flex: 3,
+                child: TextFormField(
+                  key: const Key('driver_emergency_name_input'),
+                  controller: _drvEmergencyNameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nom Contact Urgence',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                flex: 2,
+                child: DropdownButtonFormField<String>(
+                  key: const Key('driver_emergency_relation_dropdown'),
+                  initialValue: _drvEmergencyRelation,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Lien',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'Famille', child: Text('Famille', style: TextStyle(fontSize: 11))),
+                    DropdownMenuItem(value: 'Conjoint(e)', child: Text('Conjoint(e)', style: TextStyle(fontSize: 11))),
+                    DropdownMenuItem(value: 'Parent', child: Text('Parent', style: TextStyle(fontSize: 11))),
+                    DropdownMenuItem(value: 'Frère/Sœur', child: Text('Frère/Sœur', style: TextStyle(fontSize: 11))),
+                    DropdownMenuItem(value: 'Ami(e)', child: Text('Ami(e)', style: TextStyle(fontSize: 11))),
+                    DropdownMenuItem(value: 'Collègue', child: Text('Collègue', style: TextStyle(fontSize: 11))),
+                    DropdownMenuItem(value: 'Autre', child: Text('Autre', style: TextStyle(fontSize: 11))),
+                  ],
+                  onChanged: (v) => setState(() => _drvEmergencyRelation = v ?? 'Famille'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
@@ -1675,21 +1829,45 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
           )
         else
           ..._searchResults.map(
-            (item) => Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                dense: true,
-                leading: const Icon(Icons.verified_user, color: Color(0xFF0B1E36)),
-                title: Text(
-                  '${item['type']} — ${item['title']}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            (item) {
+              Uint8List? photoBytes;
+              final rawB64 = item['photoBase64']?.toString();
+              if (rawB64 != null && rawB64.isNotEmpty) {
+                try {
+                  final cleanB64 = rawB64.replaceFirst(RegExp(r'^data:[^;]+;base64,'), '');
+                  photoBytes = base64Decode(cleanB64);
+                } catch (_) {
+                  photoBytes = null;
+                }
+              }
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  dense: true,
+                  leading: (photoBytes != null && photoBytes.isNotEmpty)
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.memory(
+                            photoBytes,
+                            width: 38,
+                            height: 38,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.verified_user, color: Color(0xFF0B1E36)),
+                          ),
+                        )
+                      : const Icon(Icons.verified_user, color: Color(0xFF0B1E36)),
+                  title: Text(
+                    '${item['type']} — ${item['title']}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                  subtitle: Text(
+                    item['subtitle']?.toString() ?? '',
+                    style: const TextStyle(fontSize: 11),
+                  ),
                 ),
-                subtitle: Text(
-                  item['subtitle']?.toString() ?? '',
-                  style: const TextStyle(fontSize: 11),
-                ),
-              ),
-            ),
+              );
+            },
           ),
       ],
     );

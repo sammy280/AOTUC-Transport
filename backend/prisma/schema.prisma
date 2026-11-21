@@ -213,6 +213,11 @@ model Driver {
   licenseExpirationDate DateTime     @map("license_expiration_date")
   status                DriverStatus @default(EN_ATTENTE_VALIDATION)
 
+  // Emergency Contact Information (Nullable for backward compatibility with existing drivers)
+  emergencyContactName     String?   @map("emergency_contact_name")
+  emergencyContactPhone    String?   @map("emergency_contact_phone")
+  emergencyContactRelation String?   @map("emergency_contact_relation")
+
   unionId String?         @map("union_id")
   union   TransportUnion? @relation(fields: [unionId], references: [id], onDelete: SetNull)
 

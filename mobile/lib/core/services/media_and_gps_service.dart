@@ -93,10 +93,16 @@ class MediaAndGpsService {
     _testCameraPermissionOverride = cameraPermissionOverride;
   }
 
-  /// Requests Android runtime camera permission for QR code scanning.
+  /// Requests Android runtime camera permission for QR code scanning and photo capture.
   static Future<CameraPermissionResult> requestCameraPermission() async {
     if (_testCameraPermissionOverride != null) {
       return await _testCameraPermissionOverride!();
+    }
+    if (_testMediaOverride != null) {
+      return const CameraPermissionResult(
+        status: 'GRANTED',
+        message: 'Permission caméra accordée.',
+      );
     }
     try {
       final raw =
