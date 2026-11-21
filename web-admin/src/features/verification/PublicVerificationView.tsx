@@ -12,6 +12,7 @@ import {
   User,
 } from 'lucide-react';
 import ThemeSelector from '../../components/ThemeSelector';
+import { buildApiUrl } from '../../utils/api';
 
 interface VerificationResult {
   success: boolean;
@@ -46,7 +47,7 @@ export const PublicVerificationView: React.FC<{
     setResult(null);
 
     try {
-      const response = await fetch('/api/v1/verification/verify', {
+      const response = await fetch(buildApiUrl('/api/v1/verification/verify'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ qrPayload: codeToVerify.trim() }),

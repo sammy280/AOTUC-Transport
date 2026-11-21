@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { buildApiUrl, getStoredAuthToken } from '../utils/api';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
@@ -128,9 +129,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       localStorage.setItem(GLOBAL_THEME_KEY, newMode);
 
       // Best-effort remote synchronization across devices if token is present
-      const token = localStorage.getItem('aotuc_auth_token') || sessionStorage.getItem('aotuc_auth_token');
+      const token = getStoredAuthToken();
       if (token && currentUserId) {
-        fetch('/api/v1/auth/preferences/theme', {
+        fetch(buildApiUrl('/api/v1/auth/preferences/theme'), {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -160,9 +161,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
 
       // Check remote preference if user is authenticated
-      const token = localStorage.getItem('aotuc_auth_token') || sessionStorage.getItem('aotuc_auth_token');
+      const token = getStoredAuthToken();
       if (token && userId) {
-        fetch('/api/v1/auth/preferences/theme', {
+        fetch(buildApiUrl('/api/v1/auth/preferences/theme'), {
           headers: { Authorization: `Bearer ${token}` },
         })
           .then((res) => res.json())

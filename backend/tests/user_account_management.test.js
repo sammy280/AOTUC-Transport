@@ -333,4 +333,73 @@ describe('Urgent Bug Regression Suite — SUPER_ADMIN Account Creation, Listing 
     expect(dupRes.statusCode).toBe(409);
     expect(dupRes.body.code).toBe('EMAIL_ALREADY_EXISTS');
   });
+
+  it('7. should normalize buildApiUrl so login, user creation, and user listing never duplicate /api/v1/api/v1 across any VITE_API_URL config', () => {
+    const normalizeBaseOrigin = (rawBaseUrl) => {
+      if (typeof rawBaseUrl !== 'string') return '';
+      let cleaned = rawBaseUrl.trim().replace(/\/+$/, '');
+      while (/\/api(\/v1)?$/i.test(cleaned)) {
+        cleaned = cleaned.replace(/\/api(\/v1)?$/i, '').replace(/\/+$/, '');
+      }
+      return cleaned;
+    };
+
+    const buildApiUrl = (path, overrideEnvUrl) => {
+      const base = normalizeBaseOrigin(overrideEnvUrl);
+      let cleanPath = String(path || '').trim();
+      if (!cleanPath.startsWith('/')) cleanPath = `/${cleanPath}`;
+      cleanPath = cleanPath.replace(/^(\/api(\/v1)?)+(?=\/|$)/i, '/api/v1');
+      if (!cleanPath.startsWith('/api/v1')) cleanPath = `/api/v1${cleanPath}`;
+      return `${base}${cleanPath}`;
+    };
+
+    const relativeConfigs = ['', '/', '/api', '/api/v1', '/api/v1/'];
+    for (const cfg of relativeConfigs) {
+      const loginUrl = buildApiUrl('/api/v1/auth/login', cfg);
+      const createUsersUrl = buildApiUrl('/api/v1/users', cfg);
+      const listUsersUrl = buildApiUrl('/api/v1/users?limit=200', cfg);
+      const meUrl = buildApiUrl('/api/v1/auth/me', cfg);
+
+      expect(loginUrl).toBe('/api/v1/auth/login');
+      expect(createUsersUrl).toBe('/api/v1/users');
+      expect(listUsersUrl).toBe('/api/v1/users?limit=200');
+      expect(meUrl).toBe('/api/v1/auth/me');
+      expect(loginUrl).not.toContain('/api/v1/api/v1');
+      expect(createUsersUrl).not.toContain('/api/v1/api/v1');
+      expect(listUsersUrl).not.toContain('/api/v1/api/v1');
+    }
+
+    const hostedConfigs = [
+      'https://aotuc-backend.onrender.com',
+      'https://aotuc-backend.onrender.com/',
+      'https://aotuc-backend.onrender.com/api',
+      'https://aotuc-backend.onrender.com/api/v1',
+      'https://aotuc-backend.onrender.com/api/v1/',
+    ];
+    for (const cfg of hostedConfigs) {
+      const loginUrl = buildApiUrl('/api/v1/auth/login', cfg);
+      const createUsersUrl = buildApiUrl('/api/v1/users', cfg);
+      const listUsersUrl = buildApiUrl('/api/v1/users', cfg);
+
+      expect(loginUrl).toBe('https://aotuc-backend.onrender.com/api/v1/auth/login');
+      expect(createUsersUrl).toBe('https://aotuc-backend.onrender.com/api/v1/users');
+      expect(listUsersUrl).toBe('https://aotuc-backend.onrender.com/api/v1/users');
+      expect(loginUrl).not.toContain('/api/v1/api/v1');
+      expect(createUsersUrl).not.toContain('/api/v1/api/v1');
+      expect(listUsersUrl).not.toContain('/api/v1/api/v1');
+    }
+  });
+
+  it('8. should also safely normalize accidental duplicate /api/v1/api/v1/auth/login on the backend without 404', async () => {
+    const res = await request(app)
+      .post('/api/v1/api/v1/auth/login')
+      .send({
+        identifier: createdEmail,
+        password: createdAccountPassword,
+      });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.user.id).toBe(createdAccountId);
+  });
 });

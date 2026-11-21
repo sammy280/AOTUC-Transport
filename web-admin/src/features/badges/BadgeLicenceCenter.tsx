@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { UserContext } from '../../types';
 import { PERMISSIONS, hasRolePermission } from '../../utils/permissions';
+import { buildApiUrl, getStoredAuthToken } from '../../utils/api';
 
 interface BadgeRecord {
   id: string;
@@ -125,7 +126,7 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
   const handleVerifyOffline = async (signature: string) => {
     setVerificationFeedback('Vérification de la signature cryptographique Ed25519 en cours...');
     try {
-      const res = await fetch('/api/v1/verification/verify', {
+      const res = await fetch(buildApiUrl('/api/v1/verification/verify'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ qrPayload: signature }),
@@ -152,13 +153,13 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
   const handleDownloadPdf = async () => {
     setIsDownloading(true);
     try {
-      const token = localStorage.getItem('aotuc_auth_token') || sessionStorage.getItem('aotuc_auth_token');
+      const token = getStoredAuthToken();
       const endpoint =
         activeTab === 'badges'
           ? `/api/v1/badges/${selectedBadge.id}/pdf`
           : `/api/v1/licences/${selectedLicence.id}/sticker-pdf`;
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(buildApiUrl(endpoint), {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 

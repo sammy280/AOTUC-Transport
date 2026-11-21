@@ -19,6 +19,7 @@ import {
   Download,
 } from 'lucide-react';
 import { UserContext } from '../../types';
+import { buildApiUrl, getStoredAuthToken } from '../../utils/api';
 
 interface Tariff {
   id: string;
@@ -355,8 +356,8 @@ export const TicketingLedgerView: React.FC<{ currentUser: UserContext }> = ({ cu
     const targetReceipt = receiptNum || (sales[0] ? sales[0].receiptNumber : 'REC-2026-00042');
 
     try {
-      const token = localStorage.getItem('aotuc_auth_token') || sessionStorage.getItem('aotuc_auth_token');
-      const response = await fetch(`/api/v1/ticketing/sales/${targetId}/pdf`, {
+      const token = getStoredAuthToken();
+      const response = await fetch(buildApiUrl(`/api/v1/ticketing/sales/${targetId}/pdf`), {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 

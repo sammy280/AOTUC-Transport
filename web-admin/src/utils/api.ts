@@ -1,19 +1,52 @@
 /**
- * Centralized API helper for Web Admin.
- * Supports same-origin proxy (`/api/v1/...`) as well as separate hosted backend URLs via `VITE_API_URL`.
+ * Centralized API URL & Auth Token Helper for Web Admin.
+ *
+ * Canonical Convention:
+ * - `getApiBaseUrl()` always returns the backend ORIGIN ONLY (e.g. `https://backend.example.com` or `''` for same-origin proxy),
+ *   automatically stripping any trailing `/`, `/api/v1`, or `/api` from `VITE_API_URL`.
+ * - `buildApiUrl(path)` ensures the path begins with a single `/api/v1/` prefix and never duplicates `/api/v1/api/v1`.
  */
-export function getApiBaseUrl(): string {
-  const envUrl = (import.meta as any).env?.VITE_API_URL;
-  if (typeof envUrl === 'string' && envUrl.trim().length > 0) {
-    return envUrl.trim().replace(/\/+$/, '');
+export function normalizeBaseOrigin(rawBaseUrl?: string | null): string {
+  if (typeof rawBaseUrl !== 'string') return '';
+  let cleaned = rawBaseUrl.trim();
+  if (!cleaned) return '';
+
+  // Strip trailing slashes
+  cleaned = cleaned.replace(/\/+$/, '');
+
+  // Repeatedly strip any trailing `/api/v1` or `/api` from the configured base URL
+  while (/\/api(\/v1)?$/i.test(cleaned)) {
+    cleaned = cleaned.replace(/\/api(\/v1)?$/i, '').replace(/\/+$/, '');
   }
-  return '';
+
+  return cleaned;
 }
 
-export function buildApiUrl(path: string): string {
-  const base = getApiBaseUrl();
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  return `${base}${normalizedPath}`;
+export function getApiBaseUrl(overrideEnvUrl?: string): string {
+  const envUrl =
+    overrideEnvUrl !== undefined
+      ? overrideEnvUrl
+      : (import.meta as any).env?.VITE_API_URL;
+  return normalizeBaseOrigin(envUrl);
+}
+
+export function buildApiUrl(path: string, overrideEnvUrl?: string): string {
+  const base = getApiBaseUrl(overrideEnvUrl);
+  let cleanPath = String(path || '').trim();
+
+  if (!cleanPath.startsWith('/')) {
+    cleanPath = `/${cleanPath}`;
+  }
+
+  // Collapse any accidental duplicate `/api/v1/api/v1` or `/api/api/v1` prefixes
+  cleanPath = cleanPath.replace(/^(\/api(\/v1)?)+(?=\/|$)/i, '/api/v1');
+
+  // Ensure API paths always begin with `/api/v1`
+  if (!cleanPath.startsWith('/api/v1')) {
+    cleanPath = `/api/v1${cleanPath}`;
+  }
+
+  return `${base}${cleanPath}`;
 }
 
 export function getStoredAuthToken(): string | null {

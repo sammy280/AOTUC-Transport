@@ -101,7 +101,15 @@ app.get('/api/v1/health', async (req, res) => {
   });
 });
 
-// 6. API Route Modules
+// 6. Normalize accidental duplicate /api/v1/api/v1 or /api/api/v1 prefixes before routing
+app.use((req, _res, next) => {
+  if (/^(\/api(\/v1)?){2,}(?=\/|$)/i.test(req.url)) {
+    req.url = req.url.replace(/^(\/api(\/v1)?)+(?=\/|$)/i, '/api/v1');
+  }
+  next();
+});
+
+// 7. API Route Modules
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/registration', registrationRoutes);
 app.use('/api/v1/documents', documentRoutes);
