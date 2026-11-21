@@ -21,6 +21,7 @@ import LoginView from './features/auth/LoginView';
 import AccessDenied from './components/AccessDenied';
 import PublicVerificationView from './features/verification/PublicVerificationView';
 import { isTabAllowed, getDefaultTab } from './utils/permissions';
+import { getStoredAuthToken, storeAuthToken } from './utils/api';
 import { useTheme } from './context/ThemeContext';
 
 const INITIAL_NOTIFICATIONS: NotificationItem[] = [
@@ -68,9 +69,13 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
 export const App: React.FC = () => {
   const { setUser } = useTheme();
 
-  // Strict Security Gate: The user MUST authenticate to access the system
+  // Strict Security Gate: The user MUST authenticate with a real JWT token to access the system
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return sessionStorage.getItem('aotuc_session_active') === 'true';
+    const hasToken = getStoredAuthToken() !== null;
+    const hasSession =
+      sessionStorage.getItem('aotuc_session_active') === 'true' ||
+      Boolean(localStorage.getItem('aotuc_user'));
+    return hasSession && hasToken;
   });
 
   // Public QR Code Verification Portal check (no login required for roadside checks)
@@ -87,7 +92,7 @@ export const App: React.FC = () => {
   });
 
   const [currentUser, setCurrentUser] = useState<UserContext>(() => {
-    const saved = sessionStorage.getItem('aotuc_user');
+    const saved = sessionStorage.getItem('aotuc_user') || localStorage.getItem('aotuc_user');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -141,9 +146,12 @@ export const App: React.FC = () => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const handleLoginSuccess = (user: UserContext) => {
+  const handleLoginSuccess = (user: UserContext, token?: string) => {
     sessionStorage.setItem('aotuc_session_active', 'true');
     sessionStorage.setItem('aotuc_user', JSON.stringify(user));
+    if (token) {
+      storeAuthToken(token);
+    }
     setCurrentUser(user);
     setUser(user.id);
     setIsAuthenticated(true);
@@ -154,6 +162,7 @@ export const App: React.FC = () => {
   const handleLogout = () => {
     sessionStorage.removeItem('aotuc_session_active');
     sessionStorage.removeItem('aotuc_user');
+    sessionStorage.removeItem('aotuc_auth_token');
     localStorage.removeItem('aotuc_auth_token');
     localStorage.removeItem('aotuc_user');
     setUser(null);

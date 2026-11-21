@@ -24,13 +24,11 @@ export const createUserSchema = z.object({
     errorMap: () => ({ message: 'Rôle RBAC invalide.' }),
   }),
 
-  communeId: z.string().uuid('Identifiant de commune invalide.').optional().nullable(),
-  communeCode: z.string().trim().min(2).max(10).optional().nullable(),
+  communeId: z.string().trim().optional().nullable(),
+  communeCode: z.string().trim().max(30).optional().nullable(),
 
   password: z.string()
     .min(8, 'Le mot de passe doit comporter au moins 8 caractères.')
-    .regex(/[A-Z]/, 'Le mot de passe doit contenir au moins une lettre majuscule.')
-    .regex(/[0-9]/, 'Le mot de passe doit contenir au moins un chiffre.')
     .optional()
     .nullable(),
 
@@ -44,8 +42,8 @@ export const updateUserSchema = z.object({
   phoneNumber: z.string().trim().min(8).optional(),
   jobTitle: z.string().trim().max(120).optional().nullable(),
   role: z.nativeEnum(RoleType).optional(),
-  communeId: z.string().uuid().optional().nullable(),
-  communeCode: z.string().trim().min(2).max(10).optional().nullable(),
+  communeId: z.string().trim().optional().nullable(),
+  communeCode: z.string().trim().max(30).optional().nullable(),
   isActive: z.boolean().optional(),
 });
 
@@ -54,8 +52,6 @@ export const resetPasswordSchema = z.object({
     required_error: 'Le nouveau mot de passe est obligatoire.',
   })
     .min(8, 'Le mot de passe doit comporter au moins 8 caractères.')
-    .regex(/[A-Z]/, 'Le mot de passe doit contenir au moins une lettre majuscule.')
-    .regex(/[0-9]/, 'Le mot de passe doit contenir au moins un chiffre.')
     .optional()
     .nullable(),
 });

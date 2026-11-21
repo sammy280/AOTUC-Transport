@@ -12,13 +12,18 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-    private val channelName = "gn.gov.aotuc/location"
-    private val permissionRequestCode = 4021
-    private var pendingResult: MethodChannel.Result? = null
+    private val locationChannelName = "gn.gov.aotuc/location"
+    private val cameraChannelName = "gn.gov.aotuc/camera"
+    private val locationPermissionRequestCode = 4021
+    private val cameraPermissionRequestCode = 4022
+
+    private var pendingLocationResult: MethodChannel.Result? = null
+    private var pendingCameraResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, locationChannelName)
             .setMethodCallHandler { call, result ->
                 if (call.method == "getCurrentLocation") {
                     handleGetLocation(result)
@@ -26,6 +31,52 @@ class MainActivity : FlutterActivity() {
                     result.notImplemented()
                 }
             }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, cameraChannelName)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "checkCameraPermission" -> handleCheckCameraPermission(result)
+                    "requestCameraPermission" -> handleRequestCameraPermission(result)
+                    else -> result.notImplemented()
+                }
+            }
+    }
+
+    private fun handleCheckCameraPermission(result: MethodChannel.Result) {
+        val granted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+        result.success(
+            mapOf(
+                "status" to if (granted) "GRANTED" else "DENIED",
+                "message" to if (granted) "Permission caméra accordée." else "Permission caméra requise."
+            )
+        )
+    }
+
+    private fun handleRequestCameraPermission(result: MethodChannel.Result) {
+        val granted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (granted) {
+            result.success(
+                mapOf(
+                    "status" to "GRANTED",
+                    "message" to "Permission caméra accordée."
+                )
+            )
+            return
+        }
+
+        pendingCameraResult = result
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.CAMERA),
+            cameraPermissionRequestCode
+        )
     }
 
     private fun handleGetLocation(result: MethodChannel.Result) {
@@ -39,14 +90,14 @@ class MainActivity : FlutterActivity() {
         ) == PackageManager.PERMISSION_GRANTED
 
         if (!fineGranted && !coarseGranted) {
-            pendingResult = result
+            pendingLocationResult = result
             ActivityCompat.requestPermissions(
                 this,
                 arrayOf(
                     Manifest.permission.ACCESS_FINE_LOCATION,
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 ),
-                permissionRequestCode
+                locationPermissionRequestCode
             )
             return
         }
@@ -60,9 +111,9 @@ class MainActivity : FlutterActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == permissionRequestCode) {
-            val res = pendingResult ?: return
-            pendingResult = null
+        if (requestCode == locationPermissionRequestCode) {
+            val res = pendingLocationResult ?: return
+            pendingLocationResult = null
             val granted = grantResults.isNotEmpty() &&
                 grantResults.any { it == PackageManager.PERMISSION_GRANTED }
             if (granted) {
@@ -72,6 +123,26 @@ class MainActivity : FlutterActivity() {
                     mapOf(
                         "status" to "PERMISSION_DENIED",
                         "message" to "Permission de localisation refusée sur l'appareil."
+                    )
+                )
+            }
+        } else if (requestCode == cameraPermissionRequestCode) {
+            val res = pendingCameraResult ?: return
+            pendingCameraResult = null
+            val granted = grantResults.isNotEmpty() &&
+                grantResults.any { it == PackageManager.PERMISSION_GRANTED }
+            if (granted) {
+                res.success(
+                    mapOf(
+                        "status" to "GRANTED",
+                        "message" to "Permission caméra accordée."
+                    )
+                )
+            } else {
+                res.success(
+                    mapOf(
+                        "status" to "PERMISSION_DENIED",
+                        "message" to "Accès à la caméra refusé. Autorisez la caméra pour scanner les QR codes AOTUC."
                     )
                 )
             }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -6,6 +7,7 @@ import 'package:http/testing.dart';
 import 'package:aotuc_mobile/main.dart';
 import 'package:aotuc_mobile/core/auth/auth_models.dart';
 import 'package:aotuc_mobile/core/auth/auth_service.dart';
+import 'package:aotuc_mobile/core/crypto/ed25519_verifier.dart';
 import 'package:aotuc_mobile/core/database/offline_database.dart';
 import 'package:aotuc_mobile/core/security/local_crypto_service.dart';
 import 'package:aotuc_mobile/core/services/media_and_gps_service.dart';
@@ -1074,6 +1076,377 @@ void main() {
         expect(find.byKey(const Key('sync_card_draft-conflict-veh')), findsOneWidget);
         expect(find.text('SYNCHRONISÉ'), findsOneWidget);
         expect(find.textContaining('pg-veh-resolved-001'), findsOneWidget);
+      },
+    );
+  });
+
+  group('Phase 5 — Real Camera QR Scanner & Offline Ed25519 Credential Verification', () {
+    test(
+      '1–8: Valid badge & licence, Invalid/Forged signature, Revoked credential, Expired credential, Unknown key, Unavailable/Expired key & Malformed QR codes (100% Offline)',
+      () async {
+        final ed = Ed25519();
+        final trustedKeyPair = await ed.newKeyPair();
+        final trustedPubKey = await trustedKeyPair.extractPublicKey();
+        final trustedSpkiPem =
+            Ed25519Verifier.encodeRawPublicKeyToSpkiPem(trustedPubKey.bytes);
+        const trustedKeyId = 'aotuc-2026-v1';
+
+        final attackerKeyPair = await ed.newKeyPair();
+
+        final now = DateTime.now();
+        final futureExpiry = now.add(const Duration(days: 365));
+
+        final validBadgeQr = await Ed25519Verifier.signCredentialWithKeyPair(
+          keyPair: trustedKeyPair,
+          keyId: trustedKeyId,
+          credentialId: 'CH-2026-0042',
+          type: 'DRIVER_BADGE',
+          targetId: 'drv-matoto-042',
+          issuedAt: now.subtract(const Duration(days: 5)),
+          expiresAt: futureExpiry,
+        );
+
+        final validLicenceQr = await Ed25519Verifier.signCredentialWithKeyPair(
+          keyPair: trustedKeyPair,
+          keyId: trustedKeyId,
+          credentialId: 'LIC-2026-0188',
+          type: 'TRANSPORT_LICENCE',
+          targetId: 'veh-matoto-188',
+          issuedAt: now.subtract(const Duration(days: 5)),
+          expiresAt: futureExpiry,
+        );
+
+        // 1. Unavailable key data (empty public_keys table) -> NEVER report as valid!
+        await OfflineDatabase.instance.clearPublicKeys();
+        final noKeysOutcome = await Ed25519Verifier.verifyQrCode(validBadgeQr);
+        expect(noKeysOutcome.status, InspectionResultType.ATTENTION_ORANGE);
+        expect(noKeysOutcome.code, 'NO_KEYS_AVAILABLE');
+        expect(noKeysOutcome.isAuthentic, isFalse);
+
+        // Cache trusted Ed25519 public key in SQLite `public_keys`
+        await OfflineDatabase.instance.savePublicKeysBatch([
+          {
+            'keyId': trustedKeyId,
+            'algorithm': 'Ed25519',
+            'publicKeyPem': trustedSpkiPem,
+            'validFrom': now.toIso8601String(),
+          }
+        ]);
+
+        // 2. Valid Driver Badge (Offline Ed25519 RFC 8032 verification)
+        final badgeOutcome = await Ed25519Verifier.verifyQrCode(validBadgeQr);
+        expect(badgeOutcome.status, InspectionResultType.VALIDE_VERT);
+        expect(badgeOutcome.code, 'VALID_CREDENTIAL');
+        expect(badgeOutcome.isAuthentic, isTrue);
+        expect(badgeOutcome.title, 'BADGE CHAUFFEUR AUTHENTIQUE & VALIDE');
+        expect(badgeOutcome.credentialId, 'CH-2026-0042');
+
+        // 3. Valid Transport Licence (Offline Ed25519 RFC 8032 verification)
+        final licenceOutcome = await Ed25519Verifier.verifyQrCode(validLicenceQr);
+        expect(licenceOutcome.status, InspectionResultType.VALIDE_VERT);
+        expect(licenceOutcome.code, 'VALID_CREDENTIAL');
+        expect(licenceOutcome.isAuthentic, isTrue);
+        expect(licenceOutcome.title, 'LICENCE DE TRANSPORT AUTHENTIQUE & VALIDE');
+        expect(licenceOutcome.credentialId, 'LIC-2026-0188');
+
+        // 4. Invalid signature (payload tampered after signing)
+        final tamperedQr = validBadgeQr.replaceFirst('CH-2026-0042', 'CH-2026-9999');
+        final tamperedOutcome = await Ed25519Verifier.verifyQrCode(tamperedQr);
+        expect(tamperedOutcome.status, InspectionResultType.FRAUDE_ROUGE);
+        expect(tamperedOutcome.code, 'INVALID_SIGNATURE');
+        expect(tamperedOutcome.isAuthentic, isFalse);
+
+        // 5. Forged signature (signed with attacker's private key claiming trusted keyId)
+        final forgedQr = await Ed25519Verifier.signCredentialWithKeyPair(
+          keyPair: attackerKeyPair,
+          keyId: trustedKeyId,
+          credentialId: 'CH-2026-FAKE',
+          type: 'DRIVER_BADGE',
+          targetId: 'drv-fake',
+          issuedAt: now,
+          expiresAt: futureExpiry,
+        );
+        final forgedOutcome = await Ed25519Verifier.verifyQrCode(forgedQr);
+        expect(forgedOutcome.status, InspectionResultType.FRAUDE_ROUGE);
+        expect(forgedOutcome.code, 'INVALID_SIGNATURE');
+        expect(forgedOutcome.isAuthentic, isFalse);
+
+        // 6. Revoked credential (cached in SQLite `revocations`)
+        await OfflineDatabase.instance.saveRevocationsBatch([
+          {
+            'credentialId': 'bdg-uuid-0042',
+            'serialNumber': 'CH-2026-0042',
+            'credentialType': 'DRIVER_BADGE',
+            'reason': 'Suspension administrative : défaut de visite technique',
+            'revokedAt': now.toIso8601String(),
+          }
+        ]);
+        final revokedOutcome = await Ed25519Verifier.verifyQrCode(validBadgeQr);
+        expect(revokedOutcome.status, InspectionResultType.REVOQUE_ROUGE);
+        expect(revokedOutcome.code, 'REVOKED_CREDENTIAL');
+        expect(revokedOutcome.isAuthentic, isTrue);
+        expect(revokedOutcome.message, contains('défaut de visite technique'));
+
+        // 7. Expired credential
+        final expiredBadgeQr = await Ed25519Verifier.signCredentialWithKeyPair(
+          keyPair: trustedKeyPair,
+          keyId: trustedKeyId,
+          credentialId: 'CH-2024-EXP',
+          type: 'DRIVER_BADGE',
+          targetId: 'drv-old-01',
+          issuedAt: DateTime.parse('2024-01-01T00:00:00Z'),
+          expiresAt: DateTime.parse('2025-01-01T00:00:00Z'),
+        );
+        final expiredOutcome = await Ed25519Verifier.verifyQrCode(expiredBadgeQr);
+        expect(expiredOutcome.status, InspectionResultType.EXPIRE_ROUGE);
+        expect(expiredOutcome.code, 'EXPIRED_CREDENTIAL');
+        expect(expiredOutcome.isAuthentic, isTrue);
+
+        // 8. Unknown signing keyId
+        final unknownKeyQr = await Ed25519Verifier.signCredentialWithKeyPair(
+          keyPair: trustedKeyPair,
+          keyId: 'aotuc-2030-rotated-key',
+          credentialId: 'CH-2026-0999',
+          type: 'DRIVER_BADGE',
+          targetId: 'drv-999',
+          issuedAt: now,
+          expiresAt: futureExpiry,
+        );
+        final unknownKeyOutcome = await Ed25519Verifier.verifyQrCode(unknownKeyQr);
+        expect(unknownKeyOutcome.status, InspectionResultType.ATTENTION_ORANGE);
+        expect(unknownKeyOutcome.code, 'UNKNOWN_KEY');
+        expect(unknownKeyOutcome.isAuthentic, isFalse);
+
+        // 9. Expired / Invalid cached public key data
+        await OfflineDatabase.instance.savePublicKeysBatch([
+          {
+            'keyId': 'aotuc-expired-key',
+            'algorithm': 'Ed25519',
+            'publicKeyPem': trustedSpkiPem,
+            'validFrom': 'EXPIRED',
+          }
+        ]);
+        final expiredKeyQr = await Ed25519Verifier.signCredentialWithKeyPair(
+          keyPair: trustedKeyPair,
+          keyId: 'aotuc-expired-key',
+          credentialId: 'CH-2026-0777',
+          type: 'DRIVER_BADGE',
+          targetId: 'drv-777',
+          issuedAt: now,
+          expiresAt: futureExpiry,
+        );
+        final expiredKeyOutcome = await Ed25519Verifier.verifyQrCode(expiredKeyQr);
+        expect(expiredKeyOutcome.status, InspectionResultType.ATTENTION_ORANGE);
+        expect(expiredKeyOutcome.code, 'KEY_EXPIRED_OR_INVALID');
+        expect(expiredKeyOutcome.isAuthentic, isFalse);
+
+        // 10. Malformed QR codes
+        for (final malformed in [
+          '',
+          'HTTPS://FAKE.QR/12345',
+          'AOTUC1.only.three.parts',
+          'AOTUC1.aotuc-2026-v1.CH-1.UNKNOWN_TYPE.drv-1.1700000000.1800000000.sig',
+          'AOTUC1.aotuc-2026-v1.CH-1.DRIVER_BADGE.drv-1.notanumber.1800000000.sig',
+        ]) {
+          final badOutcome = await Ed25519Verifier.verifyQrCode(malformed);
+          expect(badOutcome.status, InspectionResultType.FRAUDE_ROUGE);
+          expect(badOutcome.code, 'MALFORMED_QR');
+          expect(badOutcome.isAuthentic, isFalse);
+        }
+
+        // Verify inspection logs were persisted in SQLite `inspection_logs`
+        final logs = await OfflineDatabase.instance.getRecentInspectionLogs();
+        expect(logs.isNotEmpty, isTrue);
+      },
+    );
+
+    testWidgets(
+      '9–12: QrScannerView Camera Permission Failure & Recovery, Online Public Key/Revocation Sync & Offline Roadside Verification UI',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1200, 2200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final ed = Ed25519();
+        final serverKeyPair = await ed.newKeyPair();
+        final serverPubKey = await serverKeyPair.extractPublicKey();
+        final serverSpkiPem =
+            Ed25519Verifier.encodeRawPublicKeyToSpkiPem(serverPubKey.bytes);
+        const serverKeyId = 'aotuc-2026-v1';
+
+        final now = DateTime.now();
+        final validLicenceQr = await Ed25519Verifier.signCredentialWithKeyPair(
+          keyPair: serverKeyPair,
+          keyId: serverKeyId,
+          credentialId: 'LIC-2026-8800',
+          type: 'TRANSPORT_LICENCE',
+          targetId: 'veh-kaloum-8800',
+          issuedAt: now.subtract(const Duration(days: 2)),
+          expiresAt: now.add(const Duration(days: 300)),
+        );
+
+        final revokedBadgeQr = await Ed25519Verifier.signCredentialWithKeyPair(
+          keyPair: serverKeyPair,
+          keyId: serverKeyId,
+          credentialId: 'CH-2026-REV99',
+          type: 'DRIVER_BADGE',
+          targetId: 'drv-matoto-99',
+          issuedAt: now.subtract(const Duration(days: 10)),
+          expiresAt: now.add(const Duration(days: 200)),
+        );
+
+        // Start with Camera Permission DENIED and empty local public_keys
+        bool cameraGranted = false;
+        await OfflineDatabase.instance.clearPublicKeys();
+
+        MediaAndGpsService.setTestOverrides(
+          cameraPermissionOverride: () async => cameraGranted
+              ? const CameraPermissionResult(
+                  status: 'GRANTED',
+                  message: 'Permission caméra accordée.',
+                )
+              : const CameraPermissionResult(
+                  status: 'PERMISSION_DENIED',
+                  message:
+                      'Accès à la caméra refusé. Autorisez la caméra pour scanner les QR codes AOTUC.',
+                ),
+        );
+
+        bool serverOnline = true;
+        final store = InMemorySecureStore();
+        final mockClient = MockClient((http.Request req) async {
+          if (req.url.path == '/api/v1/auth/me') {
+            return http.Response(
+              jsonEncode({
+                'success': true,
+                'data': {
+                  'user': {
+                    'id': 'usr-agt-matoto',
+                    'email': 'agent.matoto@aotuc.test',
+                    'phoneNumber': '+224620000005',
+                    'firstName': 'Sekou',
+                    'lastName': 'Conte',
+                    'roles': ['AGENT_TERRAIN'],
+                    'permissions': ['credentials.verify', 'drivers.create'],
+                    'communeId': 'cm-matoto',
+                    'commune': {'id': 'cm-matoto', 'code': 'MTT', 'name': 'Matoto'},
+                  },
+                },
+              }),
+              200,
+            );
+          }
+          if (req.url.path == '/api/v1/sync/pull') {
+            if (!serverOnline) {
+              throw Exception('Offline mode');
+            }
+            return http.Response(
+              jsonEncode({
+                'success': true,
+                'data': {
+                  'publicKeys': [
+                    {
+                      'keyId': serverKeyId,
+                      'algorithm': 'Ed25519',
+                      'publicKeyPem': serverSpkiPem,
+                      'validFrom': now.toIso8601String(),
+                    }
+                  ],
+                  'revocations': [
+                    {
+                      'credentialId': 'uuid-rev-99',
+                      'serialNumber': 'CH-2026-REV99',
+                      'credentialType': 'DRIVER_BADGE',
+                      'reason': 'Permis suspendu suite à infraction routière',
+                      'revokedAt': now.toIso8601String(),
+                    }
+                  ],
+                },
+              }),
+              200,
+            );
+          }
+          return http.Response(jsonEncode({'success': true}), 200);
+        });
+
+        await store.write(
+          'aotuc_secure_access_token',
+          _buildTestJwt(sub: 'usr-agt-matoto', expSecondsFromNow: 900),
+        );
+        await store.write(
+          'aotuc_secure_refresh_token',
+          _buildTestJwt(sub: 'usr-agt-matoto', expSecondsFromNow: 86400),
+        );
+        await store.write(
+          'aotuc_secure_user_profile',
+          const MobileUser(
+            id: 'usr-agt-matoto',
+            phoneNumber: '+224620000005',
+            firstName: 'Sekou',
+            lastName: 'Conte',
+            roles: ['AGENT_TERRAIN'],
+            permissions: ['credentials.verify', 'drivers.create'],
+            communeId: 'cm-matoto',
+            commune: MobileCommune(id: 'cm-matoto', code: 'MTT', name: 'Matoto'),
+          ).toRawJson(),
+        );
+
+        final authService = AuthService(credentialStore: store, httpClient: mockClient);
+        await authService.restoreSession();
+
+        await tester.pumpWidget(
+          AotucMobileApp(authService: authService, autoRestoreSession: false),
+        );
+        await tester.pumpAndSettle();
+
+        // 1. Verify Camera Permission Denied state is shown clearly in French
+        expect(find.byKey(const Key('camera_permission_denied_card')), findsOneWidget);
+        expect(find.text('ACCÈS À LA CAMÉRA REFUSÉ'), findsOneWidget);
+        expect(find.byKey(const Key('live_mobile_scanner_viewport')), findsNothing);
+
+        // 2. Grant camera permission and tap "Autoriser l'Accès à la Caméra"
+        cameraGranted = true;
+        await tester.tap(find.byKey(const Key('request_camera_permission_button')));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('camera_permission_denied_card')), findsNothing);
+        expect(find.byKey(const Key('live_mobile_scanner_viewport')), findsOneWidget);
+
+        // 3. Verify online sync populated 1 Ed25519 public key and 2 revocation keys (UUID + serialNumber)
+        expect(
+          find.textContaining('Clés Ed25519 en cache : 1'),
+          findsOneWidget,
+        );
+
+        // 4. Disconnect from network (100% offline verification from now on!)
+        serverOnline = false;
+
+        // Verify valid Transport Licence QR code offline
+        await tester.enterText(find.byKey(const Key('manual_qr_input')), validLicenceQr);
+        await tester.tap(find.byKey(const Key('verify_qr_submit_button')));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('verification_result_card')), findsOneWidget);
+        expect(
+          find.text('LICENCE DE TRANSPORT AUTHENTIQUE & VALIDE'),
+          findsOneWidget,
+        );
+        expect(find.text('LIC-2026-8800'), findsOneWidget);
+
+        // Reset scan and verify revoked Driver Badge QR code offline
+        await tester.tap(find.byKey(const Key('reset_scan_button')));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byKey(const Key('manual_qr_input')), revokedBadgeQr);
+        await tester.tap(find.byKey(const Key('verify_qr_submit_button')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('TITRE OFFICIELLEMENT RÉVOQUÉ'), findsOneWidget);
+        expect(
+          find.textContaining('Permis suspendu suite à infraction routière'),
+          findsWidgets,
+        );
       },
     );
   });

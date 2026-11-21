@@ -87,7 +87,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final canEnrol = user.canRegisterFieldRecords;
 
     final screens = <Widget>[
-      const QrScannerView(),
+      QrScannerView(authService: widget.authService),
       if (canEnrol) EnrolmentFormView(authService: widget.authService),
       if (canEnrol) SyncManagementView(authService: widget.authService),
       _AgentProfileView(authService: widget.authService),

@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react';
 import { UserContext, RoleType } from '../../types';
+import { buildApiUrl, getStoredAuthToken } from '../../utils/api';
 
 interface ManagedUser {
   id: string;
@@ -226,14 +227,34 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
   const [showResetPassword, setShowResetPassword] = useState(true);
   const [isSubmittingReset, setIsSubmittingReset] = useState(false);
   const [copiedResetPassword, setCopiedResetPassword] = useState(false);
+  const [createModalError, setCreateModalError] = useState<string | null>(null);
 
   const getAuthToken = () => {
-    return (
-      localStorage.getItem('aotuc_auth_token') ||
-      sessionStorage.getItem('aotuc_auth_token') ||
-      'session-token'
-    );
+    return getStoredAuthToken() || '';
   };
+
+  const mapApiUserToManagedUser = useCallback((u: any, fallbackCommuneName?: string): ManagedUser => {
+    const primaryRole = (u.roles?.[0] as RoleType) || (u.role as RoleType) || 'AGENT_TERRAIN';
+    return {
+      id: u.id,
+      name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Utilisateur',
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email || '—',
+      phoneNumber: u.phoneNumber || '—',
+      jobTitle: u.jobTitle || getRoleLabel(primaryRole),
+      role: primaryRole,
+      roleLabel: getRoleLabel(primaryRole),
+      commune:
+        u.commune?.name ||
+        fallbackCommuneName ||
+        (primaryRole === 'SUPER_ADMIN' ? 'Toutes Communes' : 'Direction Générale (Conakry)'),
+      communeId: u.commune?.id || u.communeId || null,
+      isActive: u.isActive !== undefined ? u.isActive : true,
+      createdAt: u.createdAt,
+      lastLogin: 'Session synchronisée',
+    };
+  }, []);
 
   // 1. Fetch Users and Communes from backend
   const loadData = useCallback(async () => {
@@ -241,6 +262,14 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
     setErrorBanner(null);
 
     const token = getAuthToken();
+    if (!token) {
+      setErrorBanner(
+        'Jeton de session expiré ou absent. Veuillez vous déconnecter puis vous reconnecter pour synchroniser la base PostgreSQL.'
+      );
+      setIsLoading(false);
+      return;
+    }
+
     const headers = {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
@@ -248,47 +277,48 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
 
     try {
       // Fetch communes
-      const commRes = await fetch('/api/v1/users/communes', { headers }).catch(() => null);
+      const commRes = await fetch(buildApiUrl('/api/v1/users/communes'), { headers }).catch(() => null);
       if (commRes && commRes.ok) {
         const commData = await commRes.json();
-        if (commData.success && Array.isArray(commData.data)) {
+        if (commData.success && Array.isArray(commData.data) && commData.data.length > 0) {
           setCommunes(commData.data);
         }
       }
 
       // Fetch users
-      const usersRes = await fetch('/api/v1/users?limit=100', { headers }).catch(() => null);
-      if (usersRes && usersRes.ok) {
+      const usersRes = await fetch(buildApiUrl('/api/v1/users?limit=200'), { headers }).catch(() => null);
+      if (!usersRes) {
+        setErrorBanner('Impossible de contacter le serveur AOTUC pour charger la liste des comptes.');
+        return;
+      }
+
+      if (usersRes.status === 401 || usersRes.status === 403) {
+        const errPayload = await usersRes.json().catch(() => ({}));
+        setErrorBanner(
+          errPayload.message ||
+            'Session non autorisée ou expirée. Veuillez vous reconnecter avec votre compte Super Administrateur.'
+        );
+        return;
+      }
+
+      if (usersRes.ok) {
         const usersData = await usersRes.json();
         if (usersData.success && Array.isArray(usersData.items)) {
-          const mapped: ManagedUser[] = usersData.items.map((u: any) => {
-            const primaryRole = (u.roles?.[0] as RoleType) || 'AGENT_TERRAIN';
-            return {
-              id: u.id,
-              name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Utilisateur',
-              firstName: u.firstName,
-              lastName: u.lastName,
-              email: u.email || '—',
-              phoneNumber: u.phoneNumber || '—',
-              jobTitle: u.jobTitle || 'Collaborateur AOTUC',
-              role: primaryRole,
-              roleLabel: getRoleLabel(primaryRole),
-              commune: u.commune ? u.commune.name : 'Direction Générale (Conakry)',
-              communeId: u.commune?.id || null,
-              isActive: u.isActive !== undefined ? u.isActive : true,
-              createdAt: u.createdAt,
-              lastLogin: 'Session synchronisée',
-            };
-          });
+          const mapped: ManagedUser[] = usersData.items.map((u: any) =>
+            mapApiUserToManagedUser(u)
+          );
           setUsers(mapped);
         }
+      } else {
+        const errPayload = await usersRes.json().catch(() => ({}));
+        setErrorBanner(errPayload.message || 'Erreur lors du chargement de la liste des collaborateurs.');
       }
     } catch (err: any) {
-      console.warn('Backend load failed, operating with local state cache:', err);
+      setErrorBanner(err.message || 'Erreur réseau lors du chargement des collaborateurs.');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [mapApiUserToManagedUser]);
 
   useEffect(() => {
     loadData();
@@ -312,15 +342,11 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
   // Activate / Deactivate account
   const handleToggleStatus = async (user: ManagedUser) => {
     const updatedStatus = !user.isActive;
-
-    // Optimistic UI update
-    setUsers((prev) =>
-      prev.map((u) => (u.id === user.id ? { ...u, isActive: updatedStatus } : u))
-    );
+    setErrorBanner(null);
 
     try {
       const response = await fetch(
-        `/api/v1/users/${user.id}/${updatedStatus ? 'reactivate' : 'deactivate'}`,
+        buildApiUrl(`/api/v1/users/${user.id}/${updatedStatus ? 'reactivate' : 'deactivate'}`),
         {
           method: 'PATCH',
           headers: {
@@ -330,21 +356,22 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
         }
       );
 
-      if (!response.ok) {
-        throw new Error('Erreur lors de la mise à jour du statut.');
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'Erreur lors de la mise à jour du statut sur le serveur.');
       }
+
+      setUsers((prev) =>
+        prev.map((u) => (u.id === user.id ? { ...u, isActive: updatedStatus } : u))
+      );
 
       setFeedback(
         updatedStatus
-          ? `Compte de ${user.name} réactivé avec succès.`
+          ? `Compte de ${user.name} réactivé avec succès dans PostgreSQL.`
           : `Compte de ${user.name} désactivé. Sessions actives révoquées immédiatement.`
       );
     } catch (err: any) {
-      setFeedback(
-        updatedStatus
-          ? `Statut de ${user.name} mis à jour localement (mode hors-ligne).`
-          : `Compte de ${user.name} désactivé localement.`
-      );
+      setErrorBanner(err.message || `Impossible de modifier le statut de ${user.name}.`);
     }
   };
 
@@ -367,8 +394,9 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
     }
 
     setIsSubmittingReset(true);
+    setErrorBanner(null);
     try {
-      const response = await fetch(`/api/v1/users/${resetTargetUser.id}/password`, {
+      const response = await fetch(buildApiUrl(`/api/v1/users/${resetTargetUser.id}/password`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -377,52 +405,60 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
         body: JSON.stringify({ password: resetPasswordValue }),
       });
 
-      const payload = await response.json();
-      if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.success) {
         throw new Error(payload.message || 'Échec de la réinitialisation du mot de passe.');
       }
 
+      const finalPass = payload.data?.temporaryPassword || resetPasswordValue;
       setFeedback(
-        `Mot de passe réinitialisé pour ${resetTargetUser.name}. Nouveau mot de passe sécurisé : ${resetPasswordValue}`
+        `Mot de passe réinitialisé dans PostgreSQL pour ${resetTargetUser.name}. Nouveau mot de passe sécurisé : ${finalPass}`
       );
       setResetTargetUser(null);
     } catch (err: any) {
-      setFeedback(
-        `Mot de passe mis à jour pour ${resetTargetUser.name} : ${resetPasswordValue} (enregistré).`
-      );
-      setResetTargetUser(null);
+      setErrorBanner(err.message || 'Impossible de réinitialiser le mot de passe.');
     } finally {
       setIsSubmittingReset(false);
     }
   };
 
-  // Create User Submission
+  // Create User Submission — Reports success ONLY after PostgreSQL persistence succeeds
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCreateModalError(null);
+    setErrorBanner(null);
+
     if (!newFirstName.trim() || !newLastName.trim() || !newPhone.trim() || !newEmail.trim()) {
-      alert('Veuillez renseigner le prénom, le nom, le téléphone et l adresse email professionnelle.');
+      setCreateModalError('Veuillez renseigner le prénom, le nom, le téléphone et l adresse email professionnelle.');
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newEmail.trim())) {
-      alert('Format d adresse email invalide (ex: mamadou.diallo@aotuc.gov.gn).');
+      setCreateModalError('Format d adresse email invalide (ex: mamadou.diallo@aotuc.gov.gn).');
+      return;
+    }
+
+    const token = getAuthToken();
+    if (!token) {
+      setCreateModalError(
+        'Votre session administrateur ne contient pas de jeton JWT valide. Veuillez vous déconnecter puis vous reconnecter.'
+      );
       return;
     }
 
     const passwordToSend = newPassword.trim() || generateSecurePassword(14);
     setIsSubmittingCreate(true);
-    setErrorBanner(null);
 
     const communeObj = communes.find((c) => c.id === newCommuneId);
     const communeName = communeObj ? communeObj.name : 'Direction Générale (Conakry)';
 
     try {
-      const response = await fetch('/api/v1/users', {
+      const response = await fetch(buildApiUrl('/api/v1/users'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${getAuthToken()}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           firstName: newFirstName.trim(),
@@ -432,20 +468,38 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
           jobTitle: newJobTitle.trim() || getRoleLabel(newRole),
           role: newRole,
           communeId: newCommuneId || null,
+          communeCode: communeObj?.code || null,
           password: passwordToSend,
         }),
       });
 
-      const payload = await response.json();
+      const payload = await response.json().catch(() => ({}));
 
-      if (!response.ok) {
-        throw new Error(payload.message || 'Échec de la création du compte.');
+      if (!response.ok || !payload.success || !payload.data?.id) {
+        const fieldErrors = Array.isArray(payload.errors)
+          ? payload.errors.map((errItem: any) => errItem.message).join(' • ')
+          : '';
+        const serverMessage =
+          fieldErrors ||
+          payload.message ||
+          `Échec de la création du compte sur le serveur (HTTP ${response.status}).`;
+        throw new Error(serverMessage);
       }
 
       const createdUser = payload.data;
-      const returnedPassword = payload.data?.temporaryPassword || passwordToSend;
+      const returnedPassword = createdUser.temporaryPassword || passwordToSend;
+      const mappedCreated = mapApiUserToManagedUser(createdUser, communeName);
 
-      // Close create form and show credentials summary card
+      // 1. Immediately prepend the real persisted PostgreSQL user to table state
+      // and clear active filters so the new account is visible immediately
+      setRoleFilter('ALL');
+      setSearchQuery('');
+      setUsers((prev) => [
+        mappedCreated,
+        ...prev.filter((u) => u.id !== mappedCreated.id && u.email !== mappedCreated.email),
+      ]);
+
+      // 2. Close create form and show verified credentials summary card
       setShowCreateModal(false);
       setCreatedSummary({
         name: `${createdUser.firstName} ${createdUser.lastName}`,
@@ -457,52 +511,26 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
         temporaryPassword: returnedPassword,
       });
 
-      // Refresh list
-      loadData();
+      setFeedback(
+        `Collaborateur ${createdUser.firstName} ${createdUser.lastName} (${createdUser.email}) enregistré avec succès dans PostgreSQL.`
+      );
 
-      // Reset form fields
+      // 3. Reset form fields
       setNewFirstName('');
       setNewLastName('');
       setNewEmail('');
       setNewPhone('');
       setNewJobTitle('');
       setNewPassword(generateSecurePassword(14));
+
+      // 4. Refresh authoritative list from PostgreSQL
+      await loadData();
     } catch (err: any) {
-      // If backend was unreachable, create locally with fallback
-      const createdLocal: ManagedUser = {
-        id: `usr-${Date.now()}`,
-        name: `${newFirstName.trim()} ${newLastName.trim()}`,
-        firstName: newFirstName.trim(),
-        lastName: newLastName.trim(),
-        email: newEmail.trim().toLowerCase(),
-        phoneNumber: newPhone.trim(),
-        jobTitle: newJobTitle.trim() || getRoleLabel(newRole),
-        role: newRole,
-        roleLabel: getRoleLabel(newRole),
-        commune: communeName,
-        communeId: newCommuneId || null,
-        isActive: true,
-        lastLogin: 'Jamais connecté',
-      };
-
-      setUsers([createdLocal, ...users]);
-      setShowCreateModal(false);
-      setCreatedSummary({
-        name: createdLocal.name,
-        email: createdLocal.email,
-        phone: createdLocal.phoneNumber,
-        role: createdLocal.roleLabel,
-        jobTitle: createdLocal.jobTitle || 'Collaborateur',
-        commune: createdLocal.commune,
-        temporaryPassword: passwordToSend,
-      });
-
-      setNewFirstName('');
-      setNewLastName('');
-      setNewEmail('');
-      setNewPhone('');
-      setNewJobTitle('');
-      setNewPassword(generateSecurePassword(14));
+      const msg =
+        err.message ||
+        'Impossible de créer le compte dans la base de données PostgreSQL. Vérifiez votre connexion et vos droits.';
+      setCreateModalError(msg);
+      setErrorBanner(msg);
     } finally {
       setIsSubmittingCreate(false);
     }
@@ -542,6 +570,7 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
 
           <button
             onClick={() => {
+              setCreateModalError(null);
               setNewPassword(generateSecurePassword(14));
               setShowCreateModal(true);
             }}
@@ -788,6 +817,13 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
             </div>
 
             <form onSubmit={handleCreateUser} className="p-5 space-y-3.5 text-xs max-h-[85vh] overflow-y-auto">
+              {createModalError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-start space-x-2 text-xs">
+                  <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+                  <span>{createModalError}</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-700 font-semibold mb-1">Prénom *</label>

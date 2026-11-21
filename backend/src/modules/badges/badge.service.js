@@ -229,11 +229,14 @@ export class BadgeService {
       };
     }
 
-    const { credentialId, isExpired, payload } = cryptoResult;
+    const { isExpired, payload } = cryptoResult;
+    const credentialId = payload.credentialId;
 
     // 2. Check live/cached revocation database
     const revocation = await prisma.credentialRevocation.findFirst({
-      where: { serialNumber: credentialId },
+      where: {
+        OR: [{ serialNumber: credentialId }, { credentialId }],
+      },
     });
 
     if (revocation) {

@@ -11,6 +11,8 @@ class OfflineDatabase {
   static bool _useInMemoryTestStore = false;
   static final List<Map<String, dynamic>> _memoryDrafts = [];
   static final Map<String, Map<String, dynamic>> _memoryRevocations = {};
+  static final Map<String, Map<String, dynamic>> _memoryPublicKeys = {};
+  static final List<Map<String, dynamic>> _memoryInspectionLogs = [];
   static final Map<String, Map<String, dynamic>> _memorySyncMeta = {};
 
   OfflineDatabase._init();
@@ -19,6 +21,8 @@ class OfflineDatabase {
     _useInMemoryTestStore = true;
     _memoryDrafts.clear();
     _memoryRevocations.clear();
+    _memoryPublicKeys.clear();
+    _memoryInspectionLogs.clear();
     _memorySyncMeta.clear();
   }
 
@@ -668,19 +672,115 @@ class OfflineDatabase {
     return rows.first['last_synced_at']?.toString();
   }
 
+  /// Saves or refreshes trusted Ed25519 public keys in SQLite `public_keys`.
+  Future<void> savePublicKeysBatch(List<dynamic> publicKeys) async {
+    final nowIso = DateTime.now().toIso8601String();
+    if (_useInMemoryTestStore) {
+      for (final rawKey in publicKeys) {
+        if (rawKey is Map) {
+          final keyId = (rawKey['keyId'] ?? rawKey['key_id'])?.toString();
+          final pem = (rawKey['publicKeyPem'] ?? rawKey['public_key_pem'])?.toString();
+          if (keyId != null && keyId.isNotEmpty && pem != null && pem.isNotEmpty) {
+            _memoryPublicKeys[keyId] = {
+              'key_id': keyId,
+              'algorithm': (rawKey['algorithm'] ?? 'Ed25519').toString(),
+              'public_key_pem': pem,
+              'valid_from': (rawKey['validFrom'] ?? rawKey['valid_from'])?.toString(),
+              'cached_at': (rawKey['cachedAt'] ?? rawKey['cached_at'] ?? nowIso).toString(),
+            };
+          }
+        }
+      }
+      return;
+    }
+
+    final db = await instance.database;
+    final batch = db.batch();
+    for (final rawKey in publicKeys) {
+      if (rawKey is Map) {
+        final keyId = (rawKey['keyId'] ?? rawKey['key_id'])?.toString();
+        final pem = (rawKey['publicKeyPem'] ?? rawKey['public_key_pem'])?.toString();
+        if (keyId != null && keyId.isNotEmpty && pem != null && pem.isNotEmpty) {
+          batch.insert(
+            'public_keys',
+            {
+              'key_id': keyId,
+              'algorithm': (rawKey['algorithm'] ?? 'Ed25519').toString(),
+              'public_key_pem': pem,
+              'valid_from': (rawKey['validFrom'] ?? rawKey['valid_from'])?.toString(),
+              'cached_at': (rawKey['cachedAt'] ?? rawKey['cached_at'] ?? nowIso).toString(),
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+      }
+    }
+    await batch.commit(noResult: true);
+  }
+
+  /// Retrieves a specific public key by [keyId] from SQLite `public_keys`.
+  Future<Map<String, dynamic>?> getPublicKey(String keyId) async {
+    if (_useInMemoryTestStore) {
+      final found = _memoryPublicKeys[keyId];
+      return found != null ? Map<String, dynamic>.from(found) : null;
+    }
+
+    final db = await instance.database;
+    final rows = await db.query(
+      'public_keys',
+      where: 'key_id = ?',
+      whereArgs: [keyId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return Map<String, dynamic>.from(rows.first);
+  }
+
+  /// Returns all cached public keys from SQLite `public_keys`.
+  Future<List<Map<String, dynamic>>> getAllPublicKeys() async {
+    if (_useInMemoryTestStore) {
+      return _memoryPublicKeys.values
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+
+    final db = await instance.database;
+    final rows = await db.query('public_keys', orderBy: 'cached_at DESC');
+    return rows.map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  /// Clears cached public keys (used in tests for unavailable key verification).
+  Future<void> clearPublicKeys() async {
+    if (_useInMemoryTestStore) {
+      _memoryPublicKeys.clear();
+      return;
+    }
+    final db = await instance.database;
+    await db.delete('public_keys');
+  }
+
   Future<void> saveRevocationsBatch(List<dynamic> revocations) async {
     if (_useInMemoryTestStore) {
       for (final rev in revocations) {
         if (rev is Map) {
-          final id = rev['credentialId']?.toString();
-          if (id != null) {
-            _memoryRevocations[id] = {
-              'credential_id': id,
-              'credential_type': rev['credentialType']?.toString() ?? 'DRIVER_BADGE',
-              'revocation_reason':
-                  (rev['reason'] ?? rev['revocationReason'] ?? 'Révoqué').toString(),
-              'revoked_at': rev['revokedAt']?.toString() ?? DateTime.now().toIso8601String(),
-            };
+          final credId = (rev['credentialId'] ?? rev['credential_id'])?.toString();
+          final serial = (rev['serialNumber'] ?? rev['serial_number'])?.toString();
+          final cType =
+              (rev['credentialType'] ?? rev['type'] ?? 'DRIVER_BADGE').toString();
+          final reason =
+              (rev['reason'] ?? rev['revocationReason'] ?? 'Révoqué').toString();
+          final revokedAt =
+              (rev['revokedAt'] ?? DateTime.now().toIso8601String()).toString();
+
+          for (final key in {credId, serial}) {
+            if (key != null && key.trim().isNotEmpty) {
+              _memoryRevocations[key.trim()] = {
+                'credential_id': key.trim(),
+                'credential_type': cType,
+                'revocation_reason': reason,
+                'revoked_at': revokedAt,
+              };
+            }
           }
         }
       }
@@ -691,32 +791,109 @@ class OfflineDatabase {
     final batch = db.batch();
     for (final rev in revocations) {
       if (rev is Map) {
-        batch.insert(
-          'revocations',
-          {
-            'credential_id': rev['credentialId'],
-            'credential_type': rev['credentialType'],
-            'revocation_reason': rev['reason'] ?? rev['revocationReason'] ?? 'Révoqué',
-            'revoked_at': rev['revokedAt'],
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
+        final credId = (rev['credentialId'] ?? rev['credential_id'])?.toString();
+        final serial = (rev['serialNumber'] ?? rev['serial_number'])?.toString();
+        final cType =
+            (rev['credentialType'] ?? rev['type'] ?? 'DRIVER_BADGE').toString();
+        final reason =
+            (rev['reason'] ?? rev['revocationReason'] ?? 'Révoqué').toString();
+        final revokedAt =
+            (rev['revokedAt'] ?? DateTime.now().toIso8601String()).toString();
+
+        for (final key in {credId, serial}) {
+          if (key != null && key.trim().isNotEmpty) {
+            batch.insert(
+              'revocations',
+              {
+                'credential_id': key.trim(),
+                'credential_type': cType,
+                'revocation_reason': reason,
+                'revoked_at': revokedAt,
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+        }
       }
     }
     await batch.commit(noResult: true);
   }
 
-  Future<bool> isCredentialRevoked(String credentialId) async {
+  Future<Map<String, dynamic>?> getRevocationRecord(String credentialId) async {
+    final trimmed = credentialId.trim();
     if (_useInMemoryTestStore) {
-      return _memoryRevocations.containsKey(credentialId);
+      final rec = _memoryRevocations[trimmed];
+      return rec != null ? Map<String, dynamic>.from(rec) : null;
     }
     final db = await instance.database;
     final result = await db.query(
       'revocations',
       where: 'credential_id = ?',
-      whereArgs: [credentialId],
+      whereArgs: [trimmed],
+      limit: 1,
     );
-    return result.isNotEmpty;
+    if (result.isEmpty) return null;
+    return Map<String, dynamic>.from(result.first);
+  }
+
+  Future<int> getRevocationsCount() async {
+    if (_useInMemoryTestStore) {
+      return _memoryRevocations.length;
+    }
+    final db = await instance.database;
+    final rows = await db.rawQuery('SELECT COUNT(*) AS cnt FROM revocations');
+    if (rows.isEmpty) return 0;
+    return (rows.first['cnt'] as int?) ?? 0;
+  }
+
+  Future<bool> isCredentialRevoked(String credentialId) async {
+    final rec = await getRevocationRecord(credentialId);
+    return rec != null;
+  }
+
+  Future<void> recordInspectionLog({
+    required String id,
+    required String scannedQr,
+    required String result,
+    String? reason,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final row = <String, dynamic>{
+      'id': id,
+      'scanned_qr': scannedQr,
+      'result': result,
+      'reason': reason,
+      'timestamp': DateTime.now().toIso8601String(),
+      'latitude': latitude,
+      'longitude': longitude,
+    };
+    if (_useInMemoryTestStore) {
+      _memoryInspectionLogs.insert(0, row);
+      return;
+    }
+    final db = await instance.database;
+    await db.insert(
+      'inspection_logs',
+      row,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getRecentInspectionLogs({int limit = 15}) async {
+    if (_useInMemoryTestStore) {
+      return _memoryInspectionLogs
+          .take(limit)
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    final db = await instance.database;
+    final rows = await db.query(
+      'inspection_logs',
+      orderBy: 'timestamp DESC',
+      limit: limit,
+    );
+    return rows.map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
   Future close() async {

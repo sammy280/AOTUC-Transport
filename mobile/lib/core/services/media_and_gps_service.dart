@@ -50,9 +50,23 @@ class GpsLocationResult {
   bool get hasCoordinates => status == 'OK' && latitude != null && longitude != null;
 }
 
+class CameraPermissionResult {
+  final String status; // 'GRANTED', 'PERMISSION_DENIED', 'DENIED', 'ERROR'
+  final String message;
+
+  const CameraPermissionResult({
+    required this.status,
+    required this.message,
+  });
+
+  bool get isGranted => status == 'GRANTED';
+}
+
 class MediaAndGpsService {
   static const MethodChannel _locationChannel =
       MethodChannel('gn.gov.aotuc/location');
+  static const MethodChannel _cameraChannel =
+      MethodChannel('gn.gov.aotuc/camera');
 
   static final ImagePicker _picker = ImagePicker();
 
@@ -63,6 +77,7 @@ class MediaAndGpsService {
   })? _testMediaOverride;
 
   static Future<GpsLocationResult> Function()? _testGpsOverride;
+  static Future<CameraPermissionResult> Function()? _testCameraPermissionOverride;
 
   static void setTestOverrides({
     Future<CapturedDocument?> Function({
@@ -71,9 +86,42 @@ class MediaAndGpsService {
       required ImageSource source,
     })? mediaOverride,
     Future<GpsLocationResult> Function()? gpsOverride,
+    Future<CameraPermissionResult> Function()? cameraPermissionOverride,
   }) {
     _testMediaOverride = mediaOverride;
     _testGpsOverride = gpsOverride;
+    _testCameraPermissionOverride = cameraPermissionOverride;
+  }
+
+  /// Requests Android runtime camera permission for QR code scanning.
+  static Future<CameraPermissionResult> requestCameraPermission() async {
+    if (_testCameraPermissionOverride != null) {
+      return await _testCameraPermissionOverride!();
+    }
+    try {
+      final raw =
+          await _cameraChannel.invokeMethod<dynamic>('requestCameraPermission');
+      if (raw is Map) {
+        final status = (raw['status'] ?? 'PERMISSION_DENIED').toString();
+        final message = (raw['message'] ?? 'Statut caméra inconnu.').toString();
+        return CameraPermissionResult(status: status, message: message);
+      }
+      return const CameraPermissionResult(
+        status: 'GRANTED',
+        message: 'Permission caméra accordée.',
+      );
+    } on MissingPluginException {
+      // On desktop/headless test environments without the native channel, default to granted unless overridden
+      return const CameraPermissionResult(
+        status: 'GRANTED',
+        message: 'Permission caméra accordée.',
+      );
+    } catch (e) {
+      return CameraPermissionResult(
+        status: 'PERMISSION_DENIED',
+        message: 'Impossible d accéder à la caméra : $e',
+      );
+    }
   }
 
   /// Computes lowercase hex SHA-256 hash of a binary buffer for document integrity verification.

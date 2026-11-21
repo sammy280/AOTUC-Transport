@@ -124,28 +124,67 @@ class SyncManager extends ChangeNotifier {
     );
   }
 
-  /// Pulls incremental server updates (Revocations, Public Keys, Lines, Communes, Unions).
+  /// Pulls incremental server updates (Public Keys, Revocations, Lines, Communes, Unions).
   Future<bool> pullIncrementalUpdates() async {
     try {
+      final headers = <String, String>{
+        if (authToken.isNotEmpty) 'Authorization': 'Bearer $authToken',
+        if (deviceId != null) 'X-Device-Id': deviceId!,
+        'Content-Type': 'application/json',
+      };
+
       final uri = Uri.parse('$backendBaseUrl/api/v1/sync/pull');
-      final response = await _httpClient.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $authToken',
-          if (deviceId != null) 'X-Device-Id': deviceId!,
-          'Content-Type': 'application/json',
-        },
-      );
+      final response = await _httpClient
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
         _isOnline = true;
-        final data = jsonDecode(response.body)['data'];
+        final data =
+            (jsonDecode(response.body) as Map<String, dynamic>)['data'] ?? {};
+        final publicKeys = (data['publicKeys'] as List<dynamic>?) ?? [];
         final revocations = (data['revocations'] as List<dynamic>?) ?? [];
-        await OfflineDatabase.instance.saveRevocationsBatch(revocations);
+
+        if (publicKeys.isNotEmpty) {
+          await OfflineDatabase.instance.savePublicKeysBatch(publicKeys);
+        }
+        if (revocations.isNotEmpty) {
+          await OfflineDatabase.instance.saveRevocationsBatch(revocations);
+        }
         notifyListeners();
         return true;
       }
-      return false;
+
+      // Fallback to public badge security endpoints if /sync/pull was not reachable with token
+      final keysRes = await _httpClient
+          .get(Uri.parse('$backendBaseUrl/api/v1/badges/public-keys'), headers: headers)
+          .timeout(const Duration(seconds: 6));
+      final revRes = await _httpClient
+          .get(Uri.parse('$backendBaseUrl/api/v1/badges/revocations'), headers: headers)
+          .timeout(const Duration(seconds: 6));
+
+      bool updatedAny = false;
+      if (keysRes.statusCode == 200) {
+        final keysData =
+            (jsonDecode(keysRes.body) as Map<String, dynamic>)['data'];
+        if (keysData is List) {
+          await OfflineDatabase.instance.savePublicKeysBatch(keysData);
+          updatedAny = true;
+        }
+      }
+      if (revRes.statusCode == 200) {
+        final revData =
+            (jsonDecode(revRes.body) as Map<String, dynamic>)['data'];
+        final revList =
+            (revData is Map ? revData['revocations'] : revData) as List<dynamic>?;
+        if (revList != null) {
+          await OfflineDatabase.instance.saveRevocationsBatch(revList);
+          updatedAny = true;
+        }
+      }
+      _isOnline = updatedAny;
+      notifyListeners();
+      return updatedAny;
     } catch (_) {
       _isOnline = false;
       notifyListeners();

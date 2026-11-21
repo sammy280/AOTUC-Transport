@@ -12,80 +12,36 @@ import {
 } from 'lucide-react';
 import { UserContext, RoleType } from '../../types';
 import ThemeSelector from '../../components/ThemeSelector';
+import { buildApiUrl, storeAuthToken } from '../../utils/api';
 
 interface LoginViewProps {
   onLoginSuccess: (user: UserContext, token?: string) => void;
   onOpenPublicVerification?: () => void;
 }
 
-// Internal credentials mapping (never rendered to UI)
-const CERTIFIED_DIRECTORY = [
-  {
-    name: 'Mamadou Camara',
-    role: 'DIRECTOR' as RoleType,
-    roleLabel: 'Directeur Général AOTUC',
-    email: 'directeur@aotuc.test',
-    phone: '+224620000002',
-    commune: 'Direction Générale (Conakry)',
-    communeId: null,
-  },
-  {
-    name: 'Ibrahima Diallo',
-    role: 'SUPER_ADMIN' as RoleType,
-    roleLabel: 'Super Administrateur DSI',
-    email: 'superadmin@aotuc.test',
-    phone: '+224620000001',
-    commune: 'Toutes Communes',
-    communeId: null,
-  },
-  {
-    name: 'Fanta Soumah',
-    role: 'CHEF_SERVICE' as RoleType,
-    roleLabel: 'Chef de Service Territorial',
-    email: 'chef.matoto@aotuc.test',
-    phone: '+224620000003',
-    commune: 'Commune de Matoto',
-    communeId: 'cm-matoto',
-  },
-  {
-    name: 'Alpha Barry',
-    role: 'CHEF_SERVICE' as RoleType,
-    roleLabel: 'Chef de Service Territorial',
-    email: 'chef.kaloum@aotuc.test',
-    phone: '+224620000004',
-    commune: 'Commune de Kaloum',
-    communeId: 'cm-kaloum',
-  },
-  {
-    name: 'Sekou Conte',
-    role: 'AGENT_TERRAIN' as RoleType,
-    roleLabel: 'Agent d Enrôlement Terrain',
-    email: 'agent.matoto@aotuc.test',
-    phone: '+224620000005',
-    commune: 'Commune de Matoto',
-    communeId: 'cm-matoto',
-  },
-  {
-    name: 'Ousmane Sylla',
-    role: 'DISTRIBUTEUR' as RoleType,
-    roleLabel: 'Distributeur Billetterie Agréé',
-    email: 'distributeur.kaloum@aotuc.test',
-    phone: '+224620000006',
-    commune: 'Commune de Kaloum',
-    communeId: 'cm-kaloum',
-  },
-  {
-    name: 'Amadou Diallo',
-    role: 'SYNDICAT' as RoleType,
-    roleLabel: 'Délégué Syndical FNTG',
-    email: 'syndicat.fntg@aotuc.test',
-    phone: '+224620000007',
-    commune: 'Fédération Syndicale',
-    communeId: null,
-  },
-];
+const getRoleLabel = (role: RoleType): string => {
+  switch (role) {
+    case 'SUPER_ADMIN':
+      return 'Super Administrateur DSI';
+    case 'DIRECTOR':
+      return 'Directeur Général AOTUC';
+    case 'CHEF_SERVICE':
+      return 'Chef de Service Territorial';
+    case 'AGENT_TERRAIN':
+      return 'Agent d Enrôlement Terrain';
+    case 'DISTRIBUTEUR':
+      return 'Distributeur Billetterie Agréé';
+    case 'SYNDICAT':
+      return 'Délégué Syndical FNTG';
+    default:
+      return 'Accréditation Validée AOTUC';
+  }
+};
 
-export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenPublicVerification }) => {
+export const LoginView: React.FC<LoginViewProps> = ({
+  onLoginSuccess,
+  onOpenPublicVerification,
+}) => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -101,80 +57,74 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenPubl
     const cleanPassword = password.trim();
 
     if (!cleanIdentifier || !cleanPassword) {
-      setErrorMessage('Veuillez saisir votre identifiant professionnel et votre mot de passe.');
+      setErrorMessage(
+        'Veuillez saisir votre identifiant professionnel et votre mot de passe.'
+      );
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // 1. Attempt backend authentication
-      const response = await fetch('/api/v1/auth/login', {
+      const response = await fetch(buildApiUrl('/api/v1/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: cleanIdentifier, password: cleanPassword }),
+        body: JSON.stringify({
+          identifier: cleanIdentifier,
+          password: cleanPassword,
+        }),
       }).catch(() => null);
 
-      if (response && response.ok) {
-        const payload = await response.json();
-        const apiUser = payload.data?.user;
-        const accessToken = payload.data?.accessToken;
+      if (response) {
+        const payload = await response.json().catch(() => ({}));
 
-        const loggedUser: UserContext = {
-          id: apiUser?.id || 'usr-auth',
-          name: `${apiUser?.firstName || 'Utilisateur'} ${apiUser?.lastName || 'AOTUC'}`,
-          role: (apiUser?.roles?.[0] as RoleType) || 'DIRECTOR',
-          roleLabel: 'Accréditation Validée AOTUC',
-          communeName: apiUser?.communeName || 'Direction Générale',
-          communeId: apiUser?.communeId || null,
-          email: apiUser?.email || cleanIdentifier,
-          phoneNumber: apiUser?.phoneNumber,
-        };
+        if (response.ok && payload.success && payload.data?.accessToken) {
+          const apiUser = payload.data.user;
+          const accessToken = payload.data.accessToken as string;
+          const primaryRole =
+            (apiUser?.roles?.[0] as RoleType) || 'AGENT_TERRAIN';
 
-        if (rememberMe) {
-          localStorage.setItem('aotuc_auth_token', accessToken || 'session-token');
-          localStorage.setItem('aotuc_user', JSON.stringify(loggedUser));
+          const loggedUser: UserContext = {
+            id: apiUser?.id || 'usr-auth',
+            name: `${apiUser?.firstName || 'Utilisateur'} ${
+              apiUser?.lastName || 'AOTUC'
+            }`.trim(),
+            role: primaryRole,
+            roleLabel: apiUser?.jobTitle || getRoleLabel(primaryRole),
+            communeName:
+              apiUser?.commune?.name ||
+              apiUser?.communeName ||
+              (primaryRole === 'SUPER_ADMIN'
+                ? 'Toutes Communes'
+                : 'Direction Générale'),
+            communeId: apiUser?.communeId || apiUser?.commune?.id || null,
+            email: apiUser?.email || cleanIdentifier,
+            phoneNumber: apiUser?.phoneNumber,
+          };
+
+          storeAuthToken(accessToken, rememberMe);
+          sessionStorage.setItem('aotuc_user', JSON.stringify(loggedUser));
+          if (rememberMe) {
+            localStorage.setItem('aotuc_user', JSON.stringify(loggedUser));
+          }
+
+          onLoginSuccess(loggedUser, accessToken);
+          return;
         }
 
-        onLoginSuccess(loggedUser, accessToken);
+        setErrorMessage(
+          payload.message || 'Identifiant ou mot de passe invalide. Accès refusé.'
+        );
         return;
       }
 
-      // 2. Validate against certified directory
-      const cleanPhone = cleanIdentifier.replace(/\s+/g, '');
-      const matched = CERTIFIED_DIRECTORY.find(
-        (acc) =>
-          acc.email.toLowerCase() === cleanIdentifier.toLowerCase() ||
-          acc.phone === cleanPhone ||
-          `+${acc.phone.replace('+', '')}` === cleanPhone
+      setErrorMessage(
+        'Impossible de joindre le serveur d authentification AOTUC. Vérifiez votre connexion réseau.'
       );
-
-      const isDevPass = cleanPassword === 'DevAotuc2026!' || cleanPassword === 'password' || cleanPassword === 'admin' || cleanPassword.length >= 4;
-      if (matched && isDevPass) {
-        const loggedUser: UserContext = {
-          id: `usr-${matched.role.toLowerCase()}`,
-          name: matched.name,
-          role: matched.role,
-          roleLabel: matched.roleLabel,
-          communeName: matched.commune,
-          communeId: matched.communeId,
-          email: matched.email,
-          phoneNumber: matched.phone,
-        };
-
-        if (rememberMe) {
-          localStorage.setItem('aotuc_auth_token', 'mock-jwt-token-aotuc-2026');
-          localStorage.setItem('aotuc_user', JSON.stringify(loggedUser));
-        }
-
-        onLoginSuccess(loggedUser, 'mock-jwt-token-aotuc-2026');
-        return;
-      }
-
-      // Credentials rejected
-      setErrorMessage('Identifiant ou mot de passe invalide. Accès refusé.');
     } catch {
-      setErrorMessage('Une erreur est survenue lors de la tentative de connexion.');
+      setErrorMessage(
+        'Une erreur est survenue lors de la tentative de connexion.'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -229,8 +179,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenPubl
                   <ShieldCheck className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="font-semibold text-white">Authentification Sécurisée Obligatoire</div>
-                  <div className="text-[11px] text-slate-400">Accès strictement réservé aux agents assermentés et habilités.</div>
+                  <div className="font-semibold text-white">
+                    Authentification Sécurisée Obligatoire
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    Accès strictement réservé aux agents assermentés et habilités.
+                  </div>
                 </div>
               </div>
 
@@ -239,14 +193,18 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenPubl
                   <Building2 className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="font-semibold text-white">Traçabilité & Découpage Territorial</div>
-                  <div className="text-[11px] text-slate-400">Contrôle hiérarchique étanche par commune et direction.</div>
+                  <div className="font-semibold text-white">
+                    Traçabilité &amp; Découpage Territorial
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    Contrôle hiérarchique étanche par commune et direction.
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Secure Login Card (NO certified users shown) */}
+          {/* Right Column: Secure Login Card */}
           <div className="lg:col-span-7 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors duration-200">
             {/* Card Header */}
             <div className="p-6 sm:p-8 bg-slate-50/70 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-4">
@@ -318,7 +276,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenPubl
                     className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                     title={showPassword ? 'Masquer' : 'Afficher'}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -333,7 +295,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenPubl
                   />
                   <span>Mémoriser ma session</span>
                 </label>
-                <span className="text-[11px] text-slate-400 dark:text-slate-500">Chiffrement Argon2id / TLS 1.3</span>
+                <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                  Chiffrement Argon2id / TLS 1.3
+                </span>
               </div>
 
               <button
@@ -373,8 +337,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenPubl
 
       {/* Footer Legal & Security */}
       <footer className="p-4 text-center text-slate-500 text-[11px] border-t border-slate-800 space-y-0.5">
-        <div>République de Guinée • Ministère des Transports • Autorité Organisatrice des Transports Urbains de Conakry (AOTUC) © 2026</div>
-        <div className="italic text-slate-400">« Pour une Mobilité Urbaine Participative &amp; Durable »</div>
+        <div>
+          République de Guinée • Ministère des Transports • Autorité Organisatrice des Transports Urbains de Conakry (AOTUC) © 2026
+        </div>
+        <div className="italic text-slate-400">
+          « Pour une Mobilité Urbaine Participative &amp; Durable »
+        </div>
       </footer>
     </div>
   );

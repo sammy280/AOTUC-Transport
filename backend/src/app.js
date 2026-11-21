@@ -29,10 +29,23 @@ app.use(helmet({
 }));
 
 // 2. Strict Cross-Origin Resource Sharing (CORS)
+const allowedOrigins = (config.CORS_ORIGIN || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, Postman) or matching origin
-    if (!origin || origin === config.CORS_ORIGIN || config.NODE_ENV === 'development') {
+    // Allow requests with no origin (like mobile apps, curl, Postman), matching origin, or hosted web-admin origins
+    if (
+      !origin ||
+      config.NODE_ENV === 'development' ||
+      allowedOrigins.includes('*') ||
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.onrender.com') ||
+      origin.endsWith('.vercel.app') ||
+      origin.endsWith('.netlify.app')
+    ) {
       return callback(null, true);
     }
     return callback(new AppError('Accès refusé par la politique CORS.', 403, 'CORS_ERROR'));

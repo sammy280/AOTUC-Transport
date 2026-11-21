@@ -39,16 +39,68 @@ export function generateSecurePassword(length = 14) {
 /**
  * Normalizes phone numbers to standard Guinean E.164 (+224...).
  */
-function normalizePhoneNumber(raw) {
+export function normalizePhoneNumber(raw) {
   if (!raw) return raw;
-  const digits = raw.replace(/\D/g, '');
-  if (digits.startsWith('224')) {
+  const digits = String(raw).replace(/\D/g, '');
+  if (digits.startsWith('00224') && digits.length >= 14) {
+    return `+${digits.slice(2)}`;
+  }
+  if (digits.startsWith('224') && digits.length >= 11) {
     return `+${digits}`;
   }
   if (digits.length === 9) {
     return `+224${digits}`;
   }
-  return raw.trim();
+  return String(raw).trim();
+}
+
+const SLUG_TO_COMMUNE_CODE = {
+  'COMM-KLM': 'KLM',
+  'CM-KALOUM': 'KLM',
+  'COMM-DXN': 'DXN',
+  'CM-DIXINN': 'DXN',
+  'COMM-MTM': 'MTM',
+  'CM-MATAM': 'MTM',
+  'COMM-RTM': 'RTM',
+  'CM-RATOMA': 'RTM',
+  'COMM-MTT': 'MTT',
+  'CM-MATOTO': 'MTT',
+  'COMM-KSS': 'KSS',
+  'CM-KASSA': 'KSS',
+};
+
+async function resolveCommuneIdentifier(communeId, communeCode) {
+  const candidate = (communeId || communeCode || '').toString().trim();
+  if (!candidate) return null;
+
+  const upper = candidate.toUpperCase();
+  const mappedCode = SLUG_TO_COMMUNE_CODE[upper] || upper;
+
+  const commune = await prisma.commune.findFirst({
+    where: {
+      OR: [
+        { id: candidate },
+        { code: { equals: mappedCode, mode: 'insensitive' } },
+        { name: { equals: candidate, mode: 'insensitive' } },
+      ],
+    },
+    select: { id: true },
+  });
+
+  return commune ? commune.id : null;
+}
+
+async function resolveValidActorId(txOrPrisma, rawActorId) {
+  if (!rawActorId) return null;
+  try {
+    const found = await txOrPrisma.user.findUnique({
+      where: { id: String(rawActorId) },
+      select: { id: true },
+    });
+    return found ? found.id : null;
+  } catch (_) {
+    return null;
+  }
 }
 
 export class UsersService {
@@ -167,16 +219,11 @@ export class UsersService {
       );
     }
 
-    // 2. Resolve commune
-    let resolvedCommuneId = data.communeId || null;
-    if (!resolvedCommuneId && data.communeCode) {
-      const commune = await prisma.commune.findUnique({
-        where: { code: data.communeCode.trim().toUpperCase() },
-      });
-      if (commune) {
-        resolvedCommuneId = commune.id;
-      }
-    }
+    // 2. Resolve commune (accepts UUID, commune code, slug like comm-mtt, or commune name)
+    const resolvedCommuneId = await resolveCommuneIdentifier(
+      data.communeId,
+      data.communeCode
+    );
 
     // 3. Password selection: use provided or generate strong unique password
     const plainPassword =
@@ -206,9 +253,16 @@ export class UsersService {
       });
 
       if (data.role) {
-        const roleRecord = await tx.role.findUnique({
+        let roleRecord = await tx.role.findUnique({
           where: { name: data.role },
         });
+        if (!roleRecord && tx.role.upsert) {
+          roleRecord = await tx.role.upsert({
+            where: { name: data.role },
+            update: {},
+            create: { name: data.role, description: `Rôle ${data.role}` },
+          });
+        }
 
         if (roleRecord) {
           await tx.userRole.create({
@@ -220,9 +274,11 @@ export class UsersService {
         }
       }
 
+      const validActorId = await resolveValidActorId(tx, actorUser?.id);
+
       await tx.auditLog.create({
         data: {
-          actorId: actorUser?.id || null,
+          actorId: validActorId,
           action: 'USER_ACCOUNT_CREATED',
           targetModule: 'USERS',
           targetRecordId: newUser.id,
@@ -232,6 +288,7 @@ export class UsersService {
             role: data.role,
             jobTitle: newUser.jobTitle,
             communeId: newUser.communeId,
+            createdByActor: actorUser?.id || null,
           },
         },
       });
@@ -255,13 +312,10 @@ export class UsersService {
       throw new AppError('Utilisateur introuvable.', 404, 'USER_NOT_FOUND');
     }
 
-    // Resolve commune if code provided
-    let resolvedCommuneId = data.communeId;
-    if (resolvedCommuneId === undefined && data.communeCode) {
-      const c = await prisma.commune.findUnique({
-        where: { code: data.communeCode.trim().toUpperCase() },
-      });
-      if (c) resolvedCommuneId = c.id;
+    // Resolve commune if communeId or communeCode provided
+    let resolvedCommuneId = undefined;
+    if (data.communeId !== undefined || data.communeCode !== undefined) {
+      resolvedCommuneId = await resolveCommuneIdentifier(data.communeId, data.communeCode);
     }
 
     const normalizedPhone = data.phoneNumber ? normalizePhoneNumber(data.phoneNumber) : undefined;
@@ -297,7 +351,14 @@ export class UsersService {
 
       // Update role if specified
       if (data.role) {
-        const roleRecord = await tx.role.findUnique({ where: { name: data.role } });
+        let roleRecord = await tx.role.findUnique({ where: { name: data.role } });
+        if (!roleRecord && tx.role.upsert) {
+          roleRecord = await tx.role.upsert({
+            where: { name: data.role },
+            update: {},
+            create: { name: data.role, description: `Rôle ${data.role}` },
+          });
+        }
         if (roleRecord) {
           await tx.userRole.deleteMany({ where: { userId } });
           await tx.userRole.create({
@@ -309,9 +370,11 @@ export class UsersService {
         }
       }
 
+      const validActorId = await resolveValidActorId(tx, actorUser?.id);
+
       await tx.auditLog.create({
         data: {
-          actorId: actorUser?.id || null,
+          actorId: validActorId,
           action: 'USER_ACCOUNT_UPDATED',
           targetModule: 'USERS',
           targetRecordId: userId,
@@ -356,9 +419,11 @@ export class UsersService {
       // Invalidate existing refresh tokens so active stolen sessions are closed
       await tx.refreshToken.deleteMany({ where: { userId } });
 
+      const validActorId = await resolveValidActorId(tx, actorUser?.id);
+
       await tx.auditLog.create({
         data: {
-          actorId: actorUser?.id || null,
+          actorId: validActorId,
           action: 'USER_PASSWORD_RESET',
           targetModule: 'USERS',
           targetRecordId: userId,
@@ -402,9 +467,11 @@ export class UsersService {
       });
     }
 
+    const validActorId = await resolveValidActorId(prisma, actorUser?.id);
+
     await prisma.auditLog.create({
       data: {
-        actorId: actorUser?.id || null,
+        actorId: validActorId,
         action: isActive ? 'USER_ACCOUNT_REACTIVATED' : 'USER_ACCOUNT_DEACTIVATED',
         targetModule: 'USERS',
         targetRecordId: userId,

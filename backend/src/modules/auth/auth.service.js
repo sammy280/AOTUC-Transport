@@ -14,10 +14,13 @@ function hashToken(rawToken) {
 
 function normalizeIdentifierPhone(raw) {
   const digits = String(raw || '').replace(/\D/g, '');
-  if (digits.startsWith('224') && digits.length === 12) {
+  if (digits.startsWith('00224') && digits.length >= 14) {
+    return `+${digits.slice(2)}`;
+  }
+  if (digits.startsWith('224') && digits.length >= 11) {
     return `+${digits}`;
   }
-  if (digits.length === 9 && digits.startsWith('6')) {
+  if (digits.length === 9) {
     return `+224${digits}`;
   }
   return String(raw || '').trim();
