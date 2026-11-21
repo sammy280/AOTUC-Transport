@@ -148,6 +148,7 @@ describe('Urgent Bug Regression Suite — SUPER_ADMIN Account Creation, Listing 
         email: data.email,
         phoneNumber: data.phoneNumber,
         jobTitle: data.jobTitle,
+        avatarUrl: data.avatarUrl || null,
         passwordHash: data.passwordHash,
         communeId: data.communeId || null,
         unionId: null,
@@ -253,6 +254,7 @@ describe('Urgent Bug Regression Suite — SUPER_ADMIN Account Creation, Listing 
         email: createdEmail,
         phoneNumber: createdPhoneRaw,
         jobTitle: 'Chef de Brigade Territoriale Matoto',
+        avatarUrl: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAA==',
         role: 'CHEF_SERVICE',
         communeId: 'comm-mtt', // Slug ID from INITIAL_COMMUNES resolved to real Matoto UUID
       });
@@ -262,6 +264,7 @@ describe('Urgent Bug Regression Suite — SUPER_ADMIN Account Creation, Listing 
     expect(res.body.data).toHaveProperty('id');
     expect(res.body.data.email).toBe(createdEmail);
     expect(res.body.data.phoneNumber).toBe(createdPhoneE164);
+    expect(res.body.data.avatarUrl).toBe('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAA==');
     expect(res.body.data.roles).toContain('CHEF_SERVICE');
     expect(res.body.data.commune.name).toBe('Matoto');
     expect(res.body.data.temporaryPassword).toBeDefined();
@@ -271,7 +274,7 @@ describe('Urgent Bug Regression Suite — SUPER_ADMIN Account Creation, Listing 
     createdAccountPassword = res.body.data.temporaryPassword;
   });
 
-  it('3. should immediately include the newly created account in GET /api/v1/users list', async () => {
+  it('3. should immediately include the newly created account and their picture in GET /api/v1/users list', async () => {
     const listRes = await request(app)
       .get('/api/v1/users?limit=200')
       .set('Authorization', `Bearer ${superAdminToken}`);
@@ -284,12 +287,13 @@ describe('Urgent Bug Regression Suite — SUPER_ADMIN Account Creation, Listing 
     expect(found).toBeDefined();
     expect(found.email).toBe(createdEmail);
     expect(found.phoneNumber).toBe(createdPhoneE164);
+    expect(found.avatarUrl).toBe('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAA==');
     expect(found.roles).toContain('CHEF_SERVICE');
     expect(found.commune.name).toBe('Matoto');
     expect(found.isActive).toBe(true);
   });
 
-  it('4. should allow the newly created account to log in using EMAIL and temporaryPassword', async () => {
+  it('4. should allow the newly created account to log in using EMAIL and temporaryPassword and return their picture (avatarUrl)', async () => {
     const loginEmailRes = await request(app)
       .post('/api/v1/auth/login')
       .send({
@@ -301,6 +305,9 @@ describe('Urgent Bug Regression Suite — SUPER_ADMIN Account Creation, Listing 
     expect(loginEmailRes.body.success).toBe(true);
     expect(loginEmailRes.body.data).toHaveProperty('accessToken');
     expect(loginEmailRes.body.data.user.id).toBe(createdAccountId);
+    expect(loginEmailRes.body.data.user.avatarUrl).toBe(
+      'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAA=='
+    );
     expect(loginEmailRes.body.data.user.roles).toContain('CHEF_SERVICE');
     expect(loginEmailRes.body.data.user.commune.name).toBe('Matoto');
   });

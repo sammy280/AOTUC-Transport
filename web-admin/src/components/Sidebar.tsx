@@ -88,20 +88,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
         })}
       </div>
 
-      {/* Footer Info Box */}
-      <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-lg text-[11px] text-slate-500 dark:text-slate-400 space-y-1.5">
+      {/* Footer Info Box with Logged-In User Photo & Name */}
+      <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-lg text-[11px] text-slate-500 dark:text-slate-400 space-y-2">
+        <div className="flex items-center space-x-2.5 pb-2 border-b border-slate-200 dark:border-slate-700">
+          {currentUser.avatarUrl ? (
+            <img
+              src={currentUser.avatarUrl}
+              alt={currentUser.name}
+              className="w-9 h-9 rounded-full object-cover border-2 border-emerald-500 shadow-sm flex-shrink-0"
+            />
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-slate-900 dark:bg-slate-700 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+              {currentUser.name.charAt(0)}
+            </div>
+          )}
+          <div className="min-w-0">
+            <div className="font-bold text-slate-800 dark:text-slate-100 truncate">
+              {currentUser.name}
+            </div>
+            <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold truncate">
+              {currentUser.roleLabel}
+            </div>
+          </div>
+        </div>
         <div className="flex items-center space-x-2">
           <img
             src="/aotuc-logo.png"
             alt="Sceau Officiel République de Guinée"
-            className="w-6 h-6 rounded-full object-contain"
+            className="w-5 h-5 rounded-full object-contain"
           />
           <div className="font-semibold text-slate-700 dark:text-slate-200 flex items-center space-x-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
             <span>Contrôle RBAC Actif</span>
           </div>
         </div>
-        <div className="text-slate-600 dark:text-slate-300">{currentUser.roleLabel}</div>
         <div className="text-[10px] text-slate-400 dark:text-slate-500 pt-1 border-t border-slate-200 dark:border-slate-700 leading-tight">
           <div className="font-semibold text-slate-500 dark:text-slate-400">Autorité Organisatrice des Transports (AOTUC)</div>
           <div className="italic text-[9.5px] text-slate-400 dark:text-slate-500 mt-0.5">« Pour une Mobilité Urbaine Participative & Durable »</div>

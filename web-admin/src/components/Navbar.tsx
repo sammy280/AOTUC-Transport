@@ -146,10 +146,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 title="Mon profil et paramètres d apparence"
                 aria-expanded={isProfileOpen}
               >
-                <div className="w-8 h-8 rounded-full bg-slate-800 dark:bg-slate-700 text-white flex items-center justify-center font-medium text-xs shadow-sm">
-                  <UserCheck className="w-4 h-4 text-[#FCD116]" />
-                </div>
-                <div className="text-left hidden lg:block">
+                {currentUser.avatarUrl ? (
+                  <img
+                    src={currentUser.avatarUrl}
+                    alt={currentUser.name}
+                    className="w-8 h-8 rounded-full object-cover border-2 border-emerald-500 shadow-sm flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-slate-800 dark:bg-slate-700 text-white flex items-center justify-center font-medium text-xs shadow-sm flex-shrink-0">
+                    <UserCheck className="w-4 h-4 text-[#FCD116]" />
+                  </div>
+                )}
+                <div className="text-left hidden sm:block">
                   <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 leading-tight flex items-center space-x-1">
                     <span>{currentUser.name}</span>
                     <ChevronDown className="w-3 h-3 text-slate-400" />
@@ -165,9 +173,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                   {/* Popover Header */}
                   <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-full bg-slate-900 dark:bg-slate-700 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
-                      {currentUser.name.charAt(0)}
-                    </div>
+                    {currentUser.avatarUrl ? (
+                      <img
+                        src={currentUser.avatarUrl}
+                        alt={currentUser.name}
+                        className="w-11 h-11 rounded-full object-cover border-2 border-emerald-500 shadow-sm flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-slate-900 dark:bg-slate-700 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                        {currentUser.name.charAt(0)}
+                      </div>
+                    )}
                     <div className="min-w-0">
                       <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
                         {currentUser.name}

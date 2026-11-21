@@ -1,6 +1,23 @@
 import { z } from 'zod';
 import { RoleType } from '@prisma/client';
 
+const avatarUrlSchema = z
+  .string()
+  .trim()
+  .max(4 * 1024 * 1024, 'La photo de profil est trop volumineuse.')
+  .refine(
+    (val) =>
+      !val ||
+      /^data:image\/(jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=]+$/i.test(val) ||
+      /^https?:\/\/.+/i.test(val) ||
+      /^\/.+/i.test(val),
+    {
+      message: 'Format de photo de profil invalide (JPEG, PNG ou WebP requis).',
+    }
+  )
+  .optional()
+  .nullable();
+
 export const createUserSchema = z.object({
   firstName: z.string({
     required_error: 'Le prénom est obligatoire.',
@@ -19,6 +36,8 @@ export const createUserSchema = z.object({
   }).trim().min(8, 'Le numéro de téléphone doit contenir au moins 8 chiffres.'),
 
   jobTitle: z.string().trim().max(120, 'La fonction ne doit pas dépasser 120 caractères.').optional().nullable(),
+
+  avatarUrl: avatarUrlSchema,
 
   role: z.nativeEnum(RoleType, {
     errorMap: () => ({ message: 'Rôle RBAC invalide.' }),
@@ -41,6 +60,7 @@ export const updateUserSchema = z.object({
   email: z.string().trim().email("Format d'adresse email invalide.").optional().nullable(),
   phoneNumber: z.string().trim().min(8).optional(),
   jobTitle: z.string().trim().max(120).optional().nullable(),
+  avatarUrl: avatarUrlSchema,
   role: z.nativeEnum(RoleType).optional(),
   communeId: z.string().trim().optional().nullable(),
   communeCode: z.string().trim().max(30).optional().nullable(),

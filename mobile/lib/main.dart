@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'core/auth/auth_service.dart';
 import 'features/auth/views/login_view.dart';
@@ -115,6 +117,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     ];
 
     final safeIndex = _currentIndex >= screens.length ? 0 : _currentIndex;
+    Uint8List? avatarBytes;
+    if (user.avatarUrl != null && user.avatarUrl!.startsWith('data:image/')) {
+      try {
+        final cleanB64 = user.avatarUrl!.replaceFirst(RegExp(r'^data:[^;]+;base64,'), '');
+        avatarBytes = base64Decode(cleanB64);
+      } catch (_) {
+        avatarBytes = null;
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -122,13 +133,26 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         elevation: 2,
         title: Row(
           children: [
-            Image.asset(
-              'assets/logo-guinee.png',
-              width: 32,
-              height: 32,
-              errorBuilder: (_, __, ___) =>
-                  const Icon(Icons.shield, color: Color(0xFFFCD116)),
-            ),
+            if (avatarBytes != null && avatarBytes.isNotEmpty)
+              ClipOval(
+                child: Image.memory(
+                  avatarBytes,
+                  key: const Key('header_user_avatar'),
+                  width: 32,
+                  height: 32,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      const Icon(Icons.shield, color: Color(0xFFFCD116)),
+                ),
+              )
+            else
+              Image.asset(
+                'assets/logo-guinee.png',
+                width: 32,
+                height: 32,
+                errorBuilder: (_, __, ___) =>
+                    const Icon(Icons.shield, color: Color(0xFFFCD116)),
+              ),
             const SizedBox(width: 8),
             Expanded(
               child: Column(

@@ -100,6 +100,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
             communeId: apiUser?.communeId || apiUser?.commune?.id || null,
             email: apiUser?.email || cleanIdentifier,
             phoneNumber: apiUser?.phoneNumber,
+            jobTitle: apiUser?.jobTitle || getRoleLabel(primaryRole),
+            avatarUrl: apiUser?.avatarUrl || null,
           };
 
           storeAuthToken(accessToken, rememberMe);

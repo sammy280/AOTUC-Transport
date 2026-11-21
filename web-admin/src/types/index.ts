@@ -31,6 +31,7 @@ export interface UserContext {
   email?: string;
   phoneNumber?: string;
   jobTitle?: string;
+  avatarUrl?: string | null;
 }
 
 export interface MetricSummary {

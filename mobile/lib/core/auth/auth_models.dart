@@ -68,6 +68,7 @@ class MobileUser {
   final String firstName;
   final String lastName;
   final String? jobTitle;
+  final String? avatarUrl;
   final List<String> roles;
   final List<String> permissions;
   final String? communeId;
@@ -82,6 +83,7 @@ class MobileUser {
     required this.firstName,
     required this.lastName,
     this.jobTitle,
+    this.avatarUrl,
     required this.roles,
     required this.permissions,
     this.communeId,
@@ -169,6 +171,7 @@ class MobileUser {
       firstName: (json['firstName'] ?? 'Agent').toString(),
       lastName: (json['lastName'] ?? 'AOTUC').toString(),
       jobTitle: json['jobTitle']?.toString(),
+      avatarUrl: json['avatarUrl']?.toString(),
       roles: rawRoles,
       permissions: rawPerms,
       communeId: (json['communeId'] ?? communeMap?['id'])?.toString(),
@@ -185,6 +188,7 @@ class MobileUser {
         'firstName': firstName,
         'lastName': lastName,
         'jobTitle': jobTitle,
+        'avatarUrl': avatarUrl,
         'roles': roles,
         'permissions': permissions,
         'communeId': communeId,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Users,
   UserCheck,
@@ -20,6 +20,9 @@ import {
   RefreshCw,
   AlertCircle,
   X,
+  Camera,
+  Upload,
+  RotateCcw,
 } from 'lucide-react';
 import { UserContext, RoleType } from '../../types';
 import { buildApiUrl, getStoredAuthToken } from '../../utils/api';
@@ -32,6 +35,7 @@ interface ManagedUser {
   email: string;
   phoneNumber: string;
   jobTitle?: string;
+  avatarUrl?: string | null;
   role: RoleType;
   roleLabel: string;
   commune: string;
@@ -187,7 +191,48 @@ const generateSecurePassword = (length = 14): string => {
   return chars.sort(() => 0.5 - Math.random()).join('');
 };
 
-export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ currentUser }) => {
+/**
+ * Compresses and center-crops an image file or data URL into a sharp 256x256 JPEG portrait data URL
+ * so it is fast to transmit and stored durably in PostgreSQL `users.avatar_url`.
+ */
+const compressImageFileToDataUrl = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Impossible de lire le fichier image.'));
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== 'string') {
+        reject(new Error('Format de fichier image invalide.'));
+        return;
+      }
+      const img = new Image();
+      img.onerror = () => reject(new Error('Image corrompue ou non prise en charge.'));
+      img.onload = () => {
+        const size = 256;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(result);
+          return;
+        }
+        const minSide = Math.min(img.width, img.height);
+        const sx = (img.width - minSide) / 2;
+        const sy = (img.height - minSide) / 2;
+        ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+        resolve(canvas.toDataURL('image/jpeg', 0.86));
+      };
+      img.src = result;
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
+export const UserManagementView: React.FC<{
+  currentUser: UserContext;
+  onUpdateCurrentUser?: (patch: Partial<UserContext>) => void;
+}> = ({ currentUser, onUpdateCurrentUser }) => {
   const [users, setUsers] = useState<ManagedUser[]>(INITIAL_USERS);
   const [communes, setCommunes] = useState<CommuneOption[]>(INITIAL_COMMUNES);
   const [isLoading, setIsLoading] = useState(false);
@@ -203,11 +248,27 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
   const [newEmail, setNewEmail] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newJobTitle, setNewJobTitle] = useState('');
+  const [newAvatarUrl, setNewAvatarUrl] = useState<string | null>(null);
   const [newRole, setNewRole] = useState<RoleType>('AGENT_TERRAIN');
   const [newCommuneId, setNewCommuneId] = useState<string>('');
   const [newPassword, setNewPassword] = useState<string>(() => generateSecurePassword());
   const [showPassword, setShowPassword] = useState(true);
   const [isSubmittingCreate, setIsSubmittingCreate] = useState(false);
+
+  // Camera & Photo Upload State (shared between Create User Modal and Edit User Photo Modal)
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
+  const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('user');
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const mobileCameraInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Edit Existing User Photo Modal State
+  const [photoTargetUser, setPhotoTargetUser] = useState<ManagedUser | null>(null);
+  const [editAvatarUrl, setEditAvatarUrl] = useState<string | null>(null);
+  const [isSubmittingPhoto, setIsSubmittingPhoto] = useState(false);
 
   // Created User Credentials Modal (to show and copy generated credentials)
   const [createdSummary, setCreatedSummary] = useState<{
@@ -218,6 +279,7 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
     jobTitle: string;
     commune: string;
     temporaryPassword: string;
+    avatarUrl?: string | null;
   } | null>(null);
   const [copiedSummary, setCopiedSummary] = useState(false);
 
@@ -228,6 +290,129 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
   const [isSubmittingReset, setIsSubmittingReset] = useState(false);
   const [copiedResetPassword, setCopiedResetPassword] = useState(false);
   const [createModalError, setCreateModalError] = useState<string | null>(null);
+
+  const stopCameraStream = useCallback(() => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      mediaStreamRef.current = null;
+    }
+    setIsVideoReady(false);
+    setIsCameraOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (isCameraOpen && videoRef.current && mediaStreamRef.current) {
+      videoRef.current.srcObject = mediaStreamRef.current;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [isCameraOpen, cameraFacingMode]);
+
+  useEffect(() => {
+    return () => {
+      stopCameraStream();
+    };
+  }, [stopCameraStream]);
+
+  const handleStartCamera = async (preferredFacing?: 'user' | 'environment') => {
+    setCameraError(null);
+    const targetFacing = preferredFacing || cameraFacingMode;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (mobileCameraInputRef.current) {
+        mobileCameraInputRef.current.click();
+        return;
+      }
+      setCameraError(
+        "La capture caméra directe n'est pas disponible sur ce navigateur. Choisissez une image."
+      );
+      return;
+    }
+    try {
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+        mediaStreamRef.current = null;
+      }
+      setIsVideoReady(false);
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: targetFacing, width: { ideal: 640 }, height: { ideal: 480 } },
+          audio: false,
+        });
+      } catch (_) {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
+      mediaStreamRef.current = stream;
+      setCameraFacingMode(targetFacing);
+      setIsCameraOpen(true);
+    } catch (err: any) {
+      if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
+        setCameraError(
+          "Accès à la caméra refusé. Veuillez autoriser la caméra dans votre navigateur ou choisir une photo."
+        );
+      } else {
+        setCameraError(
+          "Impossible d'ouvrir la caméra. Utilisez le bouton « Choisir une Image »."
+        );
+      }
+    }
+  };
+
+  const handleToggleCameraFacing = () => {
+    const nextFacing = cameraFacingMode === 'user' ? 'environment' : 'user';
+    handleStartCamera(nextFacing);
+  };
+
+  const handleCapturePhotoFromCamera = (mode: 'create' | 'edit') => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const vw = video.videoWidth || 640;
+    const vh = video.videoHeight || 480;
+    const minSide = Math.min(vw, vh);
+    const sx = (vw - minSide) / 2;
+    const sy = (vh - minSide) / 2;
+    const size = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(video, sx, sy, minSide, minSide, 0, 0, size, size);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.86);
+    if (mode === 'create') {
+      setNewAvatarUrl(dataUrl);
+    } else {
+      setEditAvatarUrl(dataUrl);
+    }
+    stopCameraStream();
+  };
+
+  const handlePhotoFileSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    mode: 'create' | 'edit'
+  ) => {
+    setCameraError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
+      setCameraError('Veuillez sélectionner une image au format JPEG, PNG ou WebP.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setCameraError('La photo dépasse la taille maximale autorisée (5 Mo).');
+      return;
+    }
+    try {
+      const compressed = await compressImageFileToDataUrl(file);
+      if (mode === 'create') {
+        setNewAvatarUrl(compressed);
+      } else {
+        setEditAvatarUrl(compressed);
+      }
+    } catch (err: any) {
+      setCameraError(err?.message || 'Erreur lors du traitement de la photo.');
+    }
+  };
 
   const getAuthToken = () => {
     return getStoredAuthToken() || '';
@@ -243,6 +428,7 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
       email: u.email || '—',
       phoneNumber: u.phoneNumber || '—',
       jobTitle: u.jobTitle || getRoleLabel(primaryRole),
+      avatarUrl: u.avatarUrl || null,
       role: primaryRole,
       roleLabel: getRoleLabel(primaryRole),
       commune:
@@ -466,6 +652,7 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
           email: newEmail.trim().toLowerCase(),
           phoneNumber: newPhone.trim(),
           jobTitle: newJobTitle.trim() || getRoleLabel(newRole),
+          avatarUrl: newAvatarUrl || null,
           role: newRole,
           communeId: newCommuneId || null,
           communeCode: communeObj?.code || null,
@@ -500,6 +687,7 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
       ]);
 
       // 2. Close create form and show verified credentials summary card
+      stopCameraStream();
       setShowCreateModal(false);
       setCreatedSummary({
         name: `${createdUser.firstName} ${createdUser.lastName}`,
@@ -509,6 +697,7 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
         jobTitle: createdUser.jobTitle || newJobTitle || getRoleLabel(newRole),
         commune: createdUser.commune?.name || communeName,
         temporaryPassword: returnedPassword,
+        avatarUrl: createdUser.avatarUrl || newAvatarUrl || null,
       });
 
       setFeedback(
@@ -521,6 +710,7 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
       setNewEmail('');
       setNewPhone('');
       setNewJobTitle('');
+      setNewAvatarUrl(null);
       setNewPassword(generateSecurePassword(14));
 
       // 4. Refresh authoritative list from PostgreSQL
@@ -533,6 +723,60 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
       setErrorBanner(msg);
     } finally {
       setIsSubmittingCreate(false);
+    }
+  };
+
+  const openEditPhotoModal = (user: ManagedUser) => {
+    stopCameraStream();
+    setCameraError(null);
+    setPhotoTargetUser(user);
+    setEditAvatarUrl(user.avatarUrl || null);
+  };
+
+  const handleSaveUserPhoto = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!photoTargetUser) return;
+    setIsSubmittingPhoto(true);
+    setErrorBanner(null);
+
+    try {
+      const response = await fetch(buildApiUrl(`/api/v1/users/${photoTargetUser.id}`), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
+        body: JSON.stringify({
+          avatarUrl: editAvatarUrl || null,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'Échec de la mise à jour de la photo de profil.');
+      }
+
+      const updatedAvatar = payload.data?.avatarUrl ?? editAvatarUrl ?? null;
+      setUsers((prev) =>
+        prev.map((u) => (u.id === photoTargetUser.id ? { ...u, avatarUrl: updatedAvatar } : u))
+      );
+
+      if (
+        photoTargetUser.id === currentUser.id ||
+        (photoTargetUser.email &&
+          currentUser.email &&
+          photoTargetUser.email.toLowerCase() === currentUser.email.toLowerCase())
+      ) {
+        onUpdateCurrentUser?.({ avatarUrl: updatedAvatar });
+      }
+
+      setFeedback(`Photographie de profil mise à jour dans PostgreSQL pour ${photoTargetUser.name}.`);
+      stopCameraStream();
+      setPhotoTargetUser(null);
+    } catch (err: any) {
+      setErrorBanner(err?.message || 'Impossible de mettre à jour la photo de profil.');
+    } finally {
+      setIsSubmittingPhoto(false);
     }
   };
 
@@ -686,10 +930,25 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
                 filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50/80 transition">
                     <td className="p-3">
-                      <div className="font-bold text-slate-900 flex items-center space-x-1.5">
-                        <span>{user.name}</span>
+                      <div className="flex items-center space-x-2.5">
+                        {user.avatarUrl ? (
+                          <img
+                            src={user.avatarUrl}
+                            alt={user.name}
+                            className="w-9 h-9 rounded-full object-cover border-2 border-emerald-500 shadow-sm flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-xs shadow-sm flex-shrink-0">
+                            {user.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-bold text-slate-900 flex items-center space-x-1.5">
+                            <span>{user.name}</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono">{user.id}</div>
+                        </div>
                       </div>
-                      <div className="text-[10px] text-slate-400 font-mono">{user.id}</div>
                     </td>
 
                     <td className="p-3">
@@ -755,7 +1014,16 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
                       </span>
                     </td>
 
-                    <td className="p-3 text-right space-x-2">
+                    <td className="p-3 text-right space-x-1.5 whitespace-nowrap">
+                      <button
+                        onClick={() => openEditPhotoModal(user)}
+                        className="px-2.5 py-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition inline-flex items-center space-x-1 cursor-pointer"
+                        title="Ajouter ou modifier la photo du collaborateur"
+                      >
+                        <Camera className="w-3 h-3 text-emerald-700" />
+                        <span>Photo</span>
+                      </button>
+
                       <button
                         onClick={() => openResetPasswordModal(user)}
                         className="px-2.5 py-1 text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition inline-flex items-center space-x-1 cursor-pointer"
@@ -823,6 +1091,139 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
                   <span>{createModalError}</span>
                 </div>
               )}
+
+              {/* Collaborator Photograph Section (Camera Capture + Preview + Retake + File Upload) */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-800 font-bold flex items-center space-x-1.5">
+                    <Camera className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Photographie du Collaborateur (Portrait)</span>
+                  </span>
+                  <span className="text-[10px] font-semibold text-slate-500">
+                    Affichée à côté du nom à la connexion
+                  </span>
+                </div>
+
+                {cameraError && (
+                  <div className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg p-2 font-medium">
+                    {cameraError}
+                  </div>
+                )}
+
+                {isCameraOpen && (
+                  <div className="space-y-2 bg-slate-900 p-3 rounded-xl text-white">
+                    <div className="relative rounded-lg overflow-hidden bg-black aspect-video flex items-center justify-center">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        onLoadedMetadata={() => setIsVideoReady(true)}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleCapturePhotoFromCamera('create')}
+                        disabled={!isVideoReady}
+                        className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white text-xs font-bold rounded-lg flex items-center justify-center space-x-1.5 cursor-pointer"
+                      >
+                        <Camera className="w-4 h-4" />
+                        <span>{isVideoReady ? 'Capturer la Photo' : 'Initialisation caméra...'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleToggleCameraFacing}
+                        className="py-2 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg flex items-center space-x-1 cursor-pointer"
+                        title="Basculer caméra avant / arrière"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Basculer</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={stopCameraStream}
+                        className="py-2 px-3 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg cursor-pointer"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {newAvatarUrl && !isCameraOpen && (
+                  <div className="flex items-center space-x-3 bg-white p-2.5 rounded-xl border border-emerald-200">
+                    <img
+                      src={newAvatarUrl}
+                      alt="Aperçu portrait collaborateur"
+                      className="w-14 h-14 rounded-full object-cover border-2 border-emerald-500 shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-emerald-800">
+                        ✓ Photo d'identité prête
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        Sera affichée à côté du nom lors de la connexion
+                      </p>
+                      <div className="flex items-center space-x-2 mt-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleStartCamera()}
+                          className="inline-flex items-center px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded text-[11px] font-bold cursor-pointer"
+                        >
+                          <RotateCcw className="w-3 h-3 mr-1" />
+                          Reprendre
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewAvatarUrl(null)}
+                          className="inline-flex items-center px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-[11px] font-bold cursor-pointer"
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {!isCameraOpen && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleStartCamera()}
+                      className="py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm transition cursor-pointer"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>{newAvatarUrl ? 'Reprendre (Caméra)' : 'Prendre une Photo'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="py-2 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 transition cursor-pointer"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Choisir une Image</span>
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(e) => handlePhotoFileSelect(e, 'create')}
+                      className="hidden"
+                    />
+                    <input
+                      ref={mobileCameraInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png"
+                      capture="user"
+                      onChange={(e) => handlePhotoFileSelect(e, 'create')}
+                      className="hidden"
+                    />
+                  </div>
+                )}
+              </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1035,10 +1436,23 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
 
             <div className="p-5 space-y-3.5 text-xs">
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2.5">
-                <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-bold">Collaborateur</span>
-                  <div className="font-bold text-slate-900 text-sm">{createdSummary.name}</div>
-                  <div className="text-slate-600">{createdSummary.jobTitle}</div>
+                <div className="flex items-center space-x-3">
+                  {createdSummary.avatarUrl ? (
+                    <img
+                      src={createdSummary.avatarUrl}
+                      alt={createdSummary.name}
+                      className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500 shadow-sm shrink-0"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm shrink-0">
+                      {createdSummary.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold">Collaborateur</span>
+                    <div className="font-bold text-slate-900 text-sm">{createdSummary.name}</div>
+                    <div className="text-slate-600">{createdSummary.jobTitle}</div>
+                  </div>
                 </div>
 
                 <div className="border-t border-slate-200 pt-2 grid grid-cols-2 gap-2">
@@ -1203,6 +1617,151 @@ export const UserManagementView: React.FC<{ currentUser: UserContext }> = ({ cur
                     </>
                   ) : (
                     <span>Valider la Réinitialisation</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT USER PHOTO MODAL */}
+      {photoTargetUser && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-5 bg-slate-900 text-white flex justify-between items-center">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-xl">
+                  <Camera className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">Photographie du Collaborateur</h3>
+                  <p className="text-[11px] text-slate-300">
+                    {photoTargetUser.name} ({photoTargetUser.email})
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  stopCameraStream();
+                  setPhotoTargetUser(null);
+                }}
+                className="text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveUserPhoto} className="p-5 space-y-4 text-xs">
+              {cameraError && (
+                <div className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg p-2.5 font-medium">
+                  {cameraError}
+                </div>
+              )}
+
+              {isCameraOpen && (
+                <div className="space-y-2 bg-slate-900 p-3 rounded-xl text-white">
+                  <div className="relative rounded-lg overflow-hidden bg-black aspect-video flex items-center justify-center">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      onLoadedMetadata={() => setIsVideoReady(true)}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleCapturePhotoFromCamera('edit')}
+                      disabled={!isVideoReady}
+                      className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white text-xs font-bold rounded-lg flex items-center justify-center space-x-1.5 cursor-pointer"
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span>{isVideoReady ? 'Capturer la Photo' : 'Initialisation caméra...'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleToggleCameraFacing}
+                      className="py-2 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg flex items-center space-x-1 cursor-pointer"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Basculer</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={stopCameraStream}
+                      className="py-2 px-3 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg cursor-pointer"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!isCameraOpen && (
+                <div className="flex flex-col items-center space-y-3 py-2">
+                  {editAvatarUrl ? (
+                    <img
+                      src={editAvatarUrl}
+                      alt={photoTargetUser.name}
+                      className="w-24 h-24 rounded-full object-cover border-2 border-emerald-500 shadow-md"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-slate-100 border border-slate-300 flex flex-col items-center justify-center text-slate-400">
+                      <Camera className="w-7 h-7 mb-1" />
+                      <span className="text-[10px] font-bold">Aucune photo</span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2 w-full">
+                    <button
+                      type="button"
+                      onClick={() => handleStartCamera()}
+                      className="py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm transition cursor-pointer"
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span>{editAvatarUrl ? 'Reprendre (Caméra)' : 'Prendre une Photo'}</span>
+                    </button>
+
+                    <label className="py-2.5 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 transition cursor-pointer">
+                      <Upload className="w-4 h-4 text-slate-500" />
+                      <span>Choisir une Image</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(e) => handlePhotoFileSelect(e, 'edit')}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-2 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    stopCameraStream();
+                    setPhotoTargetUser(null);
+                  }}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition cursor-pointer font-medium"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingPhoto}
+                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg shadow transition cursor-pointer disabled:opacity-50 flex items-center space-x-1.5"
+                >
+                  {isSubmittingPhoto ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Enregistrement...</span>
+                    </>
+                  ) : (
+                    <span>Enregistrer la Photo</span>
                   )}
                 </button>
               </div>

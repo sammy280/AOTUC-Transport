@@ -21,7 +21,7 @@ import LoginView from './features/auth/LoginView';
 import AccessDenied from './components/AccessDenied';
 import PublicVerificationView from './features/verification/PublicVerificationView';
 import { isTabAllowed, getDefaultTab } from './utils/permissions';
-import { getStoredAuthToken, storeAuthToken } from './utils/api';
+import { buildApiUrl, getStoredAuthToken, storeAuthToken } from './utils/api';
 import { useTheme } from './context/ThemeContext';
 
 const INITIAL_NOTIFICATIONS: NotificationItem[] = [
@@ -112,14 +112,54 @@ export const App: React.FC = () => {
     };
   });
 
-  // Keep ThemeContext synchronized with the authenticated user
+  // Keep ThemeContext synchronized with the authenticated user and refresh profile (including avatarUrl) from PostgreSQL
   React.useEffect(() => {
     if (isAuthenticated && currentUser?.id) {
       setUser(currentUser.id);
+      const token = getStoredAuthToken();
+      if (token) {
+        fetch(buildApiUrl('/api/v1/auth/me'), {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((body) => {
+            const apiUser = body?.data?.user || body?.data;
+            if (apiUser && apiUser.id) {
+              setCurrentUser((prev) => {
+                const updated: UserContext = {
+                  ...prev,
+                  id: apiUser.id,
+                  name: `${apiUser.firstName || ''} ${apiUser.lastName || ''}`.trim() || prev.name,
+                  email: apiUser.email || prev.email,
+                  phoneNumber: apiUser.phoneNumber || prev.phoneNumber,
+                  jobTitle: apiUser.jobTitle || prev.jobTitle,
+                  avatarUrl: apiUser.avatarUrl ?? prev.avatarUrl ?? null,
+                };
+                sessionStorage.setItem('aotuc_user', JSON.stringify(updated));
+                if (localStorage.getItem('aotuc_user')) {
+                  localStorage.setItem('aotuc_user', JSON.stringify(updated));
+                }
+                return updated;
+              });
+            }
+          })
+          .catch(() => {});
+      }
     } else {
       setUser(null);
     }
   }, [isAuthenticated, currentUser?.id, setUser]);
+
+  const handleUpdateCurrentUser = (patch: Partial<UserContext>) => {
+    setCurrentUser((prev) => {
+      const updated = { ...prev, ...patch };
+      sessionStorage.setItem('aotuc_user', JSON.stringify(updated));
+      if (localStorage.getItem('aotuc_user')) {
+        localStorage.setItem('aotuc_user', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
 
   const [currentTab, setCurrentTab] = useState<string>(() => {
     return getDefaultTab(currentUser.role);
@@ -325,7 +365,10 @@ export const App: React.FC = () => {
               )}
 
               {currentTab === 'users' && (
-                <UserManagementView currentUser={currentUser} />
+                <UserManagementView
+                  currentUser={currentUser}
+                  onUpdateCurrentUser={handleUpdateCurrentUser}
+                />
               )}
 
               {currentTab === 'validation' && (
