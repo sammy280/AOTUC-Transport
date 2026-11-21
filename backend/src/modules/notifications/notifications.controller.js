@@ -38,6 +38,9 @@ export class NotificationsController {
         } else if (log.targetModule === 'BADGES') {
           category = 'VALIDATION';
           linkTab = 'badges';
+        } else if (log.targetModule === 'FIELD_OPERATIONS') {
+          category = 'SYSTEM';
+          linkTab = 'field';
         }
 
         return {

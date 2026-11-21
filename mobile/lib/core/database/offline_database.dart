@@ -14,6 +14,7 @@ class OfflineDatabase {
   static final Map<String, Map<String, dynamic>> _memoryPublicKeys = {};
   static final List<Map<String, dynamic>> _memoryInspectionLogs = [];
   static final Map<String, Map<String, dynamic>> _memorySyncMeta = {};
+  static final Map<String, Map<String, dynamic>> _memoryFieldAssignments = {};
 
   OfflineDatabase._init();
 
@@ -24,6 +25,7 @@ class OfflineDatabase {
     _memoryPublicKeys.clear();
     _memoryInspectionLogs.clear();
     _memorySyncMeta.clear();
+    _memoryFieldAssignments.clear();
   }
 
   /// Simulates an application restart / cold boot while preserving durable SQLite data.
@@ -67,7 +69,7 @@ class OfflineDatabase {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -137,6 +139,26 @@ class OfflineDatabase {
         longitude REAL
       )
     ''');
+
+    // 6. Cached Field Assignments (Phase 6)
+    await db.execute('''
+      CREATE TABLE field_assignments (
+        id TEXT PRIMARY KEY,
+        reference TEXT NOT NULL,
+        title TEXT NOT NULL,
+        commune_id TEXT NOT NULL,
+        location_name TEXT NOT NULL,
+        latitude REAL,
+        longitude REAL,
+        assigned_user_id TEXT,
+        start_date TEXT,
+        end_date TEXT,
+        target_people INTEGER NOT NULL DEFAULT 0,
+        target_vehicles INTEGER NOT NULL DEFAULT 0,
+        instructions TEXT,
+        status TEXT NOT NULL DEFAULT 'ASSIGNED'
+      )
+    ''');
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -171,6 +193,26 @@ class OfflineDatabase {
           agent_user_id TEXT PRIMARY KEY,
           last_synced_at TEXT,
           last_pull_at TEXT
+        )
+      ''');
+    }
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS field_assignments (
+          id TEXT PRIMARY KEY,
+          reference TEXT NOT NULL,
+          title TEXT NOT NULL,
+          commune_id TEXT NOT NULL,
+          location_name TEXT NOT NULL,
+          latitude REAL,
+          longitude REAL,
+          assigned_user_id TEXT,
+          start_date TEXT,
+          end_date TEXT,
+          target_people INTEGER NOT NULL DEFAULT 0,
+          target_vehicles INTEGER NOT NULL DEFAULT 0,
+          instructions TEXT,
+          status TEXT NOT NULL DEFAULT 'ASSIGNED'
         )
       ''');
     }
@@ -894,6 +936,110 @@ class OfflineDatabase {
       limit: limit,
     );
     return rows.map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  /// Caches or updates active field assignments received during /sync/pull.
+  Future<void> saveFieldAssignmentsBatch(List<dynamic> assignments) async {
+    if (_useInMemoryTestStore) {
+      for (final raw in assignments) {
+        if (raw is Map) {
+          final id = (raw['id'] ?? raw['assignmentId'])?.toString();
+          if (id != null && id.isNotEmpty) {
+            _memoryFieldAssignments[id] = {
+              'id': id,
+              'reference': (raw['reference'] ?? 'ASN-REF').toString(),
+              'title': (raw['title'] ?? 'Mission de terrain').toString(),
+              'commune_id': (raw['communeId'] ?? raw['commune_id'] ?? '').toString(),
+              'location_name': (raw['locationName'] ?? raw['location_name'] ?? 'Point terrain').toString(),
+              'latitude': (raw['latitude'] is num) ? (raw['latitude'] as num).toDouble() : null,
+              'longitude': (raw['longitude'] is num) ? (raw['longitude'] as num).toDouble() : null,
+              'assigned_user_id': (raw['assignedUserId'] ?? raw['assigned_user_id'])?.toString(),
+              'start_date': (raw['startDate'] ?? raw['start_date'])?.toString(),
+              'end_date': (raw['endDate'] ?? raw['end_date'])?.toString(),
+              'target_people': (raw['targetPeople'] ?? raw['target_people'] ?? 0) is int ? (raw['targetPeople'] ?? raw['target_people']) : 0,
+              'target_vehicles': (raw['targetVehicles'] ?? raw['target_vehicles'] ?? 0) is int ? (raw['targetVehicles'] ?? raw['target_vehicles']) : 0,
+              'instructions': (raw['instructions'])?.toString(),
+              'status': (raw['status'] ?? 'ASSIGNED').toString(),
+            };
+          }
+        }
+      }
+      return;
+    }
+
+    final db = await instance.database;
+    final batch = db.batch();
+    for (final raw in assignments) {
+      if (raw is Map) {
+        final id = (raw['id'] ?? raw['assignmentId'])?.toString();
+        if (id != null && id.isNotEmpty) {
+          batch.insert(
+            'field_assignments',
+            {
+              'id': id,
+              'reference': (raw['reference'] ?? 'ASN-REF').toString(),
+              'title': (raw['title'] ?? 'Mission de terrain').toString(),
+              'commune_id': (raw['communeId'] ?? raw['commune_id'] ?? '').toString(),
+              'location_name': (raw['locationName'] ?? raw['location_name'] ?? 'Point terrain').toString(),
+              'latitude': (raw['latitude'] is num) ? (raw['latitude'] as num).toDouble() : null,
+              'longitude': (raw['longitude'] is num) ? (raw['longitude'] as num).toDouble() : null,
+              'assigned_user_id': (raw['assignedUserId'] ?? raw['assigned_user_id'])?.toString(),
+              'start_date': (raw['startDate'] ?? raw['start_date'])?.toString(),
+              'end_date': (raw['endDate'] ?? raw['end_date'])?.toString(),
+              'target_people': (raw['targetPeople'] ?? raw['target_people'] ?? 0) is int ? (raw['targetPeople'] ?? raw['target_people']) : 0,
+              'target_vehicles': (raw['targetVehicles'] ?? raw['target_vehicles'] ?? 0) is int ? (raw['targetVehicles'] ?? raw['target_vehicles']) : 0,
+              'instructions': (raw['instructions'])?.toString(),
+              'status': (raw['status'] ?? 'ASSIGNED').toString(),
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+      }
+    }
+    await batch.commit(noResult: true);
+  }
+
+  /// Returns cached field assignments assigned to [agentUserId].
+  Future<List<Map<String, dynamic>>> getFieldAssignmentsForAgent(String agentUserId) async {
+    if (_useInMemoryTestStore) {
+      return _memoryFieldAssignments.values
+          .where((a) => a['assigned_user_id'] == agentUserId)
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+
+    final db = await instance.database;
+    final rows = await db.query(
+      'field_assignments',
+      where: 'assigned_user_id = ?',
+      whereArgs: [agentUserId],
+      orderBy: 'start_date DESC',
+    );
+    return rows.map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  /// Returns all cached field assignments.
+  Future<List<Map<String, dynamic>>> getAllFieldAssignments() async {
+    if (_useInMemoryTestStore) {
+      return _memoryFieldAssignments.values
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+
+    final db = await instance.database;
+    final rows = await db.query('field_assignments', orderBy: 'start_date DESC');
+    return rows.map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  /// Returns total count of cached field assignments.
+  Future<int> getFieldAssignmentsCount() async {
+    if (_useInMemoryTestStore) {
+      return _memoryFieldAssignments.length;
+    }
+    final db = await instance.database;
+    final rows = await db.rawQuery('SELECT COUNT(*) AS cnt FROM field_assignments');
+    if (rows.isEmpty) return 0;
+    return (rows.first['cnt'] as int?) ?? 0;
   }
 
   Future close() async {

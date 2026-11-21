@@ -153,6 +153,36 @@ export class SyncService {
       unions = [];
     }
 
+    // 6. Active Field Assignments (Phase 6)
+    let fieldAssignments = [];
+    try {
+      fieldAssignments = await prisma.fieldAssignment.findMany({
+        where: {
+          status: { in: ['ASSIGNED', 'IN_PROGRESS'] },
+          ...(communeId ? { communeId } : {}),
+        },
+        select: {
+          id: true,
+          reference: true,
+          title: true,
+          communeId: true,
+          locationName: true,
+          latitude: true,
+          longitude: true,
+          assignedUserId: true,
+          startDate: true,
+          endDate: true,
+          targetPeople: true,
+          targetVehicles: true,
+          instructions: true,
+          status: true,
+        },
+        orderBy: { startDate: 'desc' },
+      });
+    } catch (_) {
+      fieldAssignments = [];
+    }
+
     return {
       serverTimestamp: new Date().toISOString(),
       publicKeys,
@@ -161,6 +191,7 @@ export class SyncService {
       lines,
       communes,
       unions,
+      fieldAssignments,
     };
   }
 

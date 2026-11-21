@@ -144,12 +144,16 @@ class SyncManager extends ChangeNotifier {
             (jsonDecode(response.body) as Map<String, dynamic>)['data'] ?? {};
         final publicKeys = (data['publicKeys'] as List<dynamic>?) ?? [];
         final revocations = (data['revocations'] as List<dynamic>?) ?? [];
+        final fieldAssignments = (data['fieldAssignments'] as List<dynamic>?) ?? [];
 
         if (publicKeys.isNotEmpty) {
           await OfflineDatabase.instance.savePublicKeysBatch(publicKeys);
         }
         if (revocations.isNotEmpty) {
           await OfflineDatabase.instance.saveRevocationsBatch(revocations);
+        }
+        if (fieldAssignments.isNotEmpty) {
+          await OfflineDatabase.instance.saveFieldAssignmentsBatch(fieldAssignments);
         }
         notifyListeners();
         return true;

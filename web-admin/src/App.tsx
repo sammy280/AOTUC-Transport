@@ -16,6 +16,7 @@ import TicketingLedgerView from './features/ticketing/TicketingLedgerView';
 import RegistrationDesk from './features/enrolment/RegistrationDesk';
 import AuditSecurityLogView from './features/audit/AuditSecurityLogView';
 import UserManagementView from './features/users/UserManagementView';
+import FieldOperationsView from './features/field/FieldOperationsView';
 import ToastContainer from './components/ToastContainer';
 import LoginView from './features/auth/LoginView';
 import AccessDenied from './components/AccessDenied';
@@ -362,6 +363,10 @@ export const App: React.FC = () => {
                   onOpenValidationQueue={() => setCurrentTab('validation')}
                   onNavigateTab={setCurrentTab}
                 />
+              )}
+
+              {currentTab === 'field' && (
+                <FieldOperationsView currentUser={currentUser} />
               )}
 
               {currentTab === 'users' && (

@@ -9,6 +9,7 @@ import {
   Ticket,
   ShieldAlert,
   UserCog,
+  Compass,
 } from 'lucide-react';
 import { UserContext } from '../types';
 import { isTabAllowed } from '../utils/permissions';
@@ -28,6 +29,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const allMenuItems = [
     { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
+    { id: 'field', label: 'Opérations de Terrain', icon: Compass },
     {
       id: 'validation',
       label: 'Validation Multi-Niveaux',

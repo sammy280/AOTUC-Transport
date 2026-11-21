@@ -19,6 +19,7 @@ import notificationsRoutes from './modules/notifications/notifications.routes.js
 import usersRoutes from './modules/users/users.routes.js';
 import auditRoutes from './modules/audit/audit.routes.js';
 import verificationRoutes from './modules/verification/verification.routes.js';
+import fieldOperationsRoutes from './modules/field-operations/field-operations.routes.js';
 
 const app = express();
 
@@ -123,6 +124,7 @@ app.use('/api/v1/notifications', notificationsRoutes);
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/audit', auditRoutes);
 app.use('/api/v1/verification', verificationRoutes);
+app.use('/api/v1/field-operations', fieldOperationsRoutes);
 
 // 7. 404 Route Not Found Handler
 app.use((req, res, next) => {

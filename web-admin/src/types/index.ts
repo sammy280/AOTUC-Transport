@@ -75,7 +75,7 @@ export interface NotificationItem {
   message: string;
   timestamp: string;
   isRead: boolean;
-  linkTab?: 'dashboard' | 'validation' | 'enrolment' | 'mapping' | 'badges' | 'licences' | 'ticketing' | 'audit';
+  linkTab?: 'dashboard' | 'field' | 'validation' | 'enrolment' | 'mapping' | 'badges' | 'licences' | 'ticketing' | 'audit';
   metadata?: Record<string, string>;
 }
 
@@ -84,4 +84,142 @@ export interface ToastMessage {
   type: 'success' | 'warning' | 'error' | 'info';
   title: string;
   message: string;
+}
+
+// ==============================================================================
+// FIELD OPERATIONS & MISSIONS (PHASE 6)
+// ==============================================================================
+
+export type FieldAssignmentStatus =
+  | 'PLANNED'
+  | 'ASSIGNED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
+export interface FieldAssignmentProgress {
+  targetPeople: number;
+  actualPeople: number;
+  peoplePercent: number;
+  targetVehicles: number;
+  actualVehicles: number;
+  vehiclesPercent: number;
+  overallPercent: number;
+}
+
+export interface FieldAssignmentItem {
+  id: string;
+  reference: string;
+  title: string;
+  communeId: string;
+  commune?: { id: string; code: string; name: string };
+  locationName: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  assignedUserId?: string | null;
+  assignedUser?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    phoneNumber?: string;
+    avatarUrl?: string | null;
+  } | null;
+  supervisorId: string;
+  supervisor?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+  startDate: string;
+  endDate?: string | null;
+  targetPeople: number;
+  targetVehicles: number;
+  instructions?: string | null;
+  supervisorNotes?: string | null;
+  status: FieldAssignmentStatus;
+  createdAt: string;
+  updatedAt: string;
+  progress?: FieldAssignmentProgress;
+}
+
+export interface FieldReceiptItem {
+  id: string;
+  receiptNumber: string;
+  assignmentId?: string | null;
+  assignment?: {
+    id: string;
+    reference: string;
+    title: string;
+    locationName: string;
+    startDate?: string;
+  } | null;
+  agentUserId: string;
+  agentUser?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber?: string;
+    email?: string;
+  };
+  personId?: string | null;
+  person?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    nin: string;
+    phoneNumber: string;
+    address?: string | null;
+  } | null;
+  vehicleId?: string | null;
+  vehicle?: {
+    id: string;
+    plateNumber: string;
+    registrationCardNumber?: string;
+    make?: string;
+    model?: string;
+    vehicleType?: string;
+  } | null;
+  communeId?: string | null;
+  commune?: { id: string; code: string; name: string } | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  notes?: string | null;
+  issuedAt: string;
+  createdAt: string;
+}
+
+export interface FieldDashboardSummary {
+  totalAssignments: number;
+  activeAssignments: number;
+  completedAssignments: number;
+  assignedAgentsCount: number;
+  registrationsToday: number;
+  todayBreakdown: {
+    peopleToday: number;
+    vehiclesToday: number;
+  };
+  targetsSummary: {
+    targetPeople: number;
+    actualPeople: number;
+    peoplePercent: number;
+    targetVehicles: number;
+    actualVehicles: number;
+    vehiclesPercent: number;
+    overallPercent: number;
+  };
+  totalReceiptsIssued: number;
+  communeBreakdown: {
+    communeId: string;
+    communeCode: string;
+    communeName: string;
+    activeAssignments: number;
+    totalAssignments: number;
+    targetPeople: number;
+    actualPeople: number;
+    targetVehicles: number;
+    actualVehicles: number;
+    completionRate: number;
+  }[];
+  timestamp: string;
 }

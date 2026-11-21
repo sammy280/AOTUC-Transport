@@ -43,6 +43,13 @@ export const PERMISSIONS = {
   TRANSACTIONS_CREATE: 'transactions.create',
   TRANSACTIONS_REVERSE: 'transactions.reverse',
   FINANCIAL_REPORTS_READ: 'financial_reports.read',
+
+  // Field Operations & Missions (Phase 6)
+  FIELD_ASSIGNMENTS_MANAGE: 'field_assignments.manage',
+  FIELD_ASSIGNMENTS_READ: 'field_assignments.read',
+  FIELD_PROGRESS_READ: 'field_progress.read',
+  FIELD_RECEIPTS_CREATE: 'field_receipts.create',
+  FIELD_RECEIPTS_READ: 'field_receipts.read',
 } as const;
 
 export type PermissionKey = typeof PERMISSIONS[keyof typeof PERMISSIONS];
@@ -66,6 +73,10 @@ export const ROLE_PERMISSIONS: Record<RoleType, PermissionKey[]> = {
     PERMISSIONS.AUDIT_READ,
     PERMISSIONS.FINANCIAL_REPORTS_READ,
     PERMISSIONS.TRANSACTIONS_READ_ALL,
+    PERMISSIONS.FIELD_ASSIGNMENTS_MANAGE,
+    PERMISSIONS.FIELD_ASSIGNMENTS_READ,
+    PERMISSIONS.FIELD_PROGRESS_READ,
+    PERMISSIONS.FIELD_RECEIPTS_READ,
   ],
   SUPER_ADMIN: [
     PERMISSIONS.USERS_READ,
@@ -82,6 +93,10 @@ export const ROLE_PERMISSIONS: Record<RoleType, PermissionKey[]> = {
     PERMISSIONS.DRIVERS_UPDATE,
     PERMISSIONS.DOCUMENTS_UPLOAD,
     PERMISSIONS.DOCUMENTS_VERIFY,
+    PERMISSIONS.FIELD_ASSIGNMENTS_MANAGE,
+    PERMISSIONS.FIELD_ASSIGNMENTS_READ,
+    PERMISSIONS.FIELD_PROGRESS_READ,
+    PERMISSIONS.FIELD_RECEIPTS_READ,
   ],
   CHEF_SERVICE: [
     PERMISSIONS.APPLICATIONS_REVIEW_L2,
@@ -95,6 +110,10 @@ export const ROLE_PERMISSIONS: Record<RoleType, PermissionKey[]> = {
     PERMISSIONS.DOCUMENTS_VERIFY,
     PERMISSIONS.CREDENTIALS_VERIFY,
     PERMISSIONS.CREDENTIALS_READ,
+    PERMISSIONS.FIELD_ASSIGNMENTS_MANAGE,
+    PERMISSIONS.FIELD_ASSIGNMENTS_READ,
+    PERMISSIONS.FIELD_PROGRESS_READ,
+    PERMISSIONS.FIELD_RECEIPTS_READ,
   ],
   AGENT_TERRAIN: [
     PERMISSIONS.DRIVERS_CREATE,
@@ -103,6 +122,9 @@ export const ROLE_PERMISSIONS: Record<RoleType, PermissionKey[]> = {
     PERMISSIONS.DOCUMENTS_UPLOAD,
     PERMISSIONS.DOCUMENTS_VERIFY,
     PERMISSIONS.APPLICATIONS_SUBMIT,
+    PERMISSIONS.FIELD_ASSIGNMENTS_READ,
+    PERMISSIONS.FIELD_RECEIPTS_CREATE,
+    PERMISSIONS.FIELD_RECEIPTS_READ,
   ],
   DISTRIBUTEUR: [
     PERMISSIONS.TICKETS_SELL,
@@ -122,6 +144,7 @@ export const ROLE_PERMISSIONS: Record<RoleType, PermissionKey[]> = {
 export const ROLE_ALLOWED_TABS: Record<RoleType, string[]> = {
   DIRECTOR: [
     'dashboard',
+    'field',
     'enrolment',
     'validation',
     'badges',
@@ -132,6 +155,7 @@ export const ROLE_ALLOWED_TABS: Record<RoleType, string[]> = {
   ],
   SUPER_ADMIN: [
     'dashboard',
+    'field',
     'enrolment',
     'users',
     'audit',
@@ -139,6 +163,7 @@ export const ROLE_ALLOWED_TABS: Record<RoleType, string[]> = {
   ],
   CHEF_SERVICE: [
     'dashboard',
+    'field',
     'validation',
     'enrolment',
     'badges',
@@ -147,6 +172,7 @@ export const ROLE_ALLOWED_TABS: Record<RoleType, string[]> = {
   ],
   AGENT_TERRAIN: [
     'dashboard',
+    'field',
     'enrolment',
     'validation',
   ],

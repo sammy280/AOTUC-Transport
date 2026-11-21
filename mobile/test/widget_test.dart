@@ -1580,4 +1580,97 @@ void main() {
       },
     );
   });
+
+  group('Phase 6 — Mobile Offline Field Operations, Assignment Caching & Daily Targets', () {
+    test(
+      '1–4: SyncManager pulls active field assignments, caches in SQLite, scopes to agent & preserves daily targets offline',
+      () async {
+        final mockClient = MockClient((http.Request req) async {
+          if (req.url.path == '/api/v1/sync/pull') {
+            return http.Response(
+              jsonEncode({
+                'success': true,
+                'data': {
+                  'serverTimestamp': DateTime.now().toIso8601String(),
+                  'publicKeys': [],
+                  'revocations': [],
+                  'fieldAssignments': [
+                    {
+                      'id': 'asn-matoto-001',
+                      'reference': 'ASN-2026-00042',
+                      'title': 'Mission Enrôlement Carrefour Entag',
+                      'communeId': 'comm-matoto',
+                      'locationName': 'Carrefour Entag - Rond-point',
+                      'latitude': 9.6105,
+                      'longitude': -13.5654,
+                      'assignedUserId': 'usr-agt-matoto',
+                      'startDate': DateTime.now().toIso8601String(),
+                      'targetPeople': 40,
+                      'targetVehicles': 25,
+                      'instructions': 'Priorité aux minibus Magbana.',
+                      'status': 'IN_PROGRESS',
+                    },
+                    {
+                      'id': 'asn-kaloum-002',
+                      'reference': 'ASN-2026-00043',
+                      'title': 'Mission Port Autonome',
+                      'communeId': 'comm-kaloum',
+                      'locationName': 'Gare Routière Kaloum',
+                      'latitude': 9.5092,
+                      'longitude': -13.7122,
+                      'assignedUserId': 'usr-agt-kaloum',
+                      'startDate': DateTime.now().toIso8601String(),
+                      'targetPeople': 60,
+                      'targetVehicles': 30,
+                      'status': 'ASSIGNED',
+                    },
+                  ],
+                },
+              }),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('{"error":"Not Found"}', 404);
+        });
+
+        final syncManager = SyncManager(
+          backendBaseUrl: 'https://api.aotuc.gov.gn',
+          authToken: 'test-agent-jwt',
+          agentUserId: 'usr-agt-matoto',
+          httpClient: mockClient,
+        );
+
+        // 1. Pull updates and cache field assignments
+        final updated = await syncManager.pullIncrementalUpdates();
+        expect(updated, isTrue);
+
+        // 2. Verify total cached assignments in offline database
+        final totalCount = await OfflineDatabase.instance.getFieldAssignmentsCount();
+        expect(totalCount, 2);
+
+        // 3. Verify agent-scoped query only retrieves assignments for 'usr-agt-matoto'
+        final matotoMissions = await OfflineDatabase.instance.getFieldAssignmentsForAgent('usr-agt-matoto');
+        expect(matotoMissions.length, 1);
+        final mission = matotoMissions.first;
+        expect(mission['reference'], 'ASN-2026-00042');
+        expect(mission['location_name'], 'Carrefour Entag - Rond-point');
+        expect(mission['target_people'], 40);
+        expect(mission['target_vehicles'], 25);
+        expect(mission['status'], 'IN_PROGRESS');
+
+        // 4. Verify Kaloum agent query only returns their mission
+        final kaloumMissions = await OfflineDatabase.instance.getFieldAssignmentsForAgent('usr-agt-kaloum');
+        expect(kaloumMissions.length, 1);
+        expect(kaloumMissions.first['reference'], 'ASN-2026-00043');
+        expect(kaloumMissions.first['target_people'], 60);
+
+        // 5. Verify missions survive app restart / offline cold boot
+        await OfflineDatabase.simulateAppRestart();
+        final postRestartMissions = await OfflineDatabase.instance.getFieldAssignmentsForAgent('usr-agt-matoto');
+        expect(postRestartMissions.length, 1);
+        expect(postRestartMissions.first['reference'], 'ASN-2026-00042');
+      },
+    );
+  });
 }
