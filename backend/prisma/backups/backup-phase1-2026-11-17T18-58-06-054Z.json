@@ -1,0 +1,748 @@
+{
+  "createdAt": "2026-11-17T18:58:11.654Z",
+  "counts": {
+    "communes": 6,
+    "roles": 6,
+    "users": 9,
+    "persons": 0,
+    "drivers": 0,
+    "owners": 0,
+    "vehicles": 0,
+    "transportLines": 4,
+    "transportStops": 7,
+    "auditLogs": 6
+  },
+  "data": {
+    "communes": [
+      {
+        "id": "654bfd79-b066-4f14-8ed8-8ccbcfe82ff7",
+        "code": "KLM",
+        "name": "Kaloum",
+        "description": "Centre administratif et des affaires",
+        "createdAt": "2026-11-17T15:12:53.515Z",
+        "updatedAt": "2026-11-17T15:12:53.515Z"
+      },
+      {
+        "id": "c656841f-ddd4-4a6a-94a4-51ee2662e80d",
+        "code": "DXN",
+        "name": "Dixinn",
+        "description": "Commune universitaire et résidentielle",
+        "createdAt": "2026-11-17T15:12:54.961Z",
+        "updatedAt": "2026-11-17T15:12:54.961Z"
+      },
+      {
+        "id": "119a852a-80a8-4883-a28d-277f9352d1eb",
+        "code": "MTM",
+        "name": "Matam",
+        "description": "Commune commerciale et portuaire",
+        "createdAt": "2026-11-17T15:12:55.965Z",
+        "updatedAt": "2026-11-17T15:12:55.965Z"
+      },
+      {
+        "id": "3e6506f9-f0f9-42ad-b9e4-d74239b455d3",
+        "code": "RTM",
+        "name": "Ratoma",
+        "description": "Grande commune résidentielle et axes routiers",
+        "createdAt": "2026-11-17T15:12:56.995Z",
+        "updatedAt": "2026-11-17T15:12:56.995Z"
+      },
+      {
+        "id": "472c8f3d-3f1c-4272-a4ef-ecacfb8ca57e",
+        "code": "MTT",
+        "name": "Matoto",
+        "description": "Plus grande commune urbaine de Conakry",
+        "createdAt": "2026-11-17T15:12:58.014Z",
+        "updatedAt": "2026-11-17T15:12:58.014Z"
+      },
+      {
+        "id": "89ee2176-297d-47fb-9111-89ce049a9ecc",
+        "code": "KSS",
+        "name": "Kassa",
+        "description": "Îles de Loos",
+        "createdAt": "2026-11-17T15:12:59.152Z",
+        "updatedAt": "2026-11-17T15:12:59.152Z"
+      }
+    ],
+    "roles": [
+      {
+        "id": "3ae92013-c29a-4ed4-b2cc-22440fd19104",
+        "name": "SUPER_ADMIN",
+        "labelFr": "Super Administrateur DSI",
+        "description": "Accès complet au paramétrage et audit",
+        "createdAt": "2026-11-17T15:12:59.999Z"
+      },
+      {
+        "id": "ed75e140-f84c-4326-aebf-c1b625aa217f",
+        "name": "DIRECTOR",
+        "labelFr": "Directeur Général AOTUC",
+        "description": "Validation finale Niveau 3 et gouvernance",
+        "createdAt": "2026-11-17T15:13:00.344Z"
+      },
+      {
+        "id": "738ef796-f433-4647-9394-005a97d0ce29",
+        "name": "CHEF_SERVICE",
+        "labelFr": "Chef de Service Territorial",
+        "description": "Examen de Niveau 2 par commune ou division",
+        "createdAt": "2026-11-17T15:13:00.544Z"
+      },
+      {
+        "id": "6f0cc32c-5607-4818-979c-9eb3965e5960",
+        "name": "AGENT_TERRAIN",
+        "labelFr": "Agent d Enrôlement Terrain",
+        "description": "Saisie et soumission Niveau 1 des dossiers",
+        "createdAt": "2026-11-17T15:13:00.727Z"
+      },
+      {
+        "id": "231f0829-9bad-4663-8aea-26133866ec24",
+        "name": "SYNDICAT",
+        "labelFr": "Représentant Syndical",
+        "description": "Consultation des membres syndiqués",
+        "createdAt": "2026-11-17T15:13:00.899Z"
+      },
+      {
+        "id": "910f2c82-eed7-4733-9190-fc5028657bbc",
+        "name": "DISTRIBUTEUR",
+        "labelFr": "Distributeur Agréé Billetterie",
+        "description": "Gestion des carnets et ventes de tickets",
+        "createdAt": "2026-11-17T15:13:01.075Z"
+      }
+    ],
+    "users": [
+      {
+        "id": "393163f3-9eea-4abf-a4b0-aa790d9ecdbe",
+        "email": "superadmin@aotuc.test",
+        "phoneNumber": "+224620000001",
+        "passwordHash": "$argon2id$v=19$m=65536,t=3,p=4$bHq4kEeXtwY2iAX2w51ZwQ$9wKVTn4d2Xl56Ez94gwnQSOrC1aV8hKn0fS7g0PkmQ8",
+        "firstName": "Ibrahima",
+        "lastName": "Diallo",
+        "jobTitle": "Super Administrateur & Responsable DSI",
+        "isActive": true,
+        "communeId": null,
+        "unionId": null,
+        "createdAt": "2026-11-17T15:13:01.425Z",
+        "updatedAt": "2026-11-17T15:20:27.969Z"
+      },
+      {
+        "id": "e34c462a-02db-469b-afa0-c48332726925",
+        "email": "directeur@aotuc.test",
+        "phoneNumber": "+224620000002",
+        "passwordHash": "$argon2id$v=19$m=65536,t=3,p=4$bHq4kEeXtwY2iAX2w51ZwQ$9wKVTn4d2Xl56Ez94gwnQSOrC1aV8hKn0fS7g0PkmQ8",
+        "firstName": "Mamadou",
+        "lastName": "Camara",
+        "jobTitle": "Directeur Général AOTUC",
+        "isActive": true,
+        "communeId": null,
+        "unionId": null,
+        "createdAt": "2026-11-17T15:13:03.259Z",
+        "updatedAt": "2026-11-17T15:20:30.055Z"
+      },
+      {
+        "id": "27b5c92f-c502-4165-87b6-ede1b7670e3d",
+        "email": "chef.matoto@aotuc.test",
+        "phoneNumber": "+224620000003",
+        "passwordHash": "$argon2id$v=19$m=65536,t=3,p=4$bHq4kEeXtwY2iAX2w51ZwQ$9wKVTn4d2Xl56Ez94gwnQSOrC1aV8hKn0fS7g0PkmQ8",
+        "firstName": "Fanta",
+        "lastName": "Soumah",
+        "jobTitle": "Chef de Service Territorial Matoto",
+        "isActive": true,
+        "communeId": "472c8f3d-3f1c-4272-a4ef-ecacfb8ca57e",
+        "unionId": null,
+        "createdAt": "2026-11-17T15:13:04.326Z",
+        "updatedAt": "2026-11-17T15:20:31.156Z"
+      },
+      {
+        "id": "8e432b68-006d-4f02-bf24-9b3d78b5a3ef",
+        "email": "chef.kaloum@aotuc.test",
+        "phoneNumber": "+224620000004",
+        "passwordHash": "$argon2id$v=19$m=65536,t=3,p=4$bHq4kEeXtwY2iAX2w51ZwQ$9wKVTn4d2Xl56Ez94gwnQSOrC1aV8hKn0fS7g0PkmQ8",
+        "firstName": "Alpha",
+        "lastName": "Barry",
+        "jobTitle": "Chef de Service Territorial Kaloum",
+        "isActive": true,
+        "communeId": "654bfd79-b066-4f14-8ed8-8ccbcfe82ff7",
+        "unionId": null,
+        "createdAt": "2026-11-17T15:13:05.336Z",
+        "updatedAt": "2026-11-17T15:20:32.348Z"
+      },
+      {
+        "id": "f18aaeee-539a-4c3a-8dc6-80039e4b4c59",
+        "email": "agent.matoto@aotuc.test",
+        "phoneNumber": "+224620000005",
+        "passwordHash": "$argon2id$v=19$m=65536,t=3,p=4$bHq4kEeXtwY2iAX2w51ZwQ$9wKVTn4d2Xl56Ez94gwnQSOrC1aV8hKn0fS7g0PkmQ8",
+        "firstName": "Sekou",
+        "lastName": "Conte",
+        "jobTitle": "Agent d Enrôlement Terrain Matoto",
+        "isActive": true,
+        "communeId": "472c8f3d-3f1c-4272-a4ef-ecacfb8ca57e",
+        "unionId": null,
+        "createdAt": "2026-11-17T15:13:06.389Z",
+        "updatedAt": "2026-11-17T15:20:33.575Z"
+      },
+      {
+        "id": "f1a6f2c2-680b-4cd0-88de-6eebb9e88923",
+        "email": "distributeur.kaloum@aotuc.test",
+        "phoneNumber": "+224620000006",
+        "passwordHash": "$argon2id$v=19$m=65536,t=3,p=4$bHq4kEeXtwY2iAX2w51ZwQ$9wKVTn4d2Xl56Ez94gwnQSOrC1aV8hKn0fS7g0PkmQ8",
+        "firstName": "Ousmane",
+        "lastName": "Sylla",
+        "jobTitle": "Distributeur Agréé Billetterie Kaloum",
+        "isActive": true,
+        "communeId": "654bfd79-b066-4f14-8ed8-8ccbcfe82ff7",
+        "unionId": null,
+        "createdAt": "2026-11-17T15:13:07.538Z",
+        "updatedAt": "2026-11-17T15:20:34.988Z"
+      },
+      {
+        "id": "9ff8f855-a778-4c8c-bacd-66bd1c0416ca",
+        "email": "syndicat.fntg@aotuc.test",
+        "phoneNumber": "+224620000007",
+        "passwordHash": "$argon2id$v=19$m=65536,t=3,p=4$sU94mVkHP6uOt4C36A/rCg$rvJDN+1n+WjbDZT/CNOQ7LgH3bOY5geKVm354E1gUfA",
+        "firstName": "Amadou",
+        "lastName": "Diallo",
+        "jobTitle": "Délégué Syndical FNTG",
+        "isActive": true,
+        "communeId": null,
+        "unionId": null,
+        "createdAt": "2026-11-17T15:20:36.143Z",
+        "updatedAt": "2026-11-17T15:20:36.143Z"
+      },
+      {
+        "id": "3e86cd48-96a4-42f5-8650-023a070d9980",
+        "email": "fanta.generated@aotuc.gov.gn",
+        "phoneNumber": "+224628888802",
+        "passwordHash": "$argon2id$v=19$m=65536,t=3,p=4$XVUZePyBhXqGEdP/caROaA$RrQ2U11QlpA11aVRK55tVI+RbpVTnP7YWiLds7ZK1xw",
+        "firstName": "Fanta Kaba",
+        "lastName": "Camara",
+        "jobTitle": "Agent Enrôleur Guichet Territorial",
+        "isActive": true,
+        "communeId": "472c8f3d-3f1c-4272-a4ef-ecacfb8ca57e",
+        "unionId": null,
+        "createdAt": "2026-11-17T15:24:34.005Z",
+        "updatedAt": "2026-11-17T15:24:34.005Z"
+      },
+      {
+        "id": "e577e624-5883-4495-a370-18e8bca8b89f",
+        "email": "mamadou.test@aotuc.gov.gn",
+        "phoneNumber": "+224628888801",
+        "passwordHash": "$argon2id$v=19$m=65536,t=3,p=4$i810HJkPqixyCzZlkXkuiQ$eSt11JJE8lt8ltJLJ+IxgyKUOLXhNgUfLQGWqT4VaPM",
+        "firstName": "Mamadou Alpha",
+        "lastName": "Diallo",
+        "jobTitle": "Superviseur Général de Brigade Contrôle",
+        "isActive": true,
+        "communeId": "472c8f3d-3f1c-4272-a4ef-ecacfb8ca57e",
+        "unionId": null,
+        "createdAt": "2026-11-17T15:24:29.499Z",
+        "updatedAt": "2026-11-17T15:24:43.188Z"
+      }
+    ],
+    "userRoles": [
+      {
+        "id": "7b702d55-82d1-41d7-bf57-e5aeebea3ccb",
+        "userId": "393163f3-9eea-4abf-a4b0-aa790d9ecdbe",
+        "roleId": "3ae92013-c29a-4ed4-b2cc-22440fd19104",
+        "assignedAt": "2026-11-17T15:13:01.777Z"
+      },
+      {
+        "id": "b10890eb-460c-4f34-b3ef-ab6500a2798a",
+        "userId": "e34c462a-02db-469b-afa0-c48332726925",
+        "roleId": "ed75e140-f84c-4326-aebf-c1b625aa217f",
+        "assignedAt": "2026-11-17T15:13:03.455Z"
+      },
+      {
+        "id": "85a3f131-2255-4e80-b1ff-69acb99d98fe",
+        "userId": "27b5c92f-c502-4165-87b6-ede1b7670e3d",
+        "roleId": "738ef796-f433-4647-9394-005a97d0ce29",
+        "assignedAt": "2026-11-17T15:13:04.500Z"
+      },
+      {
+        "id": "05162e6f-81a0-42b8-877c-481a084d9460",
+        "userId": "8e432b68-006d-4f02-bf24-9b3d78b5a3ef",
+        "roleId": "738ef796-f433-4647-9394-005a97d0ce29",
+        "assignedAt": "2026-11-17T15:13:05.551Z"
+      },
+      {
+        "id": "de7493f8-e42d-4704-854c-cecc043dffa4",
+        "userId": "f18aaeee-539a-4c3a-8dc6-80039e4b4c59",
+        "roleId": "6f0cc32c-5607-4818-979c-9eb3965e5960",
+        "assignedAt": "2026-11-17T15:13:06.632Z"
+      },
+      {
+        "id": "33662870-aca0-4086-a053-84d7127bdf07",
+        "userId": "f1a6f2c2-680b-4cd0-88de-6eebb9e88923",
+        "roleId": "910f2c82-eed7-4733-9190-fc5028657bbc",
+        "assignedAt": "2026-11-17T15:13:07.722Z"
+      },
+      {
+        "id": "8a291b16-a3b8-4d83-9494-8f58902c0a4c",
+        "userId": "9ff8f855-a778-4c8c-bacd-66bd1c0416ca",
+        "roleId": "231f0829-9bad-4663-8aea-26133866ec24",
+        "assignedAt": "2026-11-17T15:20:36.440Z"
+      },
+      {
+        "id": "cdc58c3c-0896-460a-89cf-0e2cc00e44e7",
+        "userId": "e577e624-5883-4495-a370-18e8bca8b89f",
+        "roleId": "738ef796-f433-4647-9394-005a97d0ce29",
+        "assignedAt": "2026-11-17T15:24:30.422Z"
+      },
+      {
+        "id": "0f06331f-ee0d-43c7-b07e-0e50acd0ca5a",
+        "userId": "3e86cd48-96a4-42f5-8650-023a070d9980",
+        "roleId": "6f0cc32c-5607-4818-979c-9eb3965e5960",
+        "assignedAt": "2026-11-17T15:24:34.558Z"
+      }
+    ],
+    "persons": [],
+    "drivers": [],
+    "owners": [],
+    "vehicles": [],
+    "vehicleInspections": [],
+    "vehicleAssignments": [],
+    "transportUnions": [],
+    "documents": [],
+    "validationRequests": [],
+    "validationSteps": [],
+    "driverBadges": [],
+    "transportLicences": [],
+    "credentialRevocations": [],
+    "transportLines": [
+      {
+        "id": "cc4321f6-455d-4fbe-8956-53262ad864a7",
+        "code": "L-01",
+        "name": "Axe Autoroute Fidel Castro (Kaloum ↔ Entag)",
+        "colorHex": "#CE1126",
+        "description": null,
+        "originName": "Palais du Peuple (Kaloum)",
+        "destinationName": "Gare Routière Entag",
+        "distanceKm": 22.4,
+        "estimatedMinutes": 45,
+        "isActive": true,
+        "pathCoordinates": [
+          [
+            -13.6892,
+            9.5241
+          ],
+          [
+            -13.6765,
+            9.5375
+          ],
+          [
+            -13.6558,
+            9.5482
+          ],
+          [
+            -13.6121,
+            9.5768
+          ],
+          [
+            -13.5654,
+            9.6105
+          ]
+        ],
+        "createdAt": "2026-11-17T15:13:14.735Z",
+        "updatedAt": "2026-11-17T15:20:43.484Z"
+      },
+      {
+        "id": "e275e4c9-2964-4edb-865a-e6dcf35be74e",
+        "code": "L-02",
+        "name": "Axe Route Le Prince (Kaloum ↔ Cosa)",
+        "colorHex": "#FCD116",
+        "description": null,
+        "originName": "Kaloum Port",
+        "destinationName": "Cosa Marché",
+        "distanceKm": 19.8,
+        "estimatedMinutes": 50,
+        "isActive": true,
+        "pathCoordinates": [
+          [
+            -13.6892,
+            9.5241
+          ],
+          [
+            -13.665,
+            9.552
+          ],
+          [
+            -13.6378,
+            9.5932
+          ],
+          [
+            -13.6102,
+            9.6201
+          ]
+        ],
+        "createdAt": "2026-11-17T15:13:16.376Z",
+        "updatedAt": "2026-11-17T15:20:45.341Z"
+      },
+      {
+        "id": "8bde15d1-67c8-46af-a4f8-3964d1f2e1e5",
+        "code": "L-03",
+        "name": "Corniche Nord (Dixinn ↔ Lambanyi)",
+        "colorHex": "#009460",
+        "description": null,
+        "originName": "Dixinn Belle-Vue",
+        "destinationName": "Lambanyi Carrefour",
+        "distanceKm": 16.5,
+        "estimatedMinutes": 40,
+        "isActive": true,
+        "pathCoordinates": [
+          [
+            -13.6765,
+            9.5375
+          ],
+          [
+            -13.65,
+            9.57
+          ],
+          [
+            -13.62,
+            9.605
+          ]
+        ],
+        "createdAt": "2026-11-17T15:13:16.567Z",
+        "updatedAt": "2026-11-17T15:20:45.549Z"
+      },
+      {
+        "id": "5dfb93fa-242c-4ed1-a6fc-bb24acddc752",
+        "code": "L-04",
+        "name": "Corniche Sud (Madina ↔ Dabompa)",
+        "colorHex": "#1E3A8A",
+        "description": null,
+        "originName": "Madina Marché",
+        "destinationName": "Dabompa Plateau",
+        "distanceKm": 21,
+        "estimatedMinutes": 48,
+        "isActive": true,
+        "pathCoordinates": [
+          [
+            -13.6558,
+            9.5482
+          ],
+          [
+            -13.61,
+            9.57
+          ],
+          [
+            -13.55,
+            9.61
+          ]
+        ],
+        "createdAt": "2026-11-17T15:13:16.741Z",
+        "updatedAt": "2026-11-17T15:20:45.893Z"
+      }
+    ],
+    "transportStops": [
+      {
+        "id": "69bf3a01-4d6a-4a7f-a2e0-083ee49daf24",
+        "code": "ARR-KLM-01",
+        "name": "Palais du Peuple",
+        "communeId": "654bfd79-b066-4f14-8ed8-8ccbcfe82ff7",
+        "latitude": 9.5241,
+        "longitude": -13.6892,
+        "isSheltered": true,
+        "createdAt": "2026-11-17T15:13:13.302Z",
+        "updatedAt": "2026-11-17T15:20:41.683Z"
+      },
+      {
+        "id": "3d153c7a-0229-4fe2-a826-52040da30825",
+        "code": "ARR-DXN-01",
+        "name": "Université Gamal Abdel Nasser",
+        "communeId": "c656841f-ddd4-4a6a-94a4-51ee2662e80d",
+        "latitude": 9.5375,
+        "longitude": -13.6765,
+        "isSheltered": true,
+        "createdAt": "2026-11-17T15:13:13.643Z",
+        "updatedAt": "2026-11-17T15:20:42.192Z"
+      },
+      {
+        "id": "78256c36-017b-4e8c-a15a-6719589fa463",
+        "code": "ARR-MTM-01",
+        "name": "Grand Marché de Madina",
+        "communeId": "119a852a-80a8-4883-a28d-277f9352d1eb",
+        "latitude": 9.5482,
+        "longitude": -13.6558,
+        "isSheltered": true,
+        "createdAt": "2026-11-17T15:13:13.828Z",
+        "updatedAt": "2026-11-17T15:20:42.421Z"
+      },
+      {
+        "id": "49456eef-578d-4b4e-ac6e-e4ac52e77e35",
+        "code": "ARR-MTT-01",
+        "name": "Aéroport Int. Ahmed Sékou Touré",
+        "communeId": "472c8f3d-3f1c-4272-a4ef-ecacfb8ca57e",
+        "latitude": 9.5768,
+        "longitude": -13.6121,
+        "isSheltered": true,
+        "createdAt": "2026-11-17T15:13:14.009Z",
+        "updatedAt": "2026-11-17T15:20:42.688Z"
+      },
+      {
+        "id": "30a09b1f-dd57-4ce2-a5ec-2a376447807e",
+        "code": "ARR-MTT-02",
+        "name": "Gare Routière Entag",
+        "communeId": "472c8f3d-3f1c-4272-a4ef-ecacfb8ca57e",
+        "latitude": 9.6105,
+        "longitude": -13.5654,
+        "isSheltered": true,
+        "createdAt": "2026-11-17T15:13:14.203Z",
+        "updatedAt": "2026-11-17T15:20:42.906Z"
+      },
+      {
+        "id": "1ceaf75c-bb9b-4d46-9947-21ffb5983729",
+        "code": "ARR-RTM-01",
+        "name": "Carrefour Bambéto",
+        "communeId": "3e6506f9-f0f9-42ad-b9e4-d74239b455d3",
+        "latitude": 9.5932,
+        "longitude": -13.6378,
+        "isSheltered": true,
+        "createdAt": "2026-11-17T15:13:14.379Z",
+        "updatedAt": "2026-11-17T15:20:43.092Z"
+      },
+      {
+        "id": "4b5c7828-f194-4b85-8a89-f84bf143f901",
+        "code": "ARR-RTM-02",
+        "name": "Rond-Point Cosa",
+        "communeId": "3e6506f9-f0f9-42ad-b9e4-d74239b455d3",
+        "latitude": 9.6201,
+        "longitude": -13.6102,
+        "isSheltered": true,
+        "createdAt": "2026-11-17T15:13:14.556Z",
+        "updatedAt": "2026-11-17T15:20:43.296Z"
+      }
+    ],
+    "lineStops": [
+      {
+        "id": "06c24954-1a13-48c6-8ca3-d87c8f6ba27d",
+        "lineId": "cc4321f6-455d-4fbe-8956-53262ad864a7",
+        "stopId": "69bf3a01-4d6a-4a7f-a2e0-083ee49daf24",
+        "stopOrder": 1,
+        "direction": "ALLER",
+        "distanceFromStartKm": 0,
+        "createdAt": "2026-11-17T15:13:15.098Z"
+      },
+      {
+        "id": "175138e3-efd1-4c30-b87b-9df675772fec",
+        "lineId": "cc4321f6-455d-4fbe-8956-53262ad864a7",
+        "stopId": "3d153c7a-0229-4fe2-a826-52040da30825",
+        "stopOrder": 2,
+        "direction": "ALLER",
+        "distanceFromStartKm": 3.2,
+        "createdAt": "2026-11-17T15:13:15.554Z"
+      },
+      {
+        "id": "d977a9a2-8c66-47b9-a424-318ba97ca36d",
+        "lineId": "cc4321f6-455d-4fbe-8956-53262ad864a7",
+        "stopId": "78256c36-017b-4e8c-a15a-6719589fa463",
+        "stopOrder": 3,
+        "direction": "ALLER",
+        "distanceFromStartKm": 6.5,
+        "createdAt": "2026-11-17T15:13:15.752Z"
+      },
+      {
+        "id": "9ad72e91-0050-4df3-b624-9690cf244746",
+        "lineId": "cc4321f6-455d-4fbe-8956-53262ad864a7",
+        "stopId": "49456eef-578d-4b4e-ac6e-e4ac52e77e35",
+        "stopOrder": 4,
+        "direction": "ALLER",
+        "distanceFromStartKm": 14.8,
+        "createdAt": "2026-11-17T15:13:15.982Z"
+      },
+      {
+        "id": "8d1e7941-2141-4946-9c91-542c29d2d26b",
+        "lineId": "cc4321f6-455d-4fbe-8956-53262ad864a7",
+        "stopId": "30a09b1f-dd57-4ce2-a5ec-2a376447807e",
+        "stopOrder": 5,
+        "direction": "ALLER",
+        "distanceFromStartKm": 22.4,
+        "createdAt": "2026-11-17T15:13:16.187Z"
+      }
+    ],
+    "ticketTariffs": [
+      {
+        "id": "0610525d-39b1-4679-8b42-ff9516006c80",
+        "code": "T-2000",
+        "name": "Ticket Urbain Standard (2 000 GNF)",
+        "priceGnf": 2000,
+        "vehicleCategory": "MINIBUS_URBAIN",
+        "isActive": true,
+        "createdAt": "2026-11-17T15:13:10.488Z",
+        "updatedAt": "2026-11-17T15:20:39.114Z"
+      },
+      {
+        "id": "e59a2633-e835-481e-8d05-005ea7c74598",
+        "code": "T-5000",
+        "name": "Ticket Express Conakry Direct (5 000 GNF)",
+        "priceGnf": 5000,
+        "vehicleCategory": "AUTOBUS_GRAND_GABARIT",
+        "isActive": true,
+        "createdAt": "2026-11-17T15:13:11.365Z",
+        "updatedAt": "2026-11-17T15:20:39.486Z"
+      },
+      {
+        "id": "00e4ffa0-c93c-4321-b48e-31b15c89a15c",
+        "code": "T-10000",
+        "name": "Pass Journalier Toutes Lignes (10 000 GNF)",
+        "priceGnf": 10000,
+        "vehicleCategory": "TOUS_VEHICULES",
+        "isActive": true,
+        "createdAt": "2026-11-17T15:13:11.625Z",
+        "updatedAt": "2026-11-17T15:20:39.717Z"
+      }
+    ],
+    "ticketBatches": [
+      {
+        "id": "4b3f6c8e-e44c-4d1f-b38c-758749da3d8e",
+        "batchNumber": "LOT-2026-0001",
+        "tariffId": "0610525d-39b1-4679-8b42-ff9516006c80",
+        "startSerial": "1000001",
+        "endSerial": "1001000",
+        "totalCount": 1000,
+        "remainingCount": 1000,
+        "status": "EN_STOCK_CENTRAL",
+        "allocatedToUserId": null,
+        "allocatedAt": null,
+        "createdAt": "2026-11-17T15:13:11.812Z",
+        "updatedAt": "2026-11-17T15:13:11.812Z"
+      }
+    ],
+    "ticketSales": [],
+    "financialAccounts": [
+      {
+        "id": "f0ed3764-4fd2-41d8-8a87-9a89067f2743",
+        "accountCode": "512100",
+        "name": "Banque Centrale BCRG - Compte Général AOTUC",
+        "type": "ACTIF",
+        "balanceGnf": "2500000000",
+        "currency": "GNF",
+        "isActive": true,
+        "createdAt": "2026-11-17T15:13:08.812Z",
+        "updatedAt": "2026-11-17T15:20:37.790Z"
+      },
+      {
+        "id": "6eaf14d5-1b9c-4837-9a65-243728e5d8bb",
+        "accountCode": "531100",
+        "name": "Caisse Principale AOTUC Conakry",
+        "type": "ACTIF",
+        "balanceGnf": "45000000",
+        "currency": "GNF",
+        "isActive": true,
+        "createdAt": "2026-11-17T15:13:09.591Z",
+        "updatedAt": "2026-11-17T15:20:38.351Z"
+      },
+      {
+        "id": "d4bcf5e1-7c3e-4a99-9982-ac109888ebea",
+        "accountCode": "411100",
+        "name": "Créances Distributeurs & Points de Vente",
+        "type": "ACTIF",
+        "balanceGnf": "12000000",
+        "currency": "GNF",
+        "isActive": true,
+        "createdAt": "2026-11-17T15:13:09.809Z",
+        "updatedAt": "2026-11-17T15:20:38.593Z"
+      },
+      {
+        "id": "ec0e0ee2-0263-4cc2-9b67-7b8d2a41ab83",
+        "accountCode": "706100",
+        "name": "Produits des Ventes Titres de Transport",
+        "type": "PRODUIT",
+        "balanceGnf": "0",
+        "currency": "GNF",
+        "isActive": true,
+        "createdAt": "2026-11-17T15:13:10.244Z",
+        "updatedAt": "2026-11-17T15:20:38.820Z"
+      }
+    ],
+    "financialLedgerEntries": [],
+    "auditLogs": [
+      {
+        "id": "75309a32-126b-427e-80c1-c59c512d2b0c",
+        "actorId": "393163f3-9eea-4abf-a4b0-aa790d9ecdbe",
+        "action": "USER_ACCOUNT_CREATED",
+        "targetModule": "USERS",
+        "targetRecordId": "e577e624-5883-4495-a370-18e8bca8b89f",
+        "previousValues": null,
+        "newValues": {
+          "role": "CHEF_SERVICE",
+          "email": "mamadou.test@aotuc.gov.gn",
+          "jobTitle": "Superviseur Général de Brigade Contrôle",
+          "communeId": "472c8f3d-3f1c-4272-a4ef-ecacfb8ca57e",
+          "phoneNumber": "+224628888801"
+        },
+        "ipAddress": null,
+        "userAgent": null,
+        "reason": null,
+        "timestamp": "2026-11-17T15:24:30.835Z"
+      },
+      {
+        "id": "ea6361e7-babd-46e3-8e3d-54cafed09e9b",
+        "actorId": "393163f3-9eea-4abf-a4b0-aa790d9ecdbe",
+        "action": "USER_ACCOUNT_CREATED",
+        "targetModule": "USERS",
+        "targetRecordId": "3e86cd48-96a4-42f5-8650-023a070d9980",
+        "previousValues": null,
+        "newValues": {
+          "role": "AGENT_TERRAIN",
+          "email": "fanta.generated@aotuc.gov.gn",
+          "jobTitle": "Agent Enrôleur Guichet Territorial",
+          "communeId": "472c8f3d-3f1c-4272-a4ef-ecacfb8ca57e",
+          "phoneNumber": "+224628888802"
+        },
+        "ipAddress": null,
+        "userAgent": null,
+        "reason": null,
+        "timestamp": "2026-11-17T15:24:35.117Z"
+      },
+      {
+        "id": "f2fcc60f-698c-44f1-823e-a561f11246c9",
+        "actorId": "e577e624-5883-4495-a370-18e8bca8b89f",
+        "action": "USER_LOGIN_SUCCESS",
+        "targetModule": "AUTH",
+        "targetRecordId": "e577e624-5883-4495-a370-18e8bca8b89f",
+        "previousValues": null,
+        "newValues": null,
+        "ipAddress": null,
+        "userAgent": null,
+        "reason": null,
+        "timestamp": "2026-11-17T15:24:39.635Z"
+      },
+      {
+        "id": "c3f2700c-ed41-44c1-8b86-e1b58aa5aaa1",
+        "actorId": "3e86cd48-96a4-42f5-8650-023a070d9980",
+        "action": "USER_LOGIN_SUCCESS",
+        "targetModule": "AUTH",
+        "targetRecordId": "3e86cd48-96a4-42f5-8650-023a070d9980",
+        "previousValues": null,
+        "newValues": null,
+        "ipAddress": null,
+        "userAgent": null,
+        "reason": null,
+        "timestamp": "2026-11-17T15:24:41.556Z"
+      },
+      {
+        "id": "be8bf664-baa7-43d7-bdb7-c24ed85c9e2f",
+        "actorId": "393163f3-9eea-4abf-a4b0-aa790d9ecdbe",
+        "action": "USER_PASSWORD_RESET",
+        "targetModule": "USERS",
+        "targetRecordId": "e577e624-5883-4495-a370-18e8bca8b89f",
+        "previousValues": null,
+        "newValues": null,
+        "ipAddress": null,
+        "userAgent": null,
+        "reason": "Réinitialisation administrative par superadmin@aotuc.test",
+        "timestamp": "2026-11-17T15:24:43.936Z"
+      },
+      {
+        "id": "729fb2af-1327-4f13-b1dc-aee3e3b04658",
+        "actorId": "e577e624-5883-4495-a370-18e8bca8b89f",
+        "action": "USER_LOGIN_SUCCESS",
+        "targetModule": "AUTH",
+        "targetRecordId": "e577e624-5883-4495-a370-18e8bca8b89f",
+        "previousValues": null,
+        "newValues": null,
+        "ipAddress": null,
+        "userAgent": null,
+        "reason": null,
+        "timestamp": "2026-11-17T15:24:47.228Z"
+      }
+    ]
+  }
+}

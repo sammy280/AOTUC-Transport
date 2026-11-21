@@ -13,6 +13,8 @@ import { getPermissionsForRoles, PERMISSIONS } from '../config/permissions.js';
 class RevocationRegistry {
   static #deactivatedUserIds = new Set();
   static #revokedTokenSignatures = new Set();
+  static #revokedDeviceIds = new Map(); // deviceId -> { reason, revokedAt }
+  static #registeredDevices = new Map(); // deviceId -> { deviceId, deviceName, userId, lastSeenAt, isRevoked }
 
   static deactivateUser(userId) {
     if (userId) this.#deactivatedUserIds.add(String(userId));
@@ -36,9 +38,64 @@ class RevocationRegistry {
     return this.#revokedTokenSignatures.has(String(signatureOrHash));
   }
 
+  static registerDevice({ deviceId, deviceName, userId, ipAddress }) {
+    if (!deviceId) return;
+    const key = String(deviceId).trim();
+    const existing = this.#registeredDevices.get(key) || {};
+    this.#registeredDevices.set(key, {
+      ...existing,
+      deviceId: key,
+      deviceName: deviceName || existing.deviceName || 'Terminal Mobile AOTUC',
+      userId: userId || existing.userId || null,
+      ipAddress: ipAddress || existing.ipAddress || null,
+      lastSeenAt: new Date().toISOString(),
+      isRevoked: this.#revokedDeviceIds.has(key),
+    });
+  }
+
+  static revokeDevice(deviceId, reason = 'Appareil signalé perdu ou volé') {
+    if (!deviceId) return;
+    const key = String(deviceId).trim();
+    const revokedAt = new Date().toISOString();
+    this.#revokedDeviceIds.set(key, { reason, revokedAt });
+    const existing = this.#registeredDevices.get(key) || { deviceId: key };
+    this.#registeredDevices.set(key, {
+      ...existing,
+      isRevoked: true,
+      revocationReason: reason,
+      revokedAt,
+    });
+  }
+
+  static restoreDevice(deviceId) {
+    if (!deviceId) return;
+    const key = String(deviceId).trim();
+    this.#revokedDeviceIds.delete(key);
+    const existing = this.#registeredDevices.get(key);
+    if (existing) {
+      this.#registeredDevices.set(key, {
+        ...existing,
+        isRevoked: false,
+        revocationReason: null,
+        revokedAt: null,
+      });
+    }
+  }
+
+  static isDeviceRevoked(deviceId) {
+    if (!deviceId) return false;
+    return this.#revokedDeviceIds.has(String(deviceId).trim());
+  }
+
+  static listDevices() {
+    return Array.from(this.#registeredDevices.values());
+  }
+
   static clear() {
     this.#deactivatedUserIds.clear();
     this.#revokedTokenSignatures.clear();
+    this.#revokedDeviceIds.clear();
+    this.#registeredDevices.clear();
   }
 }
 
@@ -79,6 +136,22 @@ export async function authenticateToken(req, res, next) {
         'Ce compte utilisateur a été désactivé par un administrateur.',
         401,
         'ACCOUNT_DEACTIVATED'
+      )
+    );
+  }
+
+  // 1b. Lost / Stolen Mobile Device Revocation Check
+  const requestDeviceId = req.headers['x-device-id'] || decoded.deviceId || null;
+  if (requestDeviceId && RevocationRegistry.isDeviceRevoked(requestDeviceId)) {
+    logger.warn('Access attempt from revoked mobile device', {
+      userId: decoded.sub,
+      deviceId: requestDeviceId,
+    });
+    return next(
+      new AppError(
+        'L accès de cet appareil mobile a été révoqué par un administrateur AOTUC.',
+        401,
+        'DEVICE_REVOKED'
       )
     );
   }

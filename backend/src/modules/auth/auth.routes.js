@@ -12,6 +12,28 @@ router.post('/logout', AuthController.logout);
 // Protected Identity & Profile
 router.get('/me', authenticateToken, AuthController.me);
 
+// Mobile Device Registration & Lost-Device Revocation (Admin / Director)
+router.get(
+  '/devices',
+  authenticateToken,
+  requireRoles('SUPER_ADMIN', 'DIRECTOR'),
+  AuthController.listDevices
+);
+
+router.post(
+  '/devices/:deviceId/revoke',
+  authenticateToken,
+  requireRoles('SUPER_ADMIN', 'DIRECTOR'),
+  AuthController.revokeDevice
+);
+
+router.post(
+  '/devices/:deviceId/restore',
+  authenticateToken,
+  requireRoles('SUPER_ADMIN', 'DIRECTOR'),
+  AuthController.restoreDevice
+);
+
 // User Theme & Appearance Preferences Synchronization (Device Independent)
 const userThemePreferences = new Map();
 

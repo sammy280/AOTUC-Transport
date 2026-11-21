@@ -5,9 +5,22 @@ import config from '../../config/index.js';
 import prisma from '../../utils/prisma.js';
 import logger from '../../utils/logger.js';
 import { AppError } from '../../middlewares/errorHandler.js';
+import { RevocationRegistry } from '../../middlewares/authMiddleware.js';
+import { getPermissionsForRoles } from '../../config/permissions.js';
 
 function hashToken(rawToken) {
   return crypto.createHash('sha256').update(rawToken).digest('hex');
+}
+
+function normalizeIdentifierPhone(raw) {
+  const digits = String(raw || '').replace(/\D/g, '');
+  if (digits.startsWith('224') && digits.length === 12) {
+    return `+${digits}`;
+  }
+  if (digits.length === 9 && digits.startsWith('6')) {
+    return `+224${digits}`;
+  }
+  return String(raw || '').trim();
 }
 
 const DEV_FALLBACK_USERS = [
@@ -17,9 +30,11 @@ const DEV_FALLBACK_USERS = [
     phoneNumber: '+224620000001',
     firstName: 'Ibrahima',
     lastName: 'Diallo',
+    jobTitle: 'Super Administrateur DSI',
     roles: ['SUPER_ADMIN'],
     communeId: null,
     commune: null,
+    union: null,
     isActive: true,
   },
   {
@@ -28,9 +43,11 @@ const DEV_FALLBACK_USERS = [
     phoneNumber: '+224620000002',
     firstName: 'Mamadou',
     lastName: 'Camara',
+    jobTitle: 'Directeur Général AOTUC',
     roles: ['DIRECTOR'],
     communeId: null,
     commune: null,
+    union: null,
     isActive: true,
   },
   {
@@ -39,9 +56,11 @@ const DEV_FALLBACK_USERS = [
     phoneNumber: '+224620000003',
     firstName: 'Fanta',
     lastName: 'Soumah',
+    jobTitle: 'Chef de Service Territorial Matoto',
     roles: ['CHEF_SERVICE'],
     communeId: 'cm-matoto',
     commune: { id: 'cm-matoto', code: 'MTT', name: 'Matoto' },
+    union: null,
     isActive: true,
   },
   {
@@ -50,9 +69,11 @@ const DEV_FALLBACK_USERS = [
     phoneNumber: '+224620000004',
     firstName: 'Alpha',
     lastName: 'Barry',
+    jobTitle: 'Chef de Service Territorial Kaloum',
     roles: ['CHEF_SERVICE'],
     communeId: 'cm-kaloum',
     commune: { id: 'cm-kaloum', code: 'KLM', name: 'Kaloum' },
+    union: null,
     isActive: true,
   },
   {
@@ -61,9 +82,11 @@ const DEV_FALLBACK_USERS = [
     phoneNumber: '+224620000005',
     firstName: 'Sekou',
     lastName: 'Conte',
+    jobTitle: 'Agent d Enrôlement Terrain Matoto',
     roles: ['AGENT_TERRAIN'],
     communeId: 'cm-matoto',
     commune: { id: 'cm-matoto', code: 'MTT', name: 'Matoto' },
+    union: null,
     isActive: true,
   },
   {
@@ -72,9 +95,11 @@ const DEV_FALLBACK_USERS = [
     phoneNumber: '+224620000006',
     firstName: 'Ousmane',
     lastName: 'Sylla',
+    jobTitle: 'Distributeur Billetterie Agréé Kaloum',
     roles: ['DISTRIBUTEUR'],
     communeId: 'cm-kaloum',
     commune: { id: 'cm-kaloum', code: 'KLM', name: 'Kaloum' },
+    union: null,
     isActive: true,
   },
   {
@@ -83,9 +108,11 @@ const DEV_FALLBACK_USERS = [
     phoneNumber: '+224620000007',
     firstName: 'Amadou',
     lastName: 'Diallo',
+    jobTitle: 'Délégué Syndical FNTG',
     roles: ['SYNDICAT'],
     communeId: null,
     commune: null,
+    union: { id: 'un-fntg', code: 'FNTG', name: 'Fédération Nationale des Transporteurs de Guinée' },
     isActive: true,
   },
 ];
@@ -94,17 +121,29 @@ export class AuthService {
   /**
    * Authenticate user by identifier (phone or email) and password.
    */
-  static async login({ identifier, password, ipAddress, userAgent }) {
+  static async login({ identifier, password, deviceId = null, deviceName = null, ipAddress, userAgent }) {
+    if (deviceId && RevocationRegistry.isDeviceRevoked(deviceId)) {
+      throw new AppError(
+        'L accès de cet appareil mobile a été révoqué par un administrateur AOTUC.',
+        403,
+        'DEVICE_REVOKED'
+      );
+    }
+
     let user = null;
     let isDevFallback = false;
 
-    // 1. Find user by phone number or email (with resilient fallback if DB is unconfigured)
+    const cleanIdentifier = String(identifier || '').trim();
+    const normalizedPhone = normalizeIdentifierPhone(cleanIdentifier);
+
+    // 1. Find user by phone number or email
     try {
       user = await prisma.user.findFirst({
         where: {
           OR: [
-            { phoneNumber: identifier },
-            { email: identifier },
+            { phoneNumber: cleanIdentifier },
+            { phoneNumber: normalizedPhone },
+            { email: { equals: cleanIdentifier, mode: 'insensitive' } },
           ],
         },
         include: {
@@ -114,6 +153,7 @@ export class AuthService {
             },
           },
           commune: true,
+          union: true,
         },
       });
     } catch (dbErr) {
@@ -122,8 +162,8 @@ export class AuthService {
         error: dbErr.message,
       });
 
-      const cleanId = (identifier || '').trim().toLowerCase();
-      const cleanPhone = (identifier || '').replace(/[\s+]/g, '');
+      const cleanId = cleanIdentifier.toLowerCase();
+      const cleanPhone = cleanIdentifier.replace(/[\s+]/g, '');
       const matchedDev = DEV_FALLBACK_USERS.find(
         (u) =>
           u.email.toLowerCase() === cleanId ||
@@ -149,7 +189,7 @@ export class AuthService {
       throw new AppError('Identifiants de connexion invalides.', 401, 'INVALID_CREDENTIALS');
     }
 
-    if (!user.isActive) {
+    if (!user.isActive || RevocationRegistry.isDeactivated(user.id)) {
       logger.warn('Failed login attempt: account inactive', { userId: user.id });
       throw new AppError('Ce compte utilisateur a été désactivé par un administrateur.', 403, 'ACCOUNT_INACTIVE');
     }
@@ -167,11 +207,28 @@ export class AuthService {
       roleNames = user.roles;
     }
 
+    const permissions = getPermissionsForRoles(roleNames);
+
+    // Register device if provided
+    if (deviceId) {
+      RevocationRegistry.registerDevice({
+        deviceId,
+        deviceName,
+        userId: user.id,
+        ipAddress,
+      });
+    }
+
     // 3. Generate token pair
     const tokenFamily = crypto.randomUUID();
-    const { accessToken, refreshToken, expiresAt } = this.generateTokenPair(user, roleNames, tokenFamily);
+    const { accessToken, refreshToken, expiresAt } = this.generateTokenPair(
+      user,
+      roleNames,
+      tokenFamily,
+      deviceId
+    );
 
-    // 4. Store hashed refresh token in database (if connected)
+    // 4. Store hashed refresh token in database
     try {
       await prisma.refreshToken.create({
         data: {
@@ -182,7 +239,6 @@ export class AuthService {
         },
       });
 
-      // 5. Record Audit Log
       await prisma.auditLog.create({
         data: {
           actorId: user.id,
@@ -191,6 +247,7 @@ export class AuthService {
           targetRecordId: user.id,
           ipAddress,
           userAgent,
+          newValues: deviceId ? { deviceId, deviceName } : undefined,
         },
       });
     } catch (auditErr) {
@@ -204,8 +261,17 @@ export class AuthService {
         phoneNumber: user.phoneNumber,
         firstName: user.firstName,
         lastName: user.lastName,
+        jobTitle: user.jobTitle || null,
         roles: roleNames,
-        commune: user.commune ? { id: user.commune.id, code: user.commune.code, name: user.commune.name } : null,
+        permissions,
+        communeId: user.communeId || user.commune?.id || null,
+        commune: user.commune
+          ? { id: user.commune.id, code: user.commune.code, name: user.commune.name }
+          : null,
+        unionId: user.unionId || user.union?.id || null,
+        union: user.union
+          ? { id: user.union.id, code: user.union.code, name: user.union.name }
+          : null,
       },
       accessToken,
       refreshToken,
@@ -215,8 +281,7 @@ export class AuthService {
   /**
    * Rotate refresh token with reuse detection (Token Family protection).
    */
-  static async refreshTokens({ rawRefreshToken, ipAddress, userAgent }) {
-    // 1. Verify JWT signature of the refresh token
+  static async refreshTokens({ rawRefreshToken, deviceId = null, ipAddress, userAgent }) {
     let decoded;
     try {
       decoded = jwt.verify(rawRefreshToken, config.JWT_REFRESH_SECRET);
@@ -224,9 +289,17 @@ export class AuthService {
       throw new AppError('Jeton de rafraîchissement invalide ou expiré.', 401, 'INVALID_REFRESH_TOKEN');
     }
 
+    const effectiveDeviceId = deviceId || decoded.deviceId || null;
+    if (effectiveDeviceId && RevocationRegistry.isDeviceRevoked(effectiveDeviceId)) {
+      throw new AppError(
+        'L accès de cet appareil mobile a été révoqué par un administrateur AOTUC.',
+        401,
+        'DEVICE_REVOKED'
+      );
+    }
+
     const tokenHashed = hashToken(rawRefreshToken);
 
-    // 2. Lookup token in database
     const tokenRecord = await prisma.refreshToken.findUnique({
       where: { tokenHash: tokenHashed },
       include: {
@@ -234,12 +307,12 @@ export class AuthService {
           include: {
             roles: { include: { role: true } },
             commune: true,
+            union: true,
           },
         },
       },
     });
 
-    // 3. Reuse detection: If token does not exist or is marked revoked, revoke all tokens in the same family!
     if (!tokenRecord || tokenRecord.isRevoked) {
       if (tokenRecord) {
         logger.error('CRITICAL: Refresh token reuse detected! Invalidating token family.', {
@@ -248,7 +321,6 @@ export class AuthService {
           ipAddress,
         });
 
-        // Revoke entire family to stop compromised tokens
         await prisma.refreshToken.updateMany({
           where: { family: tokenRecord.family },
           data: { isRevoked: true },
@@ -269,7 +341,6 @@ export class AuthService {
       throw new AppError('Jeton de session compromis ou invalide. Veuillez vous reconnecter.', 401, 'TOKEN_COMPROMISED');
     }
 
-    // 4. Verify token expiry
     if (new Date() > tokenRecord.expiresAt) {
       await prisma.refreshToken.update({
         where: { id: tokenRecord.id },
@@ -279,20 +350,19 @@ export class AuthService {
     }
 
     const user = tokenRecord.user;
-    if (!user.isActive) {
+    if (!user.isActive || RevocationRegistry.isDeactivated(user.id)) {
       throw new AppError('Compte utilisateur désactivé.', 403, 'ACCOUNT_INACTIVE');
     }
 
     const roleNames = user.roles.map((ur) => ur.role.name);
 
-    // 5. Generate new token pair preserving the existing family
     const { accessToken, refreshToken: newRefreshToken, expiresAt } = this.generateTokenPair(
       user,
       roleNames,
-      tokenRecord.family
+      tokenRecord.family,
+      effectiveDeviceId
     );
 
-    // 6. Invalidate old token and store new one atomically
     await prisma.$transaction([
       prisma.refreshToken.update({
         where: { id: tokenRecord.id },
@@ -350,15 +420,60 @@ export class AuthService {
   }
 
   /**
+   * Retrieves enriched profile for session restoration (`GET /api/v1/auth/me`).
+   */
+  static async getProfile(reqUser) {
+    try {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: reqUser.id },
+        include: {
+          roles: { include: { role: true } },
+          commune: true,
+          union: true,
+        },
+      });
+
+      if (dbUser) {
+        const roleNames = dbUser.roles.map((ur) => ur.role.name);
+        return {
+          id: dbUser.id,
+          email: dbUser.email,
+          phoneNumber: dbUser.phoneNumber,
+          firstName: dbUser.firstName,
+          lastName: dbUser.lastName,
+          jobTitle: dbUser.jobTitle || null,
+          isActive: dbUser.isActive,
+          roles: roleNames,
+          permissions: getPermissionsForRoles(roleNames),
+          communeId: dbUser.communeId,
+          commune: dbUser.commune
+            ? { id: dbUser.commune.id, code: dbUser.commune.code, name: dbUser.commune.name }
+            : null,
+          unionId: dbUser.unionId,
+          union: dbUser.union
+            ? { id: dbUser.union.id, code: dbUser.union.code, name: dbUser.union.name }
+            : null,
+        };
+      }
+    } catch (_) {
+      // Fallback to JWT claims if DB lookup fails in unit test
+    }
+
+    return reqUser;
+  }
+
+  /**
    * Helper: Generate access and refresh token pair.
    */
-  static generateTokenPair(user, roles, family) {
+  static generateTokenPair(user, roles, family, deviceId = null) {
     const accessPayload = {
       sub: user.id,
       email: user.email,
       phoneNumber: user.phoneNumber,
       roles,
       communeId: user.communeId,
+      unionId: user.unionId || null,
+      ...(deviceId ? { deviceId } : {}),
     };
 
     const accessToken = jwt.sign(accessPayload, config.JWT_ACCESS_SECRET, {
@@ -368,13 +483,13 @@ export class AuthService {
     const refreshPayload = {
       sub: user.id,
       family,
+      ...(deviceId ? { deviceId } : {}),
     };
 
     const refreshToken = jwt.sign(refreshPayload, config.JWT_REFRESH_SECRET, {
       expiresIn: config.JWT_REFRESH_EXPIRATION,
     });
 
-    // 7 days expiration default
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 

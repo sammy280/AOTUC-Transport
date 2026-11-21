@@ -30,9 +30,21 @@ router.post(
 // 2. Listing & Lookup Endpoints (Agents, Chefs, Director, Syndicat with DRIVERS_READ)
 // Distributeurs and unpermitted accounts are strictly forbidden (403)
 router.get(
+  '/check-duplicate',
+  requirePermissions(PERMISSIONS.DRIVERS_READ, PERMISSIONS.DRIVERS_CREATE),
+  RegistrationController.checkDuplicates
+);
+
+router.get(
   '/drivers',
   requirePermissions(PERMISSIONS.DRIVERS_READ),
   RegistrationController.listDrivers
+);
+
+router.get(
+  '/owners',
+  requirePermissions(PERMISSIONS.DRIVERS_READ),
+  RegistrationController.listOwners
 );
 
 router.get(

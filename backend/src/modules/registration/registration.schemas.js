@@ -4,7 +4,7 @@ import { z } from 'zod';
 const phoneRegex = /^(\+224|00224)?[6][0-9]{8}$/;
 
 export function normalizeGuineanPhone(phone) {
-  let cleaned = phone.replace(/[\s\-\.\(\)]/g, '');
+  let cleaned = String(phone || '').replace(/[\s\-\.\(\)]/g, '');
   if (cleaned.startsWith('00224')) {
     cleaned = '+' + cleaned.substring(2);
   } else if (!cleaned.startsWith('+224')) {
@@ -13,36 +13,60 @@ export function normalizeGuineanPhone(phone) {
   return cleaned;
 }
 
+const gpsFields = {
+  latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
+  longitude: z.coerce.number().min(-180).max(180).optional().nullable(),
+  gpsCapturedAt: z.string().optional().nullable(),
+};
+
+const inlineDocumentSchema = z.object({
+  category: z.string(),
+  originalName: z.string().optional(),
+  mimeType: z.string().optional(),
+  base64Data: z.string(),
+});
+
 export const registerDriverSchema = z.object({
   firstName: z.string().min(2, 'Le prénom doit contenir au moins 2 caractères.'),
   lastName: z.string().min(2, 'Le nom doit contenir au moins 2 caractères.'),
   nin: z.string().min(5, 'Le Numéro d Identification National (NIN) est obligatoire.'),
-  phoneNumber: z.string().regex(phoneRegex, 'Numéro de téléphone guinéen invalide (ex: +224 620 12 34 56).'),
-  email: z.string().email('Adresse email invalide.').optional().or(z.literal('')),
-  dateOfBirth: z.string().optional(),
-  address: z.string().optional(),
-  communeId: z.string().uuid('Commune invalide.').optional(),
-  
+  phoneNumber: z
+    .string()
+    .transform((v) => v.replace(/[\s\-\.\(\)]/g, ''))
+    .refine((v) => phoneRegex.test(v), 'Numéro de téléphone guinéen invalide (ex: +224 620 12 34 56).'),
+  email: z.string().email('Adresse email invalide.').optional().or(z.literal('')).nullable(),
+  dateOfBirth: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  communeId: z.string().uuid('Commune invalide.').optional().nullable(),
+
   drivingLicenseNumber: z.string().min(4, 'Le numéro de permis de conduire est obligatoire.'),
-  licenseCategory: z.enum(['A', 'B', 'C', 'D', 'E']).default('B'),
+  licenseCategory: z.enum(['A', 'B', 'C', 'C1', 'D', 'E']).default('B'),
   licenseExpirationDate: z.string({
     required_error: 'La date d expiration du permis est obligatoire.',
   }),
   unionId: z.string().uuid('Syndicat invalide.').optional().nullable(),
+  documents: z.array(inlineDocumentSchema).optional(),
+  ...gpsFields,
 });
 
 export const registerOwnerSchema = z.object({
   firstName: z.string().min(2, 'Le prénom doit contenir au moins 2 caractères.'),
   lastName: z.string().min(2, 'Le nom doit contenir au moins 2 caractères.'),
   nin: z.string().min(5, 'Le Numéro d Identification National (NIN) est obligatoire.'),
-  phoneNumber: z.string().regex(phoneRegex, 'Numéro de téléphone guinéen invalide.'),
-  email: z.string().email().optional().or(z.literal('')),
-  address: z.string().optional(),
-  communeId: z.string().uuid().optional(),
-  
+  phoneNumber: z
+    .string()
+    .transform((v) => v.replace(/[\s\-\.\(\)]/g, ''))
+    .refine((v) => phoneRegex.test(v), 'Numéro de téléphone guinéen invalide.'),
+  email: z.string().email().optional().or(z.literal('')).nullable(),
+  dateOfBirth: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  communeId: z.string().uuid().optional().nullable(),
+
   ownerType: z.enum(['INDIVIDU', 'ENTREPRISE']).default('INDIVIDU'),
   businessName: z.string().optional().nullable(),
   taxNumber: z.string().optional().nullable(),
+  documents: z.array(inlineDocumentSchema).optional(),
+  ...gpsFields,
 });
 
 export const registerVehicleSchema = z.object({
@@ -53,6 +77,13 @@ export const registerVehicleSchema = z.object({
   vehicleType: z.enum(['TAXI_COLLECTIF', 'MAGBANA_MINIBUS', 'BUS_URBAIN', 'MOTOTAXI', 'AUTRE']),
   make: z.string().min(2, 'La marque du véhicule est obligatoire.'),
   model: z.string().min(1, 'Le modèle du véhicule est obligatoire.'),
-  year: z.coerce.number().int().min(1970).max(2030).optional(),
-  seatingCapacity: z.coerce.number().int().min(1).max(120).optional(),
+  year: z.coerce.number().int().min(1970).max(2030).optional().nullable(),
+  seatingCapacity: z.coerce.number().int().min(1).max(120).optional().nullable(),
+  driverId: z.string().uuid().optional().nullable(),
+  transportLineId: z.string().uuid().optional().nullable(),
+  inspectionCertificateNumber: z.string().optional().nullable(),
+  inspectionCenter: z.string().optional().nullable(),
+  inspectionExpirationDate: z.string().optional().nullable(),
+  documents: z.array(inlineDocumentSchema).optional(),
+  ...gpsFields,
 });

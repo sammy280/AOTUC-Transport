@@ -65,6 +65,7 @@ model User {
   passwordHash String   @map("password_hash")
   firstName    String   @map("first_name")
   lastName     String   @map("last_name")
+  jobTitle     String?  @map("job_title")
   isActive     Boolean  @default(true) @map("is_active")
 
   // Territorial / Departmental Scope
@@ -173,6 +174,12 @@ model Person {
   communeId String?  @map("commune_id")
   commune   Commune? @relation(fields: [communeId], references: [id], onDelete: SetNull)
 
+  // Field Registration GPS & Provenance
+  latitude           Float?
+  longitude          Float?
+  gpsCapturedAt      DateTime? @map("gps_captured_at")
+  registeredByUserId String?   @map("registered_by_user_id")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -280,6 +287,12 @@ model Vehicle {
   seatingCapacity        Int?          @map("seating_capacity")
   status                 VehicleStatus @default(EN_ATTENTE_VALIDATION)
 
+  // Field Registration GPS & Provenance
+  latitude               Float?
+  longitude              Float?
+  gpsCapturedAt          DateTime?     @map("gps_captured_at")
+  registeredByUserId     String?       @map("registered_by_user_id")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -352,6 +365,12 @@ model TransportUnion {
 
   communeId String?  @map("commune_id")
   commune   Commune? @relation(fields: [communeId], references: [id], onDelete: SetNull)
+
+  // Field Registration GPS & Provenance
+  latitude           Float?
+  longitude          Float?
+  gpsCapturedAt      DateTime? @map("gps_captured_at")
+  registeredByUserId String?   @map("registered_by_user_id")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

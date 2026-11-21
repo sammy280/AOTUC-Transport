@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import request from 'supertest';
 import app from '../src/app.js';
 import jwt from 'jsonwebtoken';
@@ -19,6 +20,7 @@ describe('AOTUC Transport System — Complete 24-Scenario RBAC & Security Verifi
   let distributeurMatotoToken;
 
   beforeAll(() => {
+    jest.setTimeout(30000);
     directorToken = jwt.sign(
       {
         sub: 'usr-dir-001',

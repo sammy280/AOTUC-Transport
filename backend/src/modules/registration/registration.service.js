@@ -1,9 +1,111 @@
 import prisma from '../../utils/prisma.js';
-import logger from '../../utils/logger.js';
 import { AppError } from '../../middlewares/errorHandler.js';
+import DocumentStorageService from '../../services/documentStorageService.js';
 import { normalizeGuineanPhone } from './registration.schemas.js';
 
+async function saveInlineDocuments(documents, { actorUserId, personId = null, vehicleId = null }) {
+  if (!Array.isArray(documents) || documents.length === 0) return [];
+  const saved = [];
+  for (const doc of documents) {
+    if (!doc.base64Data || !doc.category) continue;
+    const cleanBase64 = doc.base64Data.replace(/^data:[^;]+;base64,/, '');
+    const fileBuffer = Buffer.from(cleanBase64, 'base64');
+    const record = await DocumentStorageService.storeFile({
+      fileBuffer,
+      originalName: doc.originalName || `${doc.category.toLowerCase()}.jpg`,
+      declaredMime: doc.mimeType || 'image/jpeg',
+      category: doc.category,
+      uploadedByUserId: actorUserId,
+      personId,
+      vehicleId,
+    });
+    saved.push(record);
+  }
+  return saved;
+}
+
 export class RegistrationService {
+  /**
+   * Checks whether a person, driver, owner, or vehicle already exists by identifier.
+   */
+  static async checkDuplicates(query = {}) {
+    const matches = {
+      hasDuplicate: false,
+      person: null,
+      driver: null,
+      owner: null,
+      vehicle: null,
+    };
+
+    const cleanNin = query.nin ? String(query.nin).trim().toUpperCase() : null;
+    const cleanPhone = query.phoneNumber ? normalizeGuineanPhone(query.phoneNumber) : null;
+    const cleanLicense = query.drivingLicenseNumber
+      ? String(query.drivingLicenseNumber).trim().toUpperCase()
+      : null;
+    const cleanPlate = query.plateNumber ? String(query.plateNumber).trim().toUpperCase() : null;
+    const cleanCard = query.registrationCardNumber
+      ? String(query.registrationCardNumber).trim().toUpperCase()
+      : null;
+    const cleanVin = query.chassisVin ? String(query.chassisVin).trim().toUpperCase() : null;
+
+    if (cleanNin || cleanPhone) {
+      const person = await prisma.person.findFirst({
+        where: {
+          OR: [
+            ...(cleanNin ? [{ nin: cleanNin }] : []),
+            ...(cleanPhone ? [{ phoneNumber: cleanPhone }] : []),
+          ],
+        },
+        include: { driver: true, owner: true, commune: true },
+      });
+      if (person) {
+        matches.person = {
+          id: person.id,
+          firstName: person.firstName,
+          lastName: person.lastName,
+          nin: person.nin,
+          phoneNumber: person.phoneNumber,
+          commune: person.commune?.name || null,
+          isDriver: Boolean(person.driver),
+          isOwner: Boolean(person.owner),
+        };
+        if (person.driver) matches.driver = person.driver;
+        if (person.owner) matches.owner = person.owner;
+        matches.hasDuplicate = true;
+      }
+    }
+
+    if (cleanLicense && !matches.driver) {
+      const driver = await prisma.driver.findUnique({
+        where: { drivingLicenseNumber: cleanLicense },
+        include: { person: true },
+      });
+      if (driver) {
+        matches.driver = driver;
+        matches.hasDuplicate = true;
+      }
+    }
+
+    if (cleanPlate || cleanCard || cleanVin) {
+      const vehicle = await prisma.vehicle.findFirst({
+        where: {
+          OR: [
+            ...(cleanPlate ? [{ plateNumber: cleanPlate }] : []),
+            ...(cleanCard ? [{ registrationCardNumber: cleanCard }] : []),
+            ...(cleanVin ? [{ chassisVin: cleanVin }] : []),
+          ],
+        },
+        include: { owner: { include: { person: true } } },
+      });
+      if (vehicle) {
+        matches.vehicle = vehicle;
+        matches.hasDuplicate = true;
+      }
+    }
+
+    return matches;
+  }
+
   /**
    * Enrol a Driver (Chauffeur professionnel)
    */
@@ -41,7 +143,12 @@ export class RegistrationService {
     }
 
     // Assign actor's commune if field agent has one and none provided
-    const communeId = data.communeId || actorUser.communeId || null;
+    const communeId = actorUser.communeId || data.communeId || null;
+    const hasGps =
+      data.latitude !== undefined &&
+      data.latitude !== null &&
+      data.longitude !== undefined &&
+      data.longitude !== null;
 
     // 2. Atomic creation of Person and Driver profile
     const result = await prisma.$transaction(async (tx) => {
@@ -60,6 +167,14 @@ export class RegistrationService {
             dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
             address: data.address || null,
             communeId,
+            latitude: hasGps ? Number(data.latitude) : null,
+            longitude: hasGps ? Number(data.longitude) : null,
+            gpsCapturedAt: hasGps
+              ? data.gpsCapturedAt
+                ? new Date(data.gpsCapturedAt)
+                : new Date()
+              : null,
+            registeredByUserId: actorUser.id,
           },
         });
         personId = newPerson.id;
@@ -80,7 +195,6 @@ export class RegistrationService {
         },
       });
 
-      // Audit Log
       await tx.auditLog.create({
         data: {
           actorId: actorUser.id,
@@ -92,12 +206,23 @@ export class RegistrationService {
             nin: cleanedNin,
             license: cleanedLicense,
             communeId,
+            latitude: hasGps ? Number(data.latitude) : null,
+            longitude: hasGps ? Number(data.longitude) : null,
           },
         },
       });
 
       return driver;
     });
+
+    if (Array.isArray(data.documents) && data.documents.length > 0) {
+      result.documents = await saveInlineDocuments(data.documents, {
+        actorUserId: actorUser.id,
+        personId: result.personId,
+      });
+    } else {
+      result.documents = [];
+    }
 
     return result;
   }
@@ -109,7 +234,6 @@ export class RegistrationService {
     const normalizedPhone = normalizeGuineanPhone(data.phoneNumber);
     const cleanedNin = data.nin.trim().toUpperCase();
 
-    // Check existing
     const existingPerson = await prisma.person.findFirst({
       where: {
         OR: [{ nin: cleanedNin }, { phoneNumber: normalizedPhone }],
@@ -125,7 +249,12 @@ export class RegistrationService {
       );
     }
 
-    const communeId = data.communeId || actorUser.communeId || null;
+    const communeId = actorUser.communeId || data.communeId || null;
+    const hasGps =
+      data.latitude !== undefined &&
+      data.latitude !== null &&
+      data.longitude !== undefined &&
+      data.longitude !== null;
 
     const result = await prisma.$transaction(async (tx) => {
       let personId;
@@ -140,8 +269,17 @@ export class RegistrationService {
             nin: cleanedNin,
             phoneNumber: normalizedPhone,
             email: data.email || null,
+            dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
             address: data.address || null,
             communeId,
+            latitude: hasGps ? Number(data.latitude) : null,
+            longitude: hasGps ? Number(data.longitude) : null,
+            gpsCapturedAt: hasGps
+              ? data.gpsCapturedAt
+                ? new Date(data.gpsCapturedAt)
+                : new Date()
+              : null,
+            registeredByUserId: actorUser.id,
           },
         });
         personId = newPerson.id;
@@ -165,12 +303,26 @@ export class RegistrationService {
           action: 'OWNER_ENROLLED',
           targetModule: 'REGISTRATION',
           targetRecordId: owner.id,
-          newValues: { ownerId: owner.id, nin: cleanedNin },
+          newValues: {
+            ownerId: owner.id,
+            nin: cleanedNin,
+            latitude: hasGps ? Number(data.latitude) : null,
+            longitude: hasGps ? Number(data.longitude) : null,
+          },
         },
       });
 
       return owner;
     });
+
+    if (Array.isArray(data.documents) && data.documents.length > 0) {
+      result.documents = await saveInlineDocuments(data.documents, {
+        actorUserId: actorUser.id,
+        personId: result.personId,
+      });
+    } else {
+      result.documents = [];
+    }
 
     return result;
   }
@@ -194,7 +346,11 @@ export class RegistrationService {
     }
 
     // 2. Scope check: If agent is restricted, owner must belong to agent's commune
-    if (actorUser.communeId && owner.person.communeId && actorUser.communeId !== owner.person.communeId) {
+    if (
+      actorUser.communeId &&
+      owner.person.communeId &&
+      actorUser.communeId !== owner.person.communeId
+    ) {
       throw new AppError(
         'Accès refusé. Vous ne pouvez enregistrer un véhicule que pour un propriétaire de votre commune.',
         403,
@@ -221,6 +377,12 @@ export class RegistrationService {
       );
     }
 
+    const hasGps =
+      data.latitude !== undefined &&
+      data.latitude !== null &&
+      data.longitude !== undefined &&
+      data.longitude !== null;
+
     // 4. Create Vehicle
     const vehicle = await prisma.vehicle.create({
       data: {
@@ -234,11 +396,57 @@ export class RegistrationService {
         year: data.year || null,
         seatingCapacity: data.seatingCapacity || null,
         status: 'EN_ATTENTE_VALIDATION',
+        latitude: hasGps ? Number(data.latitude) : null,
+        longitude: hasGps ? Number(data.longitude) : null,
+        gpsCapturedAt: hasGps
+          ? data.gpsCapturedAt
+            ? new Date(data.gpsCapturedAt)
+            : new Date()
+          : null,
+        registeredByUserId: actorUser.id,
       },
       include: {
         owner: { include: { person: true } },
       },
     });
+
+    // Optional driver assignment
+    if (data.driverId && prisma.vehicleAssignment) {
+      await prisma.vehicleAssignment.create({
+        data: {
+          vehicleId: vehicle.id,
+          driverId: data.driverId,
+          transportLineId: data.transportLineId || null,
+          assignedBy: actorUser.id,
+          isActive: true,
+        },
+      });
+    }
+
+    // Optional technical inspection record
+    if (data.inspectionCertificateNumber && prisma.vehicleInspection) {
+      await prisma.vehicleInspection.create({
+        data: {
+          vehicleId: vehicle.id,
+          certificateNumber: data.inspectionCertificateNumber.trim().toUpperCase(),
+          inspectionCenter: (data.inspectionCenter || 'Centre Technique Conakry').trim(),
+          inspectionDate: new Date(),
+          expirationDate: data.inspectionExpirationDate
+            ? new Date(data.inspectionExpirationDate)
+            : new Date(Date.now() + 365 * 24 * 3600 * 1000),
+          isConform: true,
+        },
+      });
+    }
+
+    if (Array.isArray(data.documents) && data.documents.length > 0) {
+      vehicle.documents = await saveInlineDocuments(data.documents, {
+        actorUserId: actorUser.id,
+        vehicleId: vehicle.id,
+      });
+    } else {
+      vehicle.documents = [];
+    }
 
     // 5. Audit Log
     await prisma.auditLog.create({
@@ -247,7 +455,12 @@ export class RegistrationService {
         action: 'VEHICLE_ENROLLED',
         targetModule: 'REGISTRATION',
         targetRecordId: vehicle.id,
-        newValues: { plateNumber: cleanedPlate, chassisVin: cleanedVin },
+        newValues: {
+          plateNumber: cleanedPlate,
+          chassisVin: cleanedVin,
+          latitude: hasGps ? Number(data.latitude) : null,
+          longitude: hasGps ? Number(data.longitude) : null,
+        },
       },
     });
 
@@ -259,8 +472,6 @@ export class RegistrationService {
    */
   static async listDrivers({ page = 1, limit = 20, search = '', communeId = null }, actorUser) {
     const skip = (page - 1) * limit;
-
-    // Filter by scope
     const filterCommuneId = actorUser.communeId || communeId || undefined;
 
     const where = {
@@ -284,7 +495,7 @@ export class RegistrationService {
         skip,
         take: limit,
         include: {
-          person: { include: { commune: true } },
+          person: { include: { commune: true, documents: true } },
           union: true,
         },
         orderBy: { createdAt: 'desc' },
@@ -294,6 +505,54 @@ export class RegistrationService {
 
     return {
       items: drivers,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * List Owners with Pagination and Commune Scope
+   */
+  static async listOwners({ page = 1, limit = 20, search = '', communeId = null }, actorUser) {
+    const skip = (page - 1) * limit;
+    const filterCommuneId = actorUser.communeId || communeId || undefined;
+
+    const where = {
+      ...(filterCommuneId ? { person: { communeId: filterCommuneId } } : {}),
+      ...(search
+        ? {
+            OR: [
+              { businessName: { contains: search, mode: 'insensitive' } },
+              { taxNumber: { contains: search, mode: 'insensitive' } },
+              { person: { firstName: { contains: search, mode: 'insensitive' } } },
+              { person: { lastName: { contains: search, mode: 'insensitive' } } },
+              { person: { nin: { contains: search, mode: 'insensitive' } } },
+              { person: { phoneNumber: { contains: search, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
+    };
+
+    const [owners, total] = await Promise.all([
+      prisma.owner.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          person: { include: { commune: true } },
+          _count: { select: { vehicles: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.owner.count({ where }),
+    ]);
+
+    return {
+      items: owners,
       pagination: {
         page,
         limit,
@@ -332,9 +591,10 @@ export class RegistrationService {
         take: limit,
         include: {
           owner: { include: { person: true } },
+          documents: true,
           assignments: {
             where: { isActive: true },
-            include: { driver: { include: { person: true } } },
+            include: { driver: { include: { person: true } }, transportLine: true },
           },
         },
         orderBy: { createdAt: 'desc' },

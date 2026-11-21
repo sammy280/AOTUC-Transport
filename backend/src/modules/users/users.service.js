@@ -1,14 +1,61 @@
+import crypto from 'crypto';
 import argon2 from 'argon2';
 import prisma from '../../utils/prisma.js';
 import logger from '../../utils/logger.js';
 import { AppError } from '../../middlewares/errorHandler.js';
 import { RevocationRegistry } from '../../middlewares/authMiddleware.js';
 
+/**
+ * Generates a cryptographically strong, human-readable random password.
+ * Format guarantees uppercase, lowercase, numbers, and special symbols.
+ */
+export function generateSecurePassword(length = 14) {
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower = 'abcdefghijkmnpqrstuvwxyz';
+  const numbers = '23456789';
+  const symbols = '!@#$%&*';
+  const all = upper + lower + numbers + symbols;
+
+  const chars = [
+    upper[crypto.randomInt(upper.length)],
+    lower[crypto.randomInt(lower.length)],
+    numbers[crypto.randomInt(numbers.length)],
+    symbols[crypto.randomInt(symbols.length)],
+  ];
+
+  for (let i = chars.length; i < length; i++) {
+    chars.push(all[crypto.randomInt(all.length)]);
+  }
+
+  // Fisher-Yates cryptographically-safe shuffle
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = crypto.randomInt(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+
+  return chars.join('');
+}
+
+/**
+ * Normalizes phone numbers to standard Guinean E.164 (+224...).
+ */
+function normalizePhoneNumber(raw) {
+  if (!raw) return raw;
+  const digits = raw.replace(/\D/g, '');
+  if (digits.startsWith('224')) {
+    return `+${digits}`;
+  }
+  if (digits.length === 9) {
+    return `+224${digits}`;
+  }
+  return raw.trim();
+}
+
 export class UsersService {
   /**
-   * Lists user accounts with role and commune relations.
+   * Lists user accounts with role, commune relations, and jobTitle.
    */
-  static async listUsers({ page = 1, limit = 20, search = '' }) {
+  static async listUsers({ page = 1, limit = 50, search = '' }) {
     const skip = (page - 1) * limit;
     const where = search
       ? {
@@ -17,6 +64,7 @@ export class UsersService {
             { lastName: { contains: search, mode: 'insensitive' } },
             { email: { contains: search, mode: 'insensitive' } },
             { phoneNumber: { contains: search, mode: 'insensitive' } },
+            { jobTitle: { contains: search, mode: 'insensitive' } },
           ],
         }
       : {};
@@ -32,6 +80,7 @@ export class UsersService {
           phoneNumber: true,
           firstName: true,
           lastName: true,
+          jobTitle: true,
           isActive: true,
           createdAt: true,
           commune: { select: { id: true, code: true, name: true } },
@@ -68,6 +117,7 @@ export class UsersService {
         phoneNumber: true,
         firstName: true,
         lastName: true,
+        jobTitle: true,
         isActive: true,
         createdAt: true,
         commune: { select: { id: true, code: true, name: true } },
@@ -86,39 +136,72 @@ export class UsersService {
   }
 
   /**
-   * Creates a new system user account.
+   * Creates a new system user account with secure password, email, role, and job/work assignment.
    */
   static async createUser(data, actorUser) {
+    const normalizedPhone = normalizePhoneNumber(data.phoneNumber);
+    const normalizedEmail = data.email ? data.email.trim().toLowerCase() : null;
+
+    // 1. Check for duplicates
     const existing = await prisma.user.findFirst({
       where: {
         OR: [
-          { phoneNumber: data.phoneNumber },
-          ...(data.email ? [{ email: data.email }] : []),
+          { phoneNumber: normalizedPhone },
+          ...(normalizedEmail ? [{ email: normalizedEmail }] : []),
         ],
       },
     });
 
     if (existing) {
+      if (existing.phoneNumber === normalizedPhone) {
+        throw new AppError(
+          `Un compte avec le numéro de téléphone ${normalizedPhone} existe déjà.`,
+          409,
+          'PHONE_ALREADY_EXISTS'
+        );
+      }
       throw new AppError(
-        'Un compte avec ce numéro de téléphone ou cet email existe déjà.',
+        `Un compte avec l'adresse email ${normalizedEmail} existe déjà.`,
         409,
-        'USER_ALREADY_EXISTS'
+        'EMAIL_ALREADY_EXISTS'
       );
     }
 
-    const defaultPassword = data.password || 'DevAotuc2026!';
-    const passwordHash = await argon2.hash(defaultPassword);
+    // 2. Resolve commune
+    let resolvedCommuneId = data.communeId || null;
+    if (!resolvedCommuneId && data.communeCode) {
+      const commune = await prisma.commune.findUnique({
+        where: { code: data.communeCode.trim().toUpperCase() },
+      });
+      if (commune) {
+        resolvedCommuneId = commune.id;
+      }
+    }
+
+    // 3. Password selection: use provided or generate strong unique password
+    const plainPassword =
+      data.password && data.password.trim().length >= 8
+        ? data.password.trim()
+        : generateSecurePassword(14);
+
+    const passwordHash = await argon2.hash(plainPassword, {
+      type: argon2.argon2id,
+      memoryCost: 65536,
+      timeCost: 3,
+      parallelism: 4,
+    });
 
     const created = await prisma.$transaction(async (tx) => {
       const newUser = await tx.user.create({
         data: {
           firstName: data.firstName.trim(),
           lastName: data.lastName.trim(),
-          email: data.email || null,
-          phoneNumber: data.phoneNumber,
+          email: normalizedEmail,
+          phoneNumber: normalizedPhone,
+          jobTitle: data.jobTitle ? data.jobTitle.trim() : null,
           passwordHash,
-          communeId: data.communeId || null,
-          isActive: data.isActive !== undefined ? data.isActive : true,
+          communeId: resolvedCommuneId,
+          isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
         },
       });
 
@@ -139,7 +222,7 @@ export class UsersService {
 
       await tx.auditLog.create({
         data: {
-          actorId: actorUser.id,
+          actorId: actorUser?.id || null,
           action: 'USER_ACCOUNT_CREATED',
           targetModule: 'USERS',
           targetRecordId: newUser.id,
@@ -147,6 +230,8 @@ export class UsersService {
             email: newUser.email,
             phoneNumber: newUser.phoneNumber,
             role: data.role,
+            jobTitle: newUser.jobTitle,
+            communeId: newUser.communeId,
           },
         },
       });
@@ -154,7 +239,11 @@ export class UsersService {
       return newUser;
     });
 
-    return this.getUserById(created.id);
+    const fullUser = await this.getUserById(created.id);
+    return {
+      ...fullUser,
+      temporaryPassword: plainPassword,
+    };
   }
 
   /**
@@ -166,27 +255,125 @@ export class UsersService {
       throw new AppError('Utilisateur introuvable.', 404, 'USER_NOT_FOUND');
     }
 
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        ...(data.firstName ? { firstName: data.firstName.trim() } : {}),
-        ...(data.lastName ? { lastName: data.lastName.trim() } : {}),
-        ...(data.email !== undefined ? { email: data.email } : {}),
-        ...(data.communeId !== undefined ? { communeId: data.communeId } : {}),
-      },
-    });
+    // Resolve commune if code provided
+    let resolvedCommuneId = data.communeId;
+    if (resolvedCommuneId === undefined && data.communeCode) {
+      const c = await prisma.commune.findUnique({
+        where: { code: data.communeCode.trim().toUpperCase() },
+      });
+      if (c) resolvedCommuneId = c.id;
+    }
 
-    await prisma.auditLog.create({
-      data: {
-        actorId: actorUser.id,
-        action: 'USER_ACCOUNT_UPDATED',
-        targetModule: 'USERS',
-        targetRecordId: userId,
-        newValues: data,
-      },
+    const normalizedPhone = data.phoneNumber ? normalizePhoneNumber(data.phoneNumber) : undefined;
+    const normalizedEmail = data.email !== undefined ? (data.email ? data.email.trim().toLowerCase() : null) : undefined;
+
+    // Check duplicate phone or email if changing
+    if (normalizedPhone && normalizedPhone !== user.phoneNumber) {
+      const dup = await prisma.user.findUnique({ where: { phoneNumber: normalizedPhone } });
+      if (dup) {
+        throw new AppError(`Le numéro de téléphone ${normalizedPhone} est déjà utilisé.`, 409, 'PHONE_ALREADY_EXISTS');
+      }
+    }
+    if (normalizedEmail && normalizedEmail !== user.email) {
+      const dup = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+      if (dup) {
+        throw new AppError(`L'adresse email ${normalizedEmail} est déjà utilisée.`, 409, 'EMAIL_ALREADY_EXISTS');
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          ...(data.firstName ? { firstName: data.firstName.trim() } : {}),
+          ...(data.lastName ? { lastName: data.lastName.trim() } : {}),
+          ...(normalizedEmail !== undefined ? { email: normalizedEmail } : {}),
+          ...(normalizedPhone !== undefined ? { phoneNumber: normalizedPhone } : {}),
+          ...(data.jobTitle !== undefined ? { jobTitle: data.jobTitle ? data.jobTitle.trim() : null } : {}),
+          ...(resolvedCommuneId !== undefined ? { communeId: resolvedCommuneId } : {}),
+          ...(data.isActive !== undefined ? { isActive: Boolean(data.isActive) } : {}),
+        },
+      });
+
+      // Update role if specified
+      if (data.role) {
+        const roleRecord = await tx.role.findUnique({ where: { name: data.role } });
+        if (roleRecord) {
+          await tx.userRole.deleteMany({ where: { userId } });
+          await tx.userRole.create({
+            data: {
+              userId,
+              roleId: roleRecord.id,
+            },
+          });
+        }
+      }
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actorUser?.id || null,
+          action: 'USER_ACCOUNT_UPDATED',
+          targetModule: 'USERS',
+          targetRecordId: userId,
+          newValues: {
+            ...data,
+            phoneNumber: normalizedPhone,
+            email: normalizedEmail,
+          },
+        },
+      });
     });
 
     return this.getUserById(userId);
+  }
+
+  /**
+   * Resets a user's password securely, revoking active sessions.
+   */
+  static async resetUserPassword(userId, newPassword, actorUser) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new AppError('Utilisateur introuvable.', 404, 'USER_NOT_FOUND');
+    }
+
+    const plainPassword = newPassword && newPassword.trim().length >= 8
+      ? newPassword.trim()
+      : generateSecurePassword(14);
+
+    const passwordHash = await argon2.hash(plainPassword, {
+      type: argon2.argon2id,
+      memoryCost: 65536,
+      timeCost: 3,
+      parallelism: 4,
+    });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: { passwordHash },
+      });
+
+      // Invalidate existing refresh tokens so active stolen sessions are closed
+      await tx.refreshToken.deleteMany({ where: { userId } });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actorUser?.id || null,
+          action: 'USER_PASSWORD_RESET',
+          targetModule: 'USERS',
+          targetRecordId: userId,
+          reason: `Réinitialisation administrative par ${actorUser?.email || actorUser?.id}`,
+        },
+      });
+    });
+
+    logger.info('User password reset successfully', { userId, actorId: actorUser?.id });
+
+    return {
+      userId,
+      temporaryPassword: plainPassword,
+      message: 'Mot de passe réinitialisé avec succès. Les sessions actives précédentes ont été révoquées.',
+    };
   }
 
   /**
@@ -206,18 +393,18 @@ export class UsersService {
 
     if (isActive) {
       RevocationRegistry.reactivateUser(userId);
-      logger.info('User account reactivated by admin', { userId, actorId: actorUser.id });
+      logger.info('User account reactivated by admin', { userId, actorId: actorUser?.id });
     } else {
       RevocationRegistry.deactivateUser(userId);
       logger.warn('User account deactivated by admin - sessions invalidated', {
         userId,
-        actorId: actorUser.id,
+        actorId: actorUser?.id,
       });
     }
 
     await prisma.auditLog.create({
       data: {
-        actorId: actorUser.id,
+        actorId: actorUser?.id || null,
         action: isActive ? 'USER_ACCOUNT_REACTIVATED' : 'USER_ACCOUNT_DEACTIVATED',
         targetModule: 'USERS',
         targetRecordId: userId,
@@ -232,6 +419,21 @@ export class UsersService {
         ? 'Compte utilisateur réactivé avec succès.'
         : 'Compte utilisateur désactivé. Sessions actives immédiatement révoquées.',
     };
+  }
+
+  /**
+   * Lists official territorial communes of Conakry.
+   */
+  static async listCommunes() {
+    return prisma.commune.findMany({
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        description: true,
+      },
+      orderBy: { name: 'asc' },
+    });
   }
 }
 

@@ -6,6 +6,18 @@ import {
 } from './registration.schemas.js';
 
 export class RegistrationController {
+  static async checkDuplicates(req, res, next) {
+    try {
+      const result = await RegistrationService.checkDuplicates(req.query);
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   static async registerDriver(req, res, next) {
     try {
       const validatedData = registerDriverSchema.parse(req.body);
@@ -59,6 +71,27 @@ export class RegistrationController {
       const communeId = req.query.communeId || null;
 
       const result = await RegistrationService.listDrivers(
+        { page, limit, search, communeId },
+        req.user
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async listOwners(req, res, next) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 20;
+      const search = req.query.search || '';
+      const communeId = req.query.communeId || null;
+
+      const result = await RegistrationService.listOwners(
         { page, limit, search, communeId },
         req.user
       );

@@ -13,7 +13,7 @@ export class NotificationsController {
       try {
         auditLogs = await prisma.auditLog.findMany({
           take: 15,
-          orderBy: { createdAt: 'desc' },
+          orderBy: { timestamp: 'desc' },
         });
       } catch (e) {
         // Fallback for mocked dev testing

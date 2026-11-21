@@ -56,10 +56,23 @@ function verifyMagicBytes(buffer, declaredMime) {
 
 export class DocumentStorageService {
   /**
-   * Securely saves an uploaded file buffer to disk and registers it in the database.
+   * Validates file size, magic bytes, and optional expected SHA-256 hash before DB writes.
    */
-  static async storeFile({ fileBuffer, originalName, declaredMime, category, uploadedByUserId, personId = null, vehicleId = null }) {
-    // 1. Validate File Size
+  static validateFileBuffer({
+    fileBuffer,
+    declaredMime,
+    originalName = 'document',
+    expectedSha256 = null,
+    uploadedByUserId = null,
+  }) {
+    if (!fileBuffer || fileBuffer.length === 0) {
+      throw new AppError(
+        'Le fichier transmis est vide.',
+        400,
+        'EMPTY_FILE_BUFFER'
+      );
+    }
+
     if (fileBuffer.length > MAX_FILE_SIZE) {
       throw new AppError(
         'Le fichier dépasse la taille maximale autorisée de 5 Mo.',
@@ -68,7 +81,6 @@ export class DocumentStorageService {
       );
     }
 
-    // 2. Validate MIME & Magic Bytes
     const isAuthentic = verifyMagicBytes(fileBuffer, declaredMime);
     if (!isAuthentic) {
       logger.warn('File upload rejected: magic bytes mismatch', {
@@ -83,8 +95,48 @@ export class DocumentStorageService {
       );
     }
 
-    // 3. Compute SHA-256 Hash for Integrity & Deduplication
     const hash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+
+    if (
+      expectedSha256 &&
+      String(expectedSha256).trim().toLowerCase() !== hash
+    ) {
+      logger.warn('File upload rejected: SHA-256 integrity mismatch', {
+        originalName,
+        expectedSha256,
+        actualHash: hash,
+      });
+      throw new AppError(
+        'Intégrité du document compromise : l empreinte SHA-256 ne correspond pas au fichier transmis.',
+        400,
+        'DOCUMENT_INTEGRITY_MISMATCH'
+      );
+    }
+
+    return hash;
+  }
+
+  /**
+   * Securely saves an uploaded file buffer to disk and registers it in the database.
+   */
+  static async storeFile({
+    fileBuffer,
+    originalName,
+    declaredMime,
+    category,
+    uploadedByUserId,
+    personId = null,
+    vehicleId = null,
+    expectedSha256 = null,
+  }) {
+    // 1–3. Validate Size, Magic Bytes & SHA-256 Integrity
+    const hash = DocumentStorageService.validateFileBuffer({
+      fileBuffer,
+      declaredMime,
+      originalName,
+      expectedSha256,
+      uploadedByUserId,
+    });
 
     // 4. Generate Safe Server Filename
     const extension = path.extname(originalName).toLowerCase().replace(/[^a-z0-9]/g, '');

@@ -30,6 +30,7 @@ export interface UserContext {
   communeId: string | null;
   email?: string;
   phoneNumber?: string;
+  jobTitle?: string;
 }
 
 export interface MetricSummary {
