@@ -89,6 +89,8 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
   final _vehPlateCtrl = TextEditingController();
   final _vehCardCtrl = TextEditingController();
   final _vehVinCtrl = TextEditingController();
+  final _vehAtrCtrl = TextEditingController();
+  final _vehAotucLicCtrl = TextEditingController();
   String _vehType = 'TAXI_COLLECTIF';
   final _vehMakeCtrl = TextEditingController();
   final _vehModelCtrl = TextEditingController();
@@ -144,6 +146,8 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
     _vehPlateCtrl.dispose();
     _vehCardCtrl.dispose();
     _vehVinCtrl.dispose();
+    _vehAtrCtrl.dispose();
+    _vehAotucLicCtrl.dispose();
     _vehMakeCtrl.dispose();
     _vehModelCtrl.dispose();
     _vehYearCtrl.dispose();
@@ -436,6 +440,8 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
       'plateNumber': _vehPlateCtrl.text.trim().toUpperCase(),
       'registrationCardNumber': _vehCardCtrl.text.trim().toUpperCase(),
       'chassisVin': _vehVinCtrl.text.trim().toUpperCase(),
+      'atrNumber': _vehAtrCtrl.text.trim().isEmpty ? null : _vehAtrCtrl.text.trim().toUpperCase(),
+      'aotucLicenseNumber': _vehAotucLicCtrl.text.trim().isEmpty ? null : _vehAotucLicCtrl.text.trim().toUpperCase(),
       'vehicleType': _vehType,
       'make': _vehMakeCtrl.text.trim(),
       'model': _vehModelCtrl.text.trim(),
@@ -473,6 +479,8 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
           _vehPlateCtrl.clear();
           _vehCardCtrl.clear();
           _vehVinCtrl.clear();
+          _vehAtrCtrl.clear();
+          _vehAotucLicCtrl.clear();
           _vehMakeCtrl.clear();
           _vehModelCtrl.clear();
           _vehInspCertCtrl.clear();
@@ -1542,6 +1550,40 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
           ),
           const SizedBox(height: 10),
 
+          // Marque and Modèle at the top
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  key: const Key('vehicle_make_input'),
+                  controller: _vehMakeCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Marque *',
+                    hintText: 'Toyota',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                  validator: (v) => v == null || v.trim().length < 2 ? 'Requis' : null,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextFormField(
+                  key: const Key('vehicle_model_input'),
+                  controller: _vehModelCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Modèle *',
+                    hintText: 'HiAce',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                  validator: (v) => v == null || v.trim().isEmpty ? 'Requis' : null,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
           Row(
             children: [
               Expanded(
@@ -1615,33 +1657,32 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
           ),
           const SizedBox(height: 10),
 
+          // Distinct Numéro ATR and Numéro de licence AOTUC fields
           Row(
             children: [
               Expanded(
                 child: TextFormField(
-                  key: const Key('vehicle_make_input'),
-                  controller: _vehMakeCtrl,
+                  key: const Key('vehicle_atr_input'),
+                  controller: _vehAtrCtrl,
                   decoration: const InputDecoration(
-                    labelText: 'Marque *',
-                    hintText: 'Toyota',
+                    labelText: 'Numéro ATR',
+                    hintText: 'Autorisation Transporteur',
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   ),
-                  validator: (v) => v == null || v.trim().length < 2 ? 'Requis' : null,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: TextFormField(
-                  key: const Key('vehicle_model_input'),
-                  controller: _vehModelCtrl,
+                  key: const Key('vehicle_aotuc_lic_input'),
+                  controller: _vehAotucLicCtrl,
                   decoration: const InputDecoration(
-                    labelText: 'Modèle *',
-                    hintText: 'HiAce',
+                    labelText: 'Numéro de licence AOTUC',
+                    hintText: 'Licence AOTUC',
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   ),
-                  validator: (v) => v == null || v.trim().isEmpty ? 'Requis' : null,
                 ),
               ),
             ],

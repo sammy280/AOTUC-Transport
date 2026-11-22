@@ -71,4 +71,10 @@ router.get(
   RegistrationController.listVehicles
 );
 
+router.get(
+  '/vehicles/:id',
+  requirePermissions(PERMISSIONS.DRIVERS_READ),
+  RegistrationController.getVehicleById
+);
+
 export default router;

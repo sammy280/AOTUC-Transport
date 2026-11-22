@@ -298,6 +298,8 @@ model Vehicle {
   plateNumber            String        @unique @map("plate_number") // Plaque d'immatriculation (ex: RC-1234-A)
   registrationCardNumber String        @unique @map("registration_card_number") // Numéro carte grise
   chassisVin             String        @unique @map("chassis_vin") // Numéro de châssis / VIN
+  atrNumber              String?       @map("atr_number") // Numéro officiel d'autorisation du transporteur en Guinée (ATR)
+  aotucLicenseNumber     String?       @map("aotuc_license_number") // Numéro de licence AOTUC
   vehicleType            VehicleType   @map("vehicle_type")
   make                   String // Marque (ex: Toyota)
   model                  String // Modèle (ex: Corolla)
@@ -323,6 +325,8 @@ model Vehicle {
 
   @@index([plateNumber])
   @@index([chassisVin])
+  @@index([atrNumber])
+  @@index([aotucLicenseNumber])
   @@index([status])
   @@index([ownerId])
   @@map("vehicles")

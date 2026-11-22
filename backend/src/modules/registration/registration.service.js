@@ -99,6 +99,8 @@ export class RegistrationService {
       ? String(query.registrationCardNumber).trim().toUpperCase()
       : null;
     const cleanVin = query.chassisVin ? String(query.chassisVin).trim().toUpperCase() : null;
+    const cleanAtr = query.atrNumber ? String(query.atrNumber).trim().toUpperCase() : null;
+    const cleanAotucLic = query.aotucLicenseNumber ? String(query.aotucLicenseNumber).trim().toUpperCase() : null;
 
     if (cleanNin || cleanPhone) {
       const person = await prisma.person.findFirst({
@@ -138,13 +140,15 @@ export class RegistrationService {
       }
     }
 
-    if (cleanPlate || cleanCard || cleanVin) {
+    if (cleanPlate || cleanCard || cleanVin || cleanAtr || cleanAotucLic) {
       const vehicle = await prisma.vehicle.findFirst({
         where: {
           OR: [
             ...(cleanPlate ? [{ plateNumber: cleanPlate }] : []),
             ...(cleanCard ? [{ registrationCardNumber: cleanCard }] : []),
             ...(cleanVin ? [{ chassisVin: cleanVin }] : []),
+            ...(cleanAtr ? [{ atrNumber: cleanAtr }] : []),
+            ...(cleanAotucLic ? [{ aotucLicenseNumber: cleanAotucLic }] : []),
           ],
         },
         include: { owner: { include: { person: true } } },
@@ -514,6 +518,8 @@ export class RegistrationService {
     const cleanedPlate = data.plateNumber.trim().toUpperCase();
     const cleanedCard = data.registrationCardNumber.trim().toUpperCase();
     const cleanedVin = data.chassisVin.trim().toUpperCase();
+    const cleanedAtr = data.atrNumber && data.atrNumber.trim() ? data.atrNumber.trim().toUpperCase() : null;
+    const cleanedAotucLicense = data.aotucLicenseNumber && data.aotucLicenseNumber.trim() ? data.aotucLicenseNumber.trim().toUpperCase() : null;
 
     // 0. Pre-validate any inline documents before DB writes
     validateInlineDocuments(data.documents, actorUser.id);
@@ -542,17 +548,37 @@ export class RegistrationService {
     }
 
     // 3. Duplicate checks
+    const orConditions = [
+      { plateNumber: cleanedPlate },
+      { registrationCardNumber: cleanedCard },
+      { chassisVin: cleanedVin },
+    ];
+    if (cleanedAtr) {
+      orConditions.push({ atrNumber: cleanedAtr });
+    }
+    if (cleanedAotucLicense) {
+      orConditions.push({ aotucLicenseNumber: cleanedAotucLicense });
+    }
+
     const existingVehicle = await prisma.vehicle.findFirst({
-      where: {
-        OR: [
-          { plateNumber: cleanedPlate },
-          { registrationCardNumber: cleanedCard },
-          { chassisVin: cleanedVin },
-        ],
-      },
+      where: { OR: orConditions },
     });
 
     if (existingVehicle) {
+      if (cleanedAtr && existingVehicle.atrNumber === cleanedAtr) {
+        throw new AppError(
+          `Un véhicule avec ce numéro ATR (${cleanedAtr}) est déjà enregistré.`,
+          409,
+          'VEHICLE_ATR_ALREADY_EXISTS'
+        );
+      }
+      if (cleanedAotucLicense && existingVehicle.aotucLicenseNumber === cleanedAotucLicense) {
+        throw new AppError(
+          `Un véhicule avec ce numéro de licence AOTUC (${cleanedAotucLicense}) est déjà enregistré.`,
+          409,
+          'VEHICLE_AOTUC_LICENCE_ALREADY_EXISTS'
+        );
+      }
       throw new AppError(
         'Un véhicule avec cette immatriculation, carte grise ou numéro de châssis est déjà enregistré.',
         409,
@@ -578,6 +604,8 @@ export class RegistrationService {
         plateNumber: cleanedPlate,
         registrationCardNumber: cleanedCard,
         chassisVin: cleanedVin,
+        atrNumber: cleanedAtr,
+        aotucLicenseNumber: cleanedAotucLicense,
         vehicleType: data.vehicleType,
         make: data.make.trim(),
         model: data.model.trim(),
@@ -662,6 +690,8 @@ export class RegistrationService {
         newValues: {
           plateNumber: cleanedPlate,
           chassisVin: cleanedVin,
+          atrNumber: cleanedAtr,
+          aotucLicenseNumber: cleanedAotucLicense,
           latitude: hasGps ? Number(data.latitude) : null,
           longitude: hasGps ? Number(data.longitude) : null,
         },
@@ -836,6 +866,8 @@ export class RegistrationService {
               { plateNumber: { contains: search, mode: 'insensitive' } },
               { registrationCardNumber: { contains: search, mode: 'insensitive' } },
               { chassisVin: { contains: search, mode: 'insensitive' } },
+              { atrNumber: { contains: search, mode: 'insensitive' } },
+              { aotucLicenseNumber: { contains: search, mode: 'insensitive' } },
               { make: { contains: search, mode: 'insensitive' } },
               { model: { contains: search, mode: 'insensitive' } },
             ],
@@ -870,6 +902,51 @@ export class RegistrationService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  /**
+   * Get single Vehicle by ID with full details & documents
+   */
+  static async getVehicleById(id, actorUser) {
+    const vehicle = await prisma.vehicle.findUnique({
+      where: { id },
+      include: {
+        owner: { include: { person: { include: { commune: true } } } },
+        documents: true,
+        assignments: {
+          where: { isActive: true },
+          include: { driver: { include: { person: true } }, transportLine: true },
+        },
+        inspections: {
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+        },
+      },
+    });
+
+    if (!vehicle) {
+      throw new AppError('Véhicule introuvable.', 404, 'VEHICLE_NOT_FOUND');
+    }
+
+    if (
+      actorUser &&
+      actorUser.communeId &&
+      vehicle.owner?.person?.communeId &&
+      actorUser.communeId !== vehicle.owner.person.communeId
+    ) {
+      const isPrivileged =
+        Array.isArray(actorUser.roles) &&
+        (actorUser.roles.includes('SUPER_ADMIN') || actorUser.roles.includes('DIRECTOR'));
+      if (!isPrivileged) {
+        throw new AppError(
+          'Accès refusé. Ce véhicule relève d une autre commune.',
+          403,
+          'FORBIDDEN_COMMUNE_SCOPE'
+        );
+      }
+    }
+
+    return vehicle;
   }
 
   /**

@@ -140,6 +140,18 @@ export class RegistrationController {
     }
   }
 
+  static async getVehicleById(req, res, next) {
+    try {
+      const vehicle = await RegistrationService.getVehicleById(req.params.id, req.user);
+      return res.status(200).json({
+        success: true,
+        data: vehicle,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   static async updateDriver(req, res, next) {
     try {
       const validatedData = updateDriverSchema.parse(req.body);

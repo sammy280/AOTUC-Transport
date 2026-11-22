@@ -86,6 +86,8 @@ interface VehicleRecord {
   plateNumber: string;
   registrationCardNumber: string;
   chassisVin: string;
+  atrNumber?: string | null;
+  aotucLicenseNumber?: string | null;
   vehicleType: string;
   make: string;
   model: string;
@@ -93,6 +95,7 @@ interface VehicleRecord {
   seatingCapacity?: number | null;
   status: string;
   createdAt: string;
+  documents?: DocumentItem[];
   owner?: {
     id: string;
     ownerType: string;
@@ -152,6 +155,11 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
   const [selectedDriverLicenceVersoUrl, setSelectedDriverLicenceVersoUrl] = useState<string | null>(null);
   const [selectedDriverCniUrl, setSelectedDriverCniUrl] = useState<string | null>(null);
 
+  // Vehicle Details Modal state
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleRecord | null>(null);
+  const [selectedVehicleCarteGriseUrl, setSelectedVehicleCarteGriseUrl] = useState<string | null>(null);
+  const [selectedVehiclePhotoUrl, setSelectedVehiclePhotoUrl] = useState<string | null>(null);
+
   // Driver Form State
   const [driverFirstName, setDriverFirstName] = useState('');
   const [driverLastName, setDriverLastName] = useState('');
@@ -168,8 +176,8 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
   const [driverUnionId, setDriverUnionId] = useState<string>('');
   const [availableUnions, setAvailableUnions] = useState<Array<{ id: string; code: string; name: string }>>([]);
 
-  // Camera Target: 'portrait' | 'licence_recto' | 'licence_verso'
-  type CameraTarget = 'portrait' | 'licence_recto' | 'licence_verso';
+  // Camera Target: 'portrait' | 'licence_recto' | 'licence_verso' | 'carte_grise' | 'photo_vehicule'
+  type CameraTarget = 'portrait' | 'licence_recto' | 'licence_verso' | 'carte_grise' | 'photo_vehicule';
   const [cameraTarget, setCameraTarget] = useState<CameraTarget | null>(null);
 
   // Driver Photograph (Portrait)
@@ -191,6 +199,15 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
   const [cniDocName, setCniDocName] = useState<string>('');
   const [cniDocMime, setCniDocMime] = useState<string>('image/jpeg');
 
+  // Vehicle Documents: Carte Grise & Photo Véhicule
+  const [carteGriseBase64, setCarteGriseBase64] = useState<string | null>(null);
+  const [carteGriseName, setCarteGriseName] = useState<string>('carte_grise.jpg');
+  const [carteGriseMime, setCarteGriseMime] = useState<string>('image/jpeg');
+
+  const [photoVehiculeBase64, setPhotoVehiculeBase64] = useState<string | null>(null);
+  const [photoVehiculeName, setPhotoVehiculeName] = useState<string>('photo_vehicule.jpg');
+  const [photoVehiculeMime, setPhotoVehiculeMime] = useState<string>('image/jpeg');
+
   const [isCameraOpen, setIsCameraOpen] = useState<boolean>(false);
   const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
   const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('user');
@@ -206,6 +223,12 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
 
   const licenceVersoFileInputRef = useRef<HTMLInputElement | null>(null);
   const mobileCameraLicenceVersoRef = useRef<HTMLInputElement | null>(null);
+
+  const carteGriseFileInputRef = useRef<HTMLInputElement | null>(null);
+  const mobileCameraCarteGriseRef = useRef<HTMLInputElement | null>(null);
+
+  const photoVehiculeFileInputRef = useRef<HTMLInputElement | null>(null);
+  const mobileCameraPhotoVehiculeRef = useRef<HTMLInputElement | null>(null);
 
   const cniFileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -223,6 +246,8 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
   const [vehiclePlate, setVehiclePlate] = useState('');
   const [vehicleRegistrationCard, setVehicleRegistrationCard] = useState('');
   const [vehicleVin, setVehicleVin] = useState('');
+  const [vehicleAtrNumber, setVehicleAtrNumber] = useState('');
+  const [vehicleAotucLicenseNumber, setVehicleAotucLicenseNumber] = useState('');
   const [vehicleMake, setVehicleMake] = useState('');
   const [vehicleModel, setVehicleModel] = useState('');
   const [vehicleYear, setVehicleYear] = useState<string>('2022');
@@ -414,6 +439,14 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
       setLicenceVersoBase64(dataUrl);
       setLicenceVersoName(`permis_verso_${Date.now()}.jpg`);
       setLicenceVersoMime('image/jpeg');
+    } else if (cameraTarget === 'carte_grise') {
+      setCarteGriseBase64(dataUrl);
+      setCarteGriseName(`carte_grise_${Date.now()}.jpg`);
+      setCarteGriseMime('image/jpeg');
+    } else if (cameraTarget === 'photo_vehicule') {
+      setPhotoVehiculeBase64(dataUrl);
+      setPhotoVehiculeName(`photo_vehicule_${Date.now()}.jpg`);
+      setPhotoVehiculeMime('image/jpeg');
     }
 
     stopCameraStream();
@@ -511,6 +544,102 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleCarteGriseFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCameraError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'].includes(file.type)) {
+      setCameraError('Format non autorisé. Veuillez sélectionner une image JPEG/PNG ou un PDF.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setCameraError('Le document dépasse la taille maximale autorisée (5 Mo).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setCarteGriseBase64(reader.result);
+        setCarteGriseName(file.name);
+        setCarteGriseMime(file.type || 'image/jpeg');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePhotoVehiculeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCameraError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
+      setCameraError('Format non autorisé. Veuillez sélectionner une image JPEG ou PNG.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setCameraError('La photo dépasse la taille maximale autorisée (5 Mo).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setPhotoVehiculeBase64(reader.result);
+        setPhotoVehiculeName(file.name);
+        setPhotoVehiculeMime(file.type || 'image/jpeg');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleOpenVehicleDetails = async (vehicle: VehicleRecord) => {
+    setSelectedVehicle(vehicle);
+    setSelectedVehicleCarteGriseUrl(null);
+    setSelectedVehiclePhotoUrl(null);
+
+    const allDocs = vehicle.documents || [];
+    const token = getStoredAuthToken();
+    if (!token || allDocs.length === 0) return;
+
+    const fetchDocBlobUrl = async (docId: string) => {
+      try {
+        const res = await fetch(buildApiUrl(`/api/v1/documents/${docId}/stream`), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const blob = await res.blob();
+          return URL.createObjectURL(blob);
+        }
+      } catch (_) {}
+      return null;
+    };
+
+    const cgDoc = allDocs.find((d) => d.category === 'CARTE_GRISE');
+    if (cgDoc) {
+      fetchDocBlobUrl(cgDoc.id).then((url) => {
+        if (url) setSelectedVehicleCarteGriseUrl(url);
+      });
+    }
+
+    const photoDoc = allDocs.find((d) => d.category === 'PHOTO_VEHICULE_AVANT' || d.category === 'AUTRE');
+    if (photoDoc) {
+      fetchDocBlobUrl(photoDoc.id).then((url) => {
+        if (url) setSelectedVehiclePhotoUrl(url);
+      });
+    }
+  };
+
+  const handleCloseVehicleDetails = () => {
+    if (selectedVehicleCarteGriseUrl) URL.revokeObjectURL(selectedVehicleCarteGriseUrl);
+    if (selectedVehiclePhotoUrl) URL.revokeObjectURL(selectedVehiclePhotoUrl);
+
+    setSelectedVehicle(null);
+    setSelectedVehicleCarteGriseUrl(null);
+    setSelectedVehiclePhotoUrl(null);
   };
 
   const handleOpenDriverDetails = async (driver: DriverRecord) => {
@@ -822,6 +951,31 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
         throw new Error('Veuillez sélectionner ou créer un propriétaire légal pour ce véhicule.');
       }
 
+      const vehicleDocs: Array<{
+        category: string;
+        originalName: string;
+        mimeType: string;
+        base64Data: string;
+      }> = [];
+
+      if (carteGriseBase64) {
+        vehicleDocs.push({
+          category: 'CARTE_GRISE',
+          originalName: carteGriseName || 'carte_grise.jpg',
+          mimeType: carteGriseMime || 'image/jpeg',
+          base64Data: carteGriseBase64,
+        });
+      }
+
+      if (photoVehiculeBase64) {
+        vehicleDocs.push({
+          category: 'PHOTO_VEHICULE_AVANT',
+          originalName: photoVehiculeName || 'photo_vehicule.jpg',
+          mimeType: photoVehiculeMime || 'image/jpeg',
+          base64Data: photoVehiculeBase64,
+        });
+      }
+
       const response = await fetch(buildApiUrl('/api/v1/registration/vehicles'), {
         method: 'POST',
         headers: {
@@ -834,12 +988,15 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
           plateNumber: cleanedPlate,
           registrationCardNumber: cleanedCard,
           chassisVin: cleanedVin,
+          atrNumber: vehicleAtrNumber.trim() || null,
+          aotucLicenseNumber: vehicleAotucLicenseNumber.trim() || null,
           vehicleType,
           make: cleanedMake,
           model: cleanedModel,
           year: vehicleYear ? Number(vehicleYear) : null,
           seatingCapacity: vehicleCapacity ? Number(vehicleCapacity) : null,
           commune: isCommuneLocked ? lockedCommune : vehicleCommune,
+          documents: vehicleDocs,
         }),
       });
 
@@ -861,9 +1018,13 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
       setVehiclePlate('');
       setVehicleRegistrationCard('');
       setVehicleVin('');
+      setVehicleAtrNumber('');
+      setVehicleAotucLicenseNumber('');
       setVehicleMake('');
       setVehicleModel('');
       setVehicleDriverId('');
+      setCarteGriseBase64(null);
+      setPhotoVehiculeBase64(null);
       setNewOwnerFirstName('');
       setNewOwnerLastName('');
       setNewOwnerNin('');
@@ -913,6 +1074,8 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
     const plate = (v.plateNumber || '').toLowerCase();
     const vin = (v.chassisVin || '').toLowerCase();
     const card = (v.registrationCardNumber || '').toLowerCase();
+    const atr = (v.atrNumber || '').toLowerCase();
+    const aotucLic = (v.aotucLicenseNumber || '').toLowerCase();
     const makeModel = `${v.make || ''} ${v.model || ''}`.toLowerCase();
     const ownerName = `${v.owner?.person?.firstName || ''} ${v.owner?.person?.lastName || ''} ${v.owner?.businessName || ''}`
       .trim()
@@ -924,6 +1087,8 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
       plate.includes(q) ||
       vin.includes(q) ||
       card.includes(q) ||
+      atr.includes(q) ||
+      aotucLic.includes(q) ||
       makeModel.includes(q) ||
       ownerName.includes(q);
 
@@ -1682,6 +1847,36 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
           ) : (
             /* Vehicle Form */
             <form onSubmit={handleRegisterVehicle} className="p-6 space-y-4">
+              {/* Marque and Modèle at the top */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Marque du Véhicule *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={vehicleMake}
+                    onChange={(e) => setVehicleMake(e.target.value)}
+                    placeholder="Ex: Toyota"
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Modèle *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={vehicleModel}
+                    onChange={(e) => setVehicleModel(e.target.value)}
+                    placeholder="Ex: HiAce / Corolla"
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
@@ -1743,32 +1938,37 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Dedicated Identifiers: Numéro ATR and Numéro de licence AOTUC */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-xl bg-amber-50/60 border border-amber-200">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Marque du Véhicule *
+                  <label className="block text-xs font-extrabold text-amber-900 uppercase mb-1">
+                    Numéro ATR
                   </label>
                   <input
                     type="text"
-                    required
-                    value={vehicleMake}
-                    onChange={(e) => setVehicleMake(e.target.value)}
-                    placeholder="Ex: Toyota"
-                    className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                    value={vehicleAtrNumber}
+                    onChange={(e) => setVehicleAtrNumber(e.target.value)}
+                    placeholder="Ex: ATR-GN-2026-001"
+                    className="w-full px-3 py-2 border border-amber-300 bg-white rounded-lg text-xs font-mono uppercase focus:ring-2 focus:ring-emerald-600 focus:outline-none"
                   />
+                  <span className="text-[10px] text-amber-800/80 mt-0.5 block">
+                    Numéro officiel d'autorisation du transporteur en Guinée
+                  </span>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Modèle *
+                  <label className="block text-xs font-extrabold text-emerald-900 uppercase mb-1">
+                    Numéro de licence AOTUC
                   </label>
                   <input
                     type="text"
-                    required
-                    value={vehicleModel}
-                    onChange={(e) => setVehicleModel(e.target.value)}
-                    placeholder="Ex: HiAce / Corolla"
-                    className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                    value={vehicleAotucLicenseNumber}
+                    onChange={(e) => setVehicleAotucLicenseNumber(e.target.value)}
+                    placeholder="Ex: AOTUC-LIC-2026-001"
+                    className="w-full px-3 py-2 border border-emerald-300 bg-white rounded-lg text-xs font-mono uppercase focus:ring-2 focus:ring-emerald-600 focus:outline-none"
                   />
+                  <span className="text-[10px] text-emerald-800/80 mt-0.5 block">
+                    Numéro de licence d'exploitation AOTUC
+                  </span>
                 </div>
               </div>
 
@@ -1968,6 +2168,195 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                 </select>
               </div>
 
+              {/* Photographies & Documents Numérisés du Véhicule */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center">
+                    <Camera className="w-4 h-4 mr-1.5 text-emerald-700" />
+                    Numérisation Documents Véhicule
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-semibold">Caméra ou Téléversement</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Carte Grise */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700">Carte Grise</span>
+                      {carteGriseBase64 && (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                          ✓ Capturé
+                        </span>
+                      )}
+                    </div>
+
+                    {carteGriseBase64 ? (
+                      <div className="space-y-2">
+                        <div className="relative rounded-lg overflow-hidden border border-slate-200 aspect-[16/10] bg-slate-100">
+                          <img
+                            src={carteGriseBase64}
+                            alt="Aperçu Carte Grise"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between gap-1 text-[11px]">
+                          <button
+                            type="button"
+                            onClick={() => handleStartCamera('carte_grise', 'environment')}
+                            className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded font-bold flex items-center space-x-1"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            <span>Reprendre</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => carteGriseFileInputRef.current?.click()}
+                            className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-bold"
+                          >
+                            Remplacer
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCarteGriseBase64(null)}
+                            className="px-2 py-1 text-red-600 hover:bg-red-50 rounded font-bold"
+                          >
+                            Supprimer
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="rounded-lg border border-dashed border-slate-300 aspect-[16/10] flex flex-col items-center justify-center p-3 text-center text-slate-400 bg-slate-50">
+                          <FileText className="w-6 h-6 mb-1 text-slate-300" />
+                          <span className="text-[10px] font-medium">Photo Carte Grise</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleStartCamera('carte_grise', 'environment')}
+                            className="py-1.5 px-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center space-x-1"
+                          >
+                            <Camera className="w-3.5 h-3.5" />
+                            <span>Photo CG</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => carteGriseFileInputRef.current?.click()}
+                            className="py-1.5 px-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold flex items-center justify-center space-x-1"
+                          >
+                            <Upload className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Fichier</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <input
+                      ref={carteGriseFileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,application/pdf"
+                      onChange={handleCarteGriseFileChange}
+                      className="hidden"
+                    />
+                    <input
+                      ref={mobileCameraCarteGriseRef}
+                      type="file"
+                      accept="image/jpeg,image/png"
+                      capture="environment"
+                      onChange={handleCarteGriseFileChange}
+                      className="hidden"
+                    />
+                  </div>
+
+                  {/* Photo Véhicule */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700">Photo Véhicule</span>
+                      {photoVehiculeBase64 && (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                          ✓ Capturé
+                        </span>
+                      )}
+                    </div>
+
+                    {photoVehiculeBase64 ? (
+                      <div className="space-y-2">
+                        <div className="relative rounded-lg overflow-hidden border border-slate-200 aspect-[16/10] bg-slate-100">
+                          <img
+                            src={photoVehiculeBase64}
+                            alt="Aperçu Photo Véhicule"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between gap-1 text-[11px]">
+                          <button
+                            type="button"
+                            onClick={() => handleStartCamera('photo_vehicule', 'environment')}
+                            className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded font-bold flex items-center space-x-1"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            <span>Reprendre</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => photoVehiculeFileInputRef.current?.click()}
+                            className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-bold"
+                          >
+                            Remplacer
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPhotoVehiculeBase64(null)}
+                            className="px-2 py-1 text-red-600 hover:bg-red-50 rounded font-bold"
+                          >
+                            Supprimer
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="rounded-lg border border-dashed border-slate-300 aspect-[16/10] flex flex-col items-center justify-center p-3 text-center text-slate-400 bg-slate-50">
+                          <Camera className="w-6 h-6 mb-1 text-slate-300" />
+                          <span className="text-[10px] font-medium">Photo du Véhicule</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleStartCamera('photo_vehicule', 'environment')}
+                            className="py-1.5 px-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center space-x-1"
+                          >
+                            <Camera className="w-3.5 h-3.5" />
+                            <span>Photo Auto</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => photoVehiculeFileInputRef.current?.click()}
+                            className="py-1.5 px-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold flex items-center justify-center space-x-1"
+                          >
+                            <Upload className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Fichier</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <input
+                      ref={photoVehiculeFileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,application/pdf"
+                      onChange={handlePhotoVehiculeFileChange}
+                      className="hidden"
+                    />
+                    <input
+                      ref={mobileCameraPhotoVehiculeRef}
+                      type="file"
+                      accept="image/jpeg,image/png"
+                      capture="environment"
+                      onChange={handlePhotoVehiculeFileChange}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={isSubmitting}
@@ -2140,10 +2529,11 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase border-b border-slate-200">
-                    <th className="py-3 px-4">Plaque / Châssis (VIN)</th>
+                    <th className="py-3 px-4">Plaque / Châssis / Identifiants</th>
                     <th className="py-3 px-4">Véhicule / Type</th>
                     <th className="py-3 px-4">Propriétaire & Chauffeur</th>
                     <th className="py-3 px-4">Statut</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 text-sm">
@@ -2157,6 +2547,20 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                           </div>
                           <div className="text-[11px] text-slate-400 font-mono mt-0.5">
                             VIN: {v.chassisVin} • CG: {v.registrationCardNumber}
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {v.atrNumber ? (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-50 text-amber-900 border border-amber-300" title="Numéro officiel d'autorisation du transporteur en Guinée">
+                                ATR: {v.atrNumber}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 italic">Sans ATR</span>
+                            )}
+                            {v.aotucLicenseNumber && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-50 text-emerald-900 border border-emerald-300" title="Numéro de licence d'exploitation AOTUC">
+                                LIC: {v.aotucLicenseNumber}
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="py-3.5 px-4">
@@ -2186,6 +2590,16 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                           )}
                         </td>
                         <td className="py-3.5 px-4">{renderStatusBadge(v.status)}</td>
+                        <td className="py-3.5 px-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenVehicleDetails(v)}
+                            className="inline-flex items-center text-xs font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1" />
+                            Consulter
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -2435,6 +2849,242 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                 <button
                   type="button"
                   onClick={handleCloseDriverDetails}
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg"
+                >
+                  Fermer la fiche
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Vehicle Details / Profile Modal */}
+      {selectedVehicle && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">
+                  Fiche Officielle Véhicule • PostgreSQL
+                </span>
+                <h4 className="text-base font-extrabold">
+                  {selectedVehicle.make} {selectedVehicle.model} — {selectedVehicle.plateNumber}
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseVehicleDetails}
+                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto">
+              {/* Top Overview Row */}
+              <div className="flex items-center space-x-4">
+                {selectedVehiclePhotoUrl ? (
+                  <img
+                    src={selectedVehiclePhotoUrl}
+                    alt="Photo du véhicule"
+                    className="w-24 h-24 rounded-xl object-cover border-2 border-emerald-500 shadow-sm shrink-0"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-xl bg-slate-100 border border-slate-300 flex flex-col items-center justify-center text-slate-500 shrink-0">
+                    <Car className="w-7 h-7 mb-1 text-slate-400" />
+                    <span className="text-[10px] font-bold">Sans photo</span>
+                  </div>
+                )}
+
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <div className="flex items-center space-x-2">
+                    {renderStatusBadge(selectedVehicle.status)}
+                    <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                      {VEHICLE_TYPE_LABELS[selectedVehicle.vehicleType] || selectedVehicle.vehicleType}
+                    </span>
+                  </div>
+                  <div className="text-xs font-mono text-slate-600">
+                    <strong>Plaque :</strong> {selectedVehicle.plateNumber}
+                  </div>
+                  <div className="text-xs font-mono text-slate-700 truncate">
+                    <strong>VIN :</strong> {selectedVehicle.chassisVin}
+                  </div>
+                  <div className="text-xs font-mono text-slate-600 truncate">
+                    <strong>Carte Grise :</strong> {selectedVehicle.registrationCardNumber}
+                  </div>
+                </div>
+              </div>
+
+              {/* Dedicated Identifiers: Numéro ATR vs Numéro de licence AOTUC */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200">
+                  <span className="text-[10px] font-extrabold uppercase text-amber-900 block flex items-center">
+                    <Shield className="w-3 h-3 mr-1 text-amber-700" />
+                    Numéro ATR
+                  </span>
+                  <p className="text-sm font-extrabold text-amber-950 mt-1 font-mono">
+                    {selectedVehicle.atrNumber || (
+                      <span className="text-xs font-normal italic text-slate-400">Non renseigné</span>
+                    )}
+                  </p>
+                  <p className="text-[10px] text-amber-800/80 mt-0.5">
+                    Autorisation officielle de transporteur en Guinée
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200">
+                  <span className="text-[10px] font-extrabold uppercase text-emerald-900 block flex items-center">
+                    <BadgeCheck className="w-3 h-3 mr-1 text-emerald-700" />
+                    Numéro Licence AOTUC
+                  </span>
+                  <p className="text-sm font-extrabold text-emerald-950 mt-1 font-mono">
+                    {selectedVehicle.aotucLicenseNumber || (
+                      <span className="text-xs font-normal italic text-slate-400">Non renseigné</span>
+                    )}
+                  </p>
+                  <p className="text-[10px] text-emerald-800/80 mt-0.5">
+                    Licence officielle d'exploitation AOTUC
+                  </p>
+                </div>
+              </div>
+
+              {/* Technical Attributes */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <span className="text-slate-400 font-bold block">Marque / Modèle</span>
+                  <span className="font-bold text-slate-800">{selectedVehicle.make} {selectedVehicle.model}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-bold block">Année</span>
+                  <span className="font-bold text-slate-800">{selectedVehicle.year || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-bold block">Capacité</span>
+                  <span className="font-bold text-slate-800">
+                    {selectedVehicle.seatingCapacity ? `${selectedVehicle.seatingCapacity} places` : 'N/A'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Legal Owner & Driver */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+                <div>
+                  <span className="text-slate-400 font-bold block">Propriétaire Légal</span>
+                  <span className="font-semibold text-slate-800">
+                    {selectedVehicle.owner?.person?.firstName} {selectedVehicle.owner?.person?.lastName}
+                    {selectedVehicle.owner?.businessName ? ` (${selectedVehicle.owner.businessName})` : ''}
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-mono block">
+                    NIN: {selectedVehicle.owner?.person?.nin} • Tél: {selectedVehicle.owner?.person?.phoneNumber}
+                  </span>
+                </div>
+                {selectedVehicle.assignments?.[0]?.driver && (
+                  <div className="pt-2 border-t border-slate-200">
+                    <span className="text-slate-400 font-bold block">Chauffeur Titulaire Assigné</span>
+                    <span className="font-semibold text-emerald-800 flex items-center">
+                      <UserCheck className="w-3 h-3 mr-1" />
+                      {selectedVehicle.assignments[0].driver.person?.firstName}{' '}
+                      {selectedVehicle.assignments[0].driver.person?.lastName}
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-mono block">
+                      Permis: {selectedVehicle.assignments[0].driver.drivingLicenseNumber}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Digitized Vehicle Documents */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase text-slate-500 flex items-center">
+                    <FileText className="w-3.5 h-3.5 mr-1 text-emerald-700" />
+                    Documents Officiels Numérisés
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-semibold">
+                    Stockage Sécurisé PostgreSQL & Disque
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Carte Grise */}
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] font-bold text-slate-700">Carte Grise</span>
+                      {selectedVehicleCarteGriseUrl && (
+                        <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded">
+                          ✓ Vérifié
+                        </span>
+                      )}
+                    </div>
+                    {selectedVehicleCarteGriseUrl ? (
+                      <div className="relative group rounded-lg overflow-hidden border border-slate-200 aspect-[16/10] bg-slate-100">
+                        <img
+                          src={selectedVehicleCarteGriseUrl}
+                          alt="Carte Grise du véhicule"
+                          className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
+                          onClick={() => window.open(selectedVehicleCarteGriseUrl, '_blank')}
+                        />
+                        <a
+                          href={selectedVehicleCarteGriseUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="absolute bottom-1.5 right-1.5 px-2 py-0.5 bg-slate-900/80 hover:bg-slate-900 text-white text-[10px] font-bold rounded flex items-center space-x-1"
+                        >
+                          <ExternalLink className="w-2.5 h-2.5" />
+                          <span>Plein écran</span>
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-dashed border-slate-300 aspect-[16/10] flex flex-col items-center justify-center text-slate-400 p-3 text-center">
+                        <FileText className="w-6 h-6 mb-1 text-slate-300" />
+                        <span className="text-[11px] font-medium">Aucun scan carte grise</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Photo Véhicule */}
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] font-bold text-slate-700">Photo du Véhicule</span>
+                      {selectedVehiclePhotoUrl && (
+                        <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded">
+                          ✓ Vérifié
+                        </span>
+                      )}
+                    </div>
+                    {selectedVehiclePhotoUrl ? (
+                      <div className="relative group rounded-lg overflow-hidden border border-slate-200 aspect-[16/10] bg-slate-100">
+                        <img
+                          src={selectedVehiclePhotoUrl}
+                          alt="Photographie du véhicule"
+                          className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
+                          onClick={() => window.open(selectedVehiclePhotoUrl, '_blank')}
+                        />
+                        <a
+                          href={selectedVehiclePhotoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="absolute bottom-1.5 right-1.5 px-2 py-0.5 bg-slate-900/80 hover:bg-slate-900 text-white text-[10px] font-bold rounded flex items-center space-x-1"
+                        >
+                          <ExternalLink className="w-2.5 h-2.5" />
+                          <span>Plein écran</span>
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-dashed border-slate-300 aspect-[16/10] flex flex-col items-center justify-center text-slate-400 p-3 text-center">
+                        <Camera className="w-6 h-6 mb-1 text-slate-300" />
+                        <span className="text-[11px] font-medium">Aucune photo véhicule</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={handleCloseVehicleDetails}
                   className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg"
                 >
                   Fermer la fiche

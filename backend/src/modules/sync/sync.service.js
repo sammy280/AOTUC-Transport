@@ -809,6 +809,9 @@ export class SyncService {
             }
           }
 
+          const cleanedAtr = payload.atrNumber && payload.atrNumber.trim() ? payload.atrNumber.trim().toUpperCase() : null;
+          const cleanedAotucLicense = payload.aotucLicenseNumber && payload.aotucLicenseNumber.trim() ? payload.aotucLicenseNumber.trim().toUpperCase() : null;
+
           const createdVehicle = await prisma.$transaction(async (tx) => {
             const vehicle = await tx.vehicle.create({
               data: {
@@ -816,6 +819,8 @@ export class SyncService {
                 plateNumber: cleanedPlate,
                 registrationCardNumber: cleanedCard,
                 chassisVin: cleanedVin,
+                atrNumber: cleanedAtr,
+                aotucLicenseNumber: cleanedAotucLicense,
                 vehicleType: payload.vehicleType,
                 make: payload.make.trim(),
                 model: payload.model.trim(),

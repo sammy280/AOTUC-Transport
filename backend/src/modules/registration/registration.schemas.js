@@ -125,6 +125,8 @@ export const registerVehicleSchema = z.object({
   plateNumber: z.string().min(4, 'Le numéro d immatriculation est obligatoire.'),
   registrationCardNumber: z.string().min(4, 'Le numéro de carte grise est obligatoire.'),
   chassisVin: z.string().min(6, 'Le numéro de châssis (VIN) est obligatoire.'),
+  atrNumber: z.string().max(80, 'Numéro ATR trop long.').optional().nullable().transform((v) => (v && v.trim() ? v.trim() : null)),
+  aotucLicenseNumber: z.string().max(80, 'Numéro de licence AOTUC trop long.').optional().nullable().transform((v) => (v && v.trim() ? v.trim() : null)),
   vehicleType: z.enum(['TAXI_COLLECTIF', 'MAGBANA_MINIBUS', 'BUS_URBAIN', 'MOTOTAXI', 'AUTRE']),
   make: z.string().min(2, 'La marque du véhicule est obligatoire.'),
   model: z.string().min(1, 'Le modèle du véhicule est obligatoire.'),
