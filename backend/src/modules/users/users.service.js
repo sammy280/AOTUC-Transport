@@ -67,6 +67,20 @@ const SLUG_TO_COMMUNE_CODE = {
   'CM-MATOTO': 'MTT',
   'COMM-KSS': 'KSS',
   'CM-KASSA': 'KSS',
+  'COMM-GBS': 'GBS',
+  'CM-GBESSIA': 'GBS',
+  'COMM-TMB': 'TMB',
+  'CM-TOMBOLIA': 'TMB',
+  'COMM-LBN': 'LBN',
+  'CM-LAMBANYI': 'LBN',
+  'COMM-SNF': 'SNF',
+  'CM-SONFONIA': 'SNF',
+  'COMM-KGB': 'KGB',
+  'CM-KAGBELEN': 'KGB',
+  'COMM-SNY': 'SNY',
+  'CM-SANOYAH': 'SNY',
+  'COMM-MNH': 'MNH',
+  'CM-MANEAH': 'MNH',
 };
 
 async function resolveCommuneIdentifier(communeId, communeCode) {
@@ -174,6 +188,7 @@ export class UsersService {
         avatarUrl: true,
         isActive: true,
         createdAt: true,
+        communeId: true,
         commune: { select: { id: true, code: true, name: true } },
         roles: { include: { role: true } },
       },

@@ -11,12 +11,17 @@ export class FieldOperationsService {
   static async resolveCommune(raw) {
     if (!raw) return null;
     const trimmed = String(raw).trim();
+    const upper = trimmed.toUpperCase();
+    const slugStripped = upper.replace(/^(COMM-|CM-)/, '');
+
     return await prisma.commune.findFirst({
       where: {
         OR: [
           { id: trimmed },
           { code: { equals: trimmed, mode: 'insensitive' } },
+          { code: { equals: slugStripped, mode: 'insensitive' } },
           { name: { equals: trimmed, mode: 'insensitive' } },
+          { name: { equals: slugStripped, mode: 'insensitive' } },
         ],
       },
     });

@@ -13,12 +13,17 @@ async function resolveCommuneId(rawCommune, fallbackCommuneId = null) {
   const trimmed = String(rawCommune).trim();
   if (!trimmed) return fallbackCommuneId || null;
 
+  const upper = trimmed.toUpperCase();
+  const slugStripped = upper.replace(/^(COMM-|CM-)/, '');
+
   const found = await prisma.commune.findFirst({
     where: {
       OR: [
         { id: trimmed },
         { code: { equals: trimmed, mode: 'insensitive' } },
+        { code: { equals: slugStripped, mode: 'insensitive' } },
         { name: { equals: trimmed, mode: 'insensitive' } },
+        { name: { equals: slugStripped, mode: 'insensitive' } },
       ],
     },
     select: { id: true },

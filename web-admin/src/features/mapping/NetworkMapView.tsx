@@ -347,7 +347,7 @@ export const NetworkMapView: React.FC = () => {
             </h1>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Cartographie temps réel des couloirs de circulation, arrêts officiels et dessertes inter-communes AOTUC.
+            Cartographie des couloirs et arrêts officiels AOTUC pour les 13 communes. Les couches de délimitation polygonale restent strictement réservées aux relevés cadastraux officiels du MATD.
           </p>
         </div>
 

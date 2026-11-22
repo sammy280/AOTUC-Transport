@@ -18,12 +18,17 @@ async function resolveCommuneId(rawCommune, fallbackCommuneId = null) {
   if (!trimmed) return fallbackCommuneId || null;
   if (UUID_REGEX.test(trimmed)) return trimmed;
 
+  const upper = trimmed.toUpperCase();
+  const slugStripped = upper.replace(/^(COMM-|CM-)/, '');
+
   const found = await prisma.commune.findFirst({
     where: {
       OR: [
         { id: trimmed },
         { code: { equals: trimmed, mode: 'insensitive' } },
+        { code: { equals: slugStripped, mode: 'insensitive' } },
         { name: { equals: trimmed, mode: 'insensitive' } },
+        { name: { equals: slugStripped, mode: 'insensitive' } },
       ],
     },
     select: { id: true },
@@ -706,18 +711,27 @@ export class RegistrationService {
    */
   static async listDrivers({ page = 1, limit = 20, search = '', communeId = null }, actorUser) {
     const skip = (page - 1) * limit;
-    const filterCommuneId = actorUser.communeId || communeId || undefined;
+    let filterCommuneId = undefined;
+    const hasExplicitFilter = Boolean(communeId);
+    if (communeId) {
+      filterCommuneId = await resolveCommuneId(communeId);
+    }
+    if (actorUser.communeId) {
+      filterCommuneId = actorUser.communeId;
+    }
 
     const where = {
       ...(filterCommuneId
         ? {
-            person: {
-              OR: [
-                { communeId: filterCommuneId },
-                { registeredByUserId: actorUser.id },
-                { communeId: null },
-              ],
-            },
+            person:
+              hasExplicitFilter && !actorUser.communeId
+                ? { communeId: filterCommuneId }
+                : {
+                    OR: [
+                      { communeId: filterCommuneId },
+                      { registeredByUserId: actorUser.id },
+                    ],
+                  },
           }
         : {}),
       ...(search
@@ -789,18 +803,27 @@ export class RegistrationService {
    */
   static async listOwners({ page = 1, limit = 20, search = '', communeId = null }, actorUser) {
     const skip = (page - 1) * limit;
-    const filterCommuneId = actorUser.communeId || communeId || undefined;
+    let filterCommuneId = undefined;
+    const hasExplicitFilter = Boolean(communeId);
+    if (communeId) {
+      filterCommuneId = await resolveCommuneId(communeId);
+    }
+    if (actorUser.communeId) {
+      filterCommuneId = actorUser.communeId;
+    }
 
     const where = {
       ...(filterCommuneId
         ? {
-            person: {
-              OR: [
-                { communeId: filterCommuneId },
-                { registeredByUserId: actorUser.id },
-                { communeId: null },
-              ],
-            },
+            person:
+              hasExplicitFilter && !actorUser.communeId
+                ? { communeId: filterCommuneId }
+                : {
+                    OR: [
+                      { communeId: filterCommuneId },
+                      { registeredByUserId: actorUser.id },
+                    ],
+                  },
           }
         : {}),
       ...(search
@@ -848,16 +871,26 @@ export class RegistrationService {
    */
   static async listVehicles({ page = 1, limit = 20, search = '', communeId = null }, actorUser) {
     const skip = (page - 1) * limit;
-    const filterCommuneId = actorUser.communeId || communeId || undefined;
+    let filterCommuneId = undefined;
+    const hasExplicitFilter = Boolean(communeId);
+    if (communeId) {
+      filterCommuneId = await resolveCommuneId(communeId);
+    }
+    if (actorUser.communeId) {
+      filterCommuneId = actorUser.communeId;
+    }
 
     const where = {
       ...(filterCommuneId
         ? {
-            OR: [
-              { owner: { person: { communeId: filterCommuneId } } },
-              { registeredByUserId: actorUser.id },
-              { owner: { person: { communeId: null } } },
-            ],
+            ...(hasExplicitFilter && !actorUser.communeId
+              ? { owner: { person: { communeId: filterCommuneId } } }
+              : {
+                  OR: [
+                    { owner: { person: { communeId: filterCommuneId } } },
+                    { registeredByUserId: actorUser.id },
+                  ],
+                }),
           }
         : {}),
       ...(search

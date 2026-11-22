@@ -70,7 +70,7 @@ export class RegistrationController {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 20;
       const search = req.query.search || '';
-      const communeId = req.query.communeId || null;
+      const communeId = req.query.communeId || req.query.commune || null;
 
       const result = await RegistrationService.listDrivers(
         { page, limit, search, communeId },
@@ -103,7 +103,7 @@ export class RegistrationController {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 20;
       const search = req.query.search || '';
-      const communeId = req.query.communeId || null;
+      const communeId = req.query.communeId || req.query.commune || null;
 
       const result = await RegistrationService.listOwners(
         { page, limit, search, communeId },
@@ -124,7 +124,7 @@ export class RegistrationController {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 20;
       const search = req.query.search || '';
-      const communeId = req.query.communeId || null;
+      const communeId = req.query.communeId || req.query.commune || null;
 
       const result = await RegistrationService.listVehicles(
         { page, limit, search, communeId },
