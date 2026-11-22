@@ -13,6 +13,8 @@ import {
   Mail,
   Phone,
   ChevronDown,
+  Menu,
+  X,
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown';
 import ThemeSelector from './ThemeSelector';
@@ -27,6 +29,8 @@ interface NavbarProps {
   onSelectNotification: (item: NotificationItem) => void;
   onTriggerTestNotification: () => void;
   onLogout: () => void;
+  isMobileMenuOpen?: boolean;
+  onToggleMobileMenu?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -38,6 +42,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSelectNotification,
   onTriggerTestNotification,
   onLogout,
+  isMobileMenuOpen,
+  onToggleMobileMenu,
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -72,23 +78,39 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Brand & Organization Title */}
-          <div className="flex items-center space-x-3">
+          {/* Brand & Organization Title with Mobile Hamburger Toggle */}
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            {onToggleMobileMenu && (
+              <button
+                type="button"
+                onClick={onToggleMobileMenu}
+                className="lg:hidden p-2 -ml-1 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
+                aria-label={isMobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+                aria-expanded={isMobileMenuOpen}
+              >
+                {isMobileMenuOpen ? (
+                  <X className="w-5 h-5 text-slate-800 dark:text-white" />
+                ) : (
+                  <Menu className="w-5 h-5 text-slate-800 dark:text-white" />
+                )}
+              </button>
+            )}
+
             <img
               src="/aotuc-logo.png"
               alt="République de Guinée - Ministère des Transports"
-              className="w-11 h-11 object-contain rounded-full shadow-sm bg-white p-0.5 border border-slate-200 dark:border-slate-700 flex-shrink-0"
+              className="w-9 h-9 sm:w-11 sm:h-11 object-contain rounded-full shadow-sm bg-white p-0.5 border border-slate-200 dark:border-slate-700 flex-shrink-0"
             />
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
-                  AOTUC-TRANSPORT
+            <div className="min-w-0">
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
+                <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight truncate">
+                  AOTUC
                 </span>
-                <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-400 rounded-full border border-emerald-200 dark:border-emerald-800">
-                  v2.0 Officiel
+                <span className="px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-400 rounded-full border border-emerald-200 dark:border-emerald-800 flex-shrink-0">
+                  v2.0
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
+              <p className="text-xs text-slate-500 dark:text-slate-400 hidden md:block">
                 Autorité Organisatrice des Transports Urbains de Conakry (AOTUC) • <span className="italic font-medium text-slate-600 dark:text-slate-300">« Pour une Mobilité Urbaine Participative & Durable »</span>
               </p>
             </div>
@@ -170,7 +192,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               {/* User Profile & Appearance Settings Popover */}
               {isProfileOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-xs sm:w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                   {/* Popover Header */}
                   <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-3">
                     {currentUser.avatarUrl ? (

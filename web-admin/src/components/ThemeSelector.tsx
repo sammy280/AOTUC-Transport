@@ -110,7 +110,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+        <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-xs sm:w-72 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
           <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800">
             <div className="text-xs font-bold text-slate-900 dark:text-white">
               Apparence & Thème Visuel

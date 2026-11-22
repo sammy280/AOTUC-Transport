@@ -345,11 +345,11 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
             </p>
           </div>
 
-          <div className="flex items-center space-x-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={fetchDashboardData}
               disabled={isLoading}
-              className="flex items-center space-x-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+              className="min-h-[40px] flex items-center space-x-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
               title="Rafraîchir les données"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
@@ -359,7 +359,7 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
             {canManage && (
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center space-x-1.5 px-4 py-2 text-xs font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition"
+                className="min-h-[40px] flex items-center space-x-1.5 px-4 py-2 text-xs font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition"
               >
                 <Plus className="w-4 h-4" />
                 <span>Nouvelle Mission</span>
@@ -378,7 +378,7 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
 
       {/* 2. Key Metrics Overview */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <div className="p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
             <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs">
               <span>Missions Totales</span>
@@ -848,7 +848,7 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Commune de rattachement *
@@ -899,7 +899,7 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
                     <span>Capturer position actuelle</span>
                   </button>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <input
                     type="number"
                     step="any"
@@ -939,7 +939,7 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
               </div>
 
               {/* Dates */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Date de début *
@@ -967,7 +967,7 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
               </div>
 
               {/* Target Numbers */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Cible Personnes (Chauffeurs/Propriétaires)

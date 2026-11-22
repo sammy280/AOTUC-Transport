@@ -166,6 +166,7 @@ export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<string>(() => {
     return getDefaultTab(currentUser.role);
   });
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -339,17 +340,25 @@ export const App: React.FC = () => {
         onSelectNotification={handleSelectNotification}
         onTriggerTestNotification={handleTriggerTestNotification}
         onLogout={handleLogout}
+        isMobileMenuOpen={isMobileMenuOpen}
+        onToggleMobileMenu={() => setIsMobileMenuOpen((prev) => !prev)}
       />
 
-      <div className="flex-1 flex max-w-7xl w-full mx-auto">
+      <div className="flex-1 flex max-w-7xl w-full mx-auto min-w-0 overflow-x-hidden">
         <Sidebar
           currentTab={currentTab}
-          onSelectTab={setCurrentTab}
+          onSelectTab={(tab) => {
+            setCurrentTab(tab);
+            setIsMobileMenuOpen(false);
+          }}
           pendingCount={notifications.filter((n) => !n.isRead && n.category === 'VALIDATION').length || 46}
           currentUser={currentUser}
+          isOpenMobile={isMobileMenuOpen}
+          onCloseMobile={() => setIsMobileMenuOpen(false)}
+          onLogout={handleLogout}
         />
 
-        <main className="flex-1 p-6 overflow-y-auto">
+        <main className="flex-1 p-3 sm:p-5 md:p-6 overflow-y-auto overflow-x-hidden min-w-0">
           {!isCurrentTabPermitted ? (
             <AccessDenied
               currentUser={currentUser}

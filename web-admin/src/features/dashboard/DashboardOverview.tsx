@@ -108,10 +108,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               </p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 w-full sm:w-auto">
             <button
               onClick={() => navigateTo('users')}
-              className="flex items-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer"
+              className="w-full sm:w-auto justify-center flex items-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer min-h-[44px]"
             >
               <span>Gérer les Utilisateurs</span>
               <ArrowUpRight className="w-4 h-4" />
@@ -239,7 +239,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
           <button
             onClick={onOpenValidationQueue}
-            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer"
+            className="w-full sm:w-auto justify-center flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer min-h-[44px]"
           >
             <Send className="w-4 h-4" />
             <span>Instruire les Dossiers Matoto (N2)</span>
@@ -356,7 +356,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
           <button
             onClick={() => navigateTo('enrolment')}
-            className="flex items-center space-x-2 bg-[#CE1126] hover:bg-red-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer"
+            className="w-full sm:w-auto justify-center flex items-center space-x-2 bg-[#CE1126] hover:bg-red-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer min-h-[44px]"
           >
             <UserPlus className="w-4 h-4" />
             <span>Nouvel Enrôlement Chauffeur</span>
@@ -456,7 +456,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
           <button
             onClick={() => navigateTo('ticketing')}
-            className="flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer"
+            className="w-full sm:w-auto justify-center flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer min-h-[44px]"
           >
             <Receipt className="w-4 h-4" />
             <span>Ouvrir le Guichet POS</span>
@@ -615,10 +615,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 w-full sm:w-auto">
           <button
             onClick={onOpenValidationQueue}
-            className="flex items-center space-x-2 bg-[#CE1126] hover:bg-red-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer"
+            className="w-full sm:w-auto justify-center flex items-center space-x-2 bg-[#CE1126] hover:bg-red-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer min-h-[44px]"
           >
             <span>Examiner les Dossiers Niveau 3</span>
             <ArrowUpRight className="w-4 h-4" />
@@ -754,14 +754,14 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
         <div className="divide-y divide-slate-100">
           {recentAudits.map((item, idx) => (
-            <div key={idx} className="py-2.5 flex items-center justify-between text-xs">
-              <div className="flex items-center space-x-3">
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.badge}`}>
+            <div key={idx} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs">
+              <div className="flex items-start sm:items-center space-x-2.5 min-w-0">
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${item.badge}`}>
                   {item.action}
                 </span>
-                <span className="font-medium text-slate-800">{item.detail}</span>
+                <span className="font-medium text-slate-800 break-words">{item.detail}</span>
               </div>
-              <div className="flex items-center space-x-4 text-slate-500 text-[11px]">
+              <div className="flex items-center space-x-2 sm:space-x-4 text-slate-500 text-[11px] shrink-0 pl-1 sm:pl-0">
                 <span>{item.actor}</span>
                 <span>•</span>
                 <span className="text-slate-400">{item.time}</span>

@@ -428,13 +428,13 @@ export const ValidationQueue: React.FC<ValidationQueueProps> = ({ currentUser })
                 </div>
 
                 {/* Role-Specific Action Buttons */}
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                   {/* Niveau 2 : Chef de Service Actions */}
                   {selectedItem.status === 'SOUMIS_NIVEAU2' &&
                     hasRolePermission(currentUser.role, PERMISSIONS.APPLICATIONS_APPROVE_L2) && (
                       <button
                         onClick={() => handleDecision('FORWARD_TO_L3')}
-                        className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition"
+                        className="w-full sm:w-auto min-h-[44px] justify-center flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition"
                       >
                         <Send className="w-3.5 h-3.5" />
                         <span>Transmettre au Niveau 3 (Direction)</span>
@@ -446,7 +446,7 @@ export const ValidationQueue: React.FC<ValidationQueueProps> = ({ currentUser })
                     hasRolePermission(currentUser.role, PERMISSIONS.APPLICATIONS_APPROVE_L3) && (
                       <button
                         onClick={() => handleDecision('APPROVE_FINAL')}
-                        className="flex items-center space-x-1.5 bg-[#009460] hover:bg-emerald-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition"
+                        className="w-full sm:w-auto min-h-[44px] justify-center flex items-center space-x-1.5 bg-[#009460] hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition"
                       >
                         <CheckCircle className="w-3.5 h-3.5" />
                         <span>Approbation Finale (Délivrance Badge)</span>
@@ -458,7 +458,7 @@ export const ValidationQueue: React.FC<ValidationQueueProps> = ({ currentUser })
                     hasRolePermission(currentUser.role, PERMISSIONS.APPLICATIONS_RETURN) && (
                       <button
                         onClick={() => handleDecision('RETURN_FOR_CORRECTION')}
-                        className="flex items-center space-x-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition"
+                        className="w-full sm:w-auto min-h-[44px] justify-center flex items-center space-x-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition"
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
                         <span>Renvoyer pour Correction</span>
@@ -470,7 +470,7 @@ export const ValidationQueue: React.FC<ValidationQueueProps> = ({ currentUser })
                     hasRolePermission(currentUser.role, PERMISSIONS.APPLICATIONS_REJECT) && (
                       <button
                         onClick={() => handleDecision('REJECT')}
-                        className="flex items-center space-x-1.5 bg-[#CE1126] hover:bg-red-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition"
+                        className="w-full sm:w-auto min-h-[44px] justify-center flex items-center space-x-1.5 bg-[#CE1126] hover:bg-red-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition"
                       >
                         <XCircle className="w-3.5 h-3.5" />
                         <span>Rejeter Définitivement</span>

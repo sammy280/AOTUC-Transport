@@ -746,24 +746,26 @@ export const UnionManagementView: React.FC<UnionManagementViewProps> = ({ curren
           />
         </div>
 
-        <div className="flex items-center space-x-2">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs dark:text-white focus:outline-hidden"
-          >
-            <option value="ALL">Tous les statuts</option>
-            <option value="ACTIF">Actif</option>
-            <option value="EN_ATTENTE_VALIDATION">En attente de validation</option>
-            <option value="SUSPENDU">Suspendu</option>
-            <option value="REJETE">Rejeté</option>
-          </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center space-x-1.5 w-full sm:w-auto">
+            <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs dark:text-white focus:outline-hidden"
+            >
+              <option value="ALL">Tous les statuts</option>
+              <option value="ACTIF">Actif</option>
+              <option value="EN_ATTENTE_VALIDATION">En attente de validation</option>
+              <option value="SUSPENDU">Suspendu</option>
+              <option value="REJETE">Rejeté</option>
+            </select>
+          </div>
 
           <select
             value={communeFilter}
             onChange={(e) => setCommuneFilter(e.target.value)}
-            className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs dark:text-white focus:outline-hidden"
+            className="w-full sm:w-auto px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs dark:text-white focus:outline-hidden"
           >
             <option value="ALL">Toutes les communes</option>
             {CONAKRY_COMMUNES.map((comm) => (
@@ -773,197 +775,312 @@ export const UnionManagementView: React.FC<UnionManagementViewProps> = ({ curren
         </div>
       </div>
 
-      {/* Main Syndicats Table */}
+      {/* Main Syndicats Table & Mobile Cards */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                <th className="py-3 px-4">Sigle & Organisation</th>
-                <th className="py-3 px-4">Agrément Officiel</th>
-                <th className="py-3 px-4">Représentant & Fonction</th>
-                <th className="py-3 px-4">Commune & Siège</th>
-                <th className="py-3 px-4 text-center">Affiliés</th>
-                <th className="py-3 px-4">Statut</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400">
-                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-emerald-600" />
-                    <span>Chargement des syndicats depuis PostgreSQL...</span>
-                  </td>
-                </tr>
-              ) : filteredUnions.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400">
-                    <Building2 className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                    <p className="font-medium text-slate-600 dark:text-slate-400">Aucun syndicat trouvé</p>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      {unions.length === 0
-                        ? "Aucune organisation professionnelle enregistrée pour l'instant."
-                        : "Aucun résultat ne correspond aux filtres de recherche."}
-                    </p>
-                    {canManageUnions && unions.length === 0 && (
-                      <button
-                        onClick={handleOpenRegister}
-                        className="mt-3 inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Enregistrer le premier syndicat</span>
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ) : (
-                filteredUnions.map((u) => {
-                  const portraitDoc = u.documents?.find((d) => d.category === 'PHOTO_PORTRAIT');
-                  const photoSrc = u.photoUrl || (portraitDoc ? getDocumentStreamUrl(portraitDoc.id) : null);
+        {isLoading ? (
+          <div className="py-12 text-center text-slate-400">
+            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-emerald-600" />
+            <span>Chargement des syndicats depuis PostgreSQL...</span>
+          </div>
+        ) : filteredUnions.length === 0 ? (
+          <div className="py-12 text-center text-slate-400 p-4">
+            <Building2 className="w-8 h-8 mx-auto mb-2 opacity-40" />
+            <p className="font-medium text-slate-600 dark:text-slate-400">Aucun syndicat trouvé</p>
+            <p className="text-[11px] text-slate-400 mt-1">
+              {unions.length === 0
+                ? "Aucune organisation professionnelle enregistrée pour l'instant."
+                : "Aucun résultat ne correspond aux filtres de recherche."}
+            </p>
+            {canManageUnions && unions.length === 0 && (
+              <button
+                onClick={handleOpenRegister}
+                className="mt-3 inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Enregistrer le premier syndicat</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Mobile Cards View (< sm screens) */}
+            <div className="sm:hidden divide-y divide-slate-100 dark:divide-slate-800">
+              {filteredUnions.map((u) => {
+                const portraitDoc = u.documents?.find((d) => d.category === 'PHOTO_PORTRAIT');
+                const photoSrc = u.photoUrl || (portraitDoc ? getDocumentStreamUrl(portraitDoc.id) : null);
 
-                  return (
-                    <tr
-                      key={u.id}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition"
-                    >
-                      <td className="py-3 px-4">
-                        <div className="flex items-center space-x-3">
-                          {u.logoUrl ? (
-                            <img
-                              src={u.logoUrl}
-                              alt={u.code}
-                              className="w-8 h-8 rounded-md object-contain bg-slate-100 dark:bg-slate-800 p-0.5 border border-slate-200 dark:border-slate-700 flex-shrink-0"
-                            />
-                          ) : (
-                            <div className="w-8 h-8 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-400 flex items-center justify-center font-bold text-xs flex-shrink-0 border border-emerald-200 dark:border-emerald-800">
-                              {u.code.substring(0, 3)}
-                            </div>
-                          )}
-                          <div>
-                            <div className="font-bold text-slate-900 dark:text-white flex items-center space-x-1.5">
-                              <span className="font-mono text-emerald-700 dark:text-emerald-400 font-extrabold">{u.code}</span>
-                              <span>•</span>
-                              <span>{u.name}</span>
-                            </div>
-                            <div className="text-[10px] text-slate-400">
-                              Enregistré le {new Date(u.createdAt).toLocaleDateString('fr-FR')}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="py-3 px-4">
-                        {u.registrationNumber ? (
-                          <div className="font-mono text-[11px] font-semibold text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded inline-block">
-                            {u.registrationNumber}
-                          </div>
+                return (
+                  <div key={u.id} className="p-4 space-y-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center space-x-2.5 min-w-0">
+                        {u.logoUrl ? (
+                          <img
+                            src={u.logoUrl}
+                            alt={u.code}
+                            className="w-10 h-10 rounded-lg object-contain bg-slate-100 dark:bg-slate-800 p-0.5 border border-slate-200 dark:border-slate-700 shrink-0"
+                          />
                         ) : (
-                          <span className="text-slate-400 text-[11px] italic">Non renseigné</span>
+                          <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0 border border-emerald-200 dark:border-emerald-800">
+                            {u.code.substring(0, 3)}
+                          </div>
                         )}
-                      </td>
-
-                      <td className="py-3 px-4">
-                        <div className="flex items-center space-x-2.5">
-                          {photoSrc ? (
-                            <img
-                              src={photoSrc}
-                              alt={u.presidentName || 'Représentant'}
-                              className="w-8 h-8 rounded-full object-cover border border-slate-300 dark:border-slate-700 flex-shrink-0"
-                            />
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center border border-slate-200 dark:border-slate-700 flex-shrink-0">
-                              <User className="w-4 h-4" />
-                            </div>
-                          )}
-                          <div className="space-y-0.5">
-                            <div className="font-medium text-slate-900 dark:text-slate-100 truncate max-w-[150px]">
-                              {u.presidentName || 'Non renseigné'}
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <span className="inline-block px-1.5 py-0.2 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 border border-slate-200 dark:border-slate-700">
-                                {u.fonction || 'Président'}
-                              </span>
-                              {u.cniNumber && (
-                                <span className="text-[10px] text-slate-400 font-mono" title={`CNI : ${u.cniNumber}`}>
-                                  • {u.cniNumber}
-                                </span>
-                              )}
-                            </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-900 dark:text-white text-sm flex items-center space-x-1 truncate">
+                            <span className="font-mono text-emerald-700 dark:text-emerald-400 font-extrabold">{u.code}</span>
+                            <span>•</span>
+                            <span className="truncate">{u.name}</span>
                           </div>
-                        </div>
-                      </td>
-
-                      <td className="py-3 px-4">
-                        <div className="space-y-0.5">
-                          <div className="font-medium text-slate-800 dark:text-slate-200 flex items-center space-x-1">
-                            <MapPin className="w-3 h-3 text-emerald-600 flex-shrink-0" />
-                            <span>{u.commune?.name || 'Toutes communes'}</span>
-                          </div>
-                          {u.headquartersAddress && (
-                            <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[160px]">
-                              {u.headquartersAddress}
+                          {u.registrationNumber && (
+                            <div className="font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                              Agrément : {u.registrationNumber}
                             </div>
                           )}
                         </div>
-                      </td>
+                      </div>
+                      <div className="shrink-0">{renderStatusBadge(u.status)}</div>
+                    </div>
 
-                      <td className="py-3 px-4 text-center">
-                        <div className="inline-flex items-center space-x-2 text-[11px]">
-                          <span className="flex items-center space-x-0.5 text-slate-600 dark:text-slate-400" title="Chauffeurs membres">
-                            <Users className="w-3 h-3 text-slate-400" />
-                            <span className="font-bold">{u._count?.members || 0}</span>
-                          </span>
-                          <span className="text-slate-300">•</span>
-                          <span className="flex items-center space-x-0.5 text-slate-600 dark:text-slate-400" title="Propriétaires">
-                            <Car className="w-3 h-3 text-slate-400" />
-                            <span className="font-bold">{u._count?.owners || 0}</span>
-                          </span>
+                    {/* Représentant & Fonction */}
+                    <div className="flex items-center space-x-2.5 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700/50 text-xs">
+                      {photoSrc ? (
+                        <img
+                          src={photoSrc}
+                          alt={u.presidentName || 'Représentant'}
+                          className="w-8 h-8 rounded-full object-cover border border-slate-300 dark:border-slate-700 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 flex items-center justify-center shrink-0">
+                          <User className="w-4 h-4" />
                         </div>
-                      </td>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-slate-900 dark:text-slate-100 truncate">
+                          {u.presidentName || 'Représentant non renseigné'}
+                        </div>
+                        <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium truncate">
+                          {u.fonction || 'Président'} {u.cniNumber ? `• CNI: ${u.cniNumber}` : ''}
+                        </div>
+                      </div>
+                    </div>
 
-                      <td className="py-3 px-4">
-                        {renderStatusBadge(u.status)}
-                      </td>
+                    {/* Commune & Affiliates stats */}
+                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                      <div className="flex items-center space-x-1 truncate">
+                        <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span className="truncate">{u.commune?.name || 'Toutes communes'}</span>
+                      </div>
+                      <div className="flex items-center space-x-2 shrink-0 text-[11px]">
+                        <span className="flex items-center space-x-0.5">
+                          <Users className="w-3 h-3 text-slate-400" />
+                          <span className="font-bold">{u._count?.members || 0}</span>
+                        </span>
+                        <span>•</span>
+                        <span className="flex items-center space-x-0.5">
+                          <Car className="w-3 h-3 text-slate-400" />
+                          <span className="font-bold">{u._count?.owners || 0}</span>
+                        </span>
+                      </div>
+                    </div>
 
-                      <td className="py-3 px-4 text-right">
-                        <div className="inline-flex items-center space-x-1">
+                    {/* Touch Action Buttons */}
+                    <div className="flex items-center space-x-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenDetails(u)}
+                        className="flex-1 min-h-[40px] flex items-center justify-center space-x-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 rounded-lg transition"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Consulter</span>
+                      </button>
+
+                      {canManageUnions && (
+                        <>
                           <button
-                            onClick={() => handleOpenDetails(u)}
-                            title="Consulter la fiche détaillée, gouvernance et pièces"
-                            className="p-1.5 text-slate-500 hover:text-slate-900 dark:hover:text-white rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                            type="button"
+                            onClick={() => handleOpenEdit(u)}
+                            className="min-h-[40px] px-3 flex items-center justify-center text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-lg transition"
+                            title="Modifier"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Edit2 className="w-3.5 h-3.5" />
                           </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenStatusModal(u)}
+                            className="min-h-[40px] px-3 flex items-center justify-center text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 rounded-lg transition"
+                            title="Statut"
+                          >
+                            <Shield className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
-                          {canManageUnions && (
-                            <>
-                              <button
-                                onClick={() => handleOpenEdit(u)}
-                                title="Modifier les informations et pièces d'identité"
-                                className="p-1.5 text-slate-500 hover:text-emerald-600 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
+            {/* Desktop / Tablet Table View (>= sm screens) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    <th className="py-3 px-4">Sigle & Organisation</th>
+                    <th className="py-3 px-4">Agrément Officiel</th>
+                    <th className="py-3 px-4">Représentant & Fonction</th>
+                    <th className="py-3 px-4">Commune & Siège</th>
+                    <th className="py-3 px-4 text-center">Affiliés</th>
+                    <th className="py-3 px-4">Statut</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                  {filteredUnions.map((u) => {
+                    const portraitDoc = u.documents?.find((d) => d.category === 'PHOTO_PORTRAIT');
+                    const photoSrc = u.photoUrl || (portraitDoc ? getDocumentStreamUrl(portraitDoc.id) : null);
 
-                              <button
-                                onClick={() => handleOpenStatusModal(u)}
-                                title="Changer le statut (Activer / Suspendre / Rejeter)"
-                                className="p-1.5 text-slate-500 hover:text-amber-600 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                              >
-                                <Shield className="w-4 h-4" />
-                              </button>
-                            </>
+                    return (
+                      <tr
+                        key={u.id}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition"
+                      >
+                        <td className="py-3 px-4">
+                          <div className="flex items-center space-x-3">
+                            {u.logoUrl ? (
+                              <img
+                                src={u.logoUrl}
+                                alt={u.code}
+                                className="w-8 h-8 rounded-md object-contain bg-slate-100 dark:bg-slate-800 p-0.5 border border-slate-200 dark:border-slate-700 flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-400 flex items-center justify-center font-bold text-xs flex-shrink-0 border border-emerald-200 dark:border-emerald-800">
+                                {u.code.substring(0, 3)}
+                              </div>
+                            )}
+                            <div>
+                              <div className="font-bold text-slate-900 dark:text-white flex items-center space-x-1.5">
+                                <span className="font-mono text-emerald-700 dark:text-emerald-400 font-extrabold">{u.code}</span>
+                                <span>•</span>
+                                <span>{u.name}</span>
+                              </div>
+                              <div className="text-[10px] text-slate-400">
+                                Enregistré le {new Date(u.createdAt).toLocaleDateString('fr-FR')}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-4">
+                          {u.registrationNumber ? (
+                            <div className="font-mono text-[11px] font-semibold text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded inline-block">
+                              {u.registrationNumber}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-[11px] italic">Non renseigné</span>
                           )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                        </td>
+
+                        <td className="py-3 px-4">
+                          <div className="flex items-center space-x-2.5">
+                            {photoSrc ? (
+                              <img
+                                src={photoSrc}
+                                alt={u.presidentName || 'Représentant'}
+                                className="w-8 h-8 rounded-full object-cover border border-slate-300 dark:border-slate-700 flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center border border-slate-200 dark:border-slate-700 flex-shrink-0">
+                                <User className="w-4 h-4" />
+                              </div>
+                            )}
+                            <div className="space-y-0.5">
+                              <div className="font-medium text-slate-900 dark:text-slate-100 truncate max-w-[150px]">
+                                {u.presidentName || 'Non renseigné'}
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <span className="inline-block px-1.5 py-0.2 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 border border-slate-200 dark:border-slate-700">
+                                  {u.fonction || 'Président'}
+                                </span>
+                                {u.cniNumber && (
+                                  <span className="text-[10px] text-slate-400 font-mono" title={`CNI : ${u.cniNumber}`}>
+                                    • {u.cniNumber}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-4">
+                          <div className="space-y-0.5">
+                            <div className="font-medium text-slate-800 dark:text-slate-200 flex items-center space-x-1">
+                              <MapPin className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+                              <span>{u.commune?.name || 'Toutes communes'}</span>
+                            </div>
+                            {u.headquartersAddress && (
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[160px]">
+                                {u.headquartersAddress}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-4 text-center">
+                          <div className="inline-flex items-center space-x-2 text-[11px]">
+                            <span className="flex items-center space-x-0.5 text-slate-600 dark:text-slate-400" title="Chauffeurs membres">
+                              <Users className="w-3 h-3 text-slate-400" />
+                              <span className="font-bold">{u._count?.members || 0}</span>
+                            </span>
+                            <span className="text-slate-300">•</span>
+                            <span className="flex items-center space-x-0.5 text-slate-600 dark:text-slate-400" title="Propriétaires">
+                              <Car className="w-3 h-3 text-slate-400" />
+                              <span className="font-bold">{u._count?.owners || 0}</span>
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-4">
+                          {renderStatusBadge(u.status)}
+                        </td>
+
+                        <td className="py-3 px-4 text-right">
+                          <div className="inline-flex items-center space-x-1">
+                            <button
+                              onClick={() => handleOpenDetails(u)}
+                              title="Consulter la fiche détaillée, gouvernance et pièces"
+                              className="p-1.5 text-slate-500 hover:text-slate-900 dark:hover:text-white rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+
+                            {canManageUnions && (
+                              <>
+                                <button
+                                  onClick={() => handleOpenEdit(u)}
+                                  title="Modifier les informations et pièces d'identité"
+                                  className="p-1.5 text-slate-500 hover:text-emerald-600 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+
+                                <button
+                                  onClick={() => handleOpenStatusModal(u)}
+                                  title="Changer le statut (Activer / Suspendre / Rejeter)"
+                                  className="p-1.5 text-slate-500 hover:text-amber-600 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                                >
+                                  <Shield className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
 
       {/* ========================================================================= */}

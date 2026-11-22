@@ -1258,9 +1258,9 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
           </div>
 
           {activeTab === 'drivers' ? (
-            <form onSubmit={handleRegisterDriver} className="p-6 space-y-4">
+            <form onSubmit={handleRegisterDriver} className="p-4 sm:p-6 space-y-4">
               {/* Driver Identity */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                     Prénom(s) (CNI) *
@@ -1289,7 +1289,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                     N° NIN Biométrique *
@@ -1344,7 +1344,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                       Nom du Contact (Optionnel)
@@ -1379,8 +1379,8 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
               </div>
 
               {/* Driving License Fields */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                     N° Permis de Conduire *
                   </label>
@@ -1412,7 +1412,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                     Expiration du Permis *
@@ -1577,11 +1577,11 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                 )}
 
                 {!isCameraOpen && (
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <button
                       type="button"
                       onClick={() => handleStartCamera('portrait', 'user')}
-                      className="py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm transition-colors"
+                      className="min-h-[44px] py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm transition-colors"
                     >
                       <Camera className="w-4 h-4" />
                       <span>{driverPhotoBase64 ? 'Reprendre (Caméra)' : 'Prendre une Photo'}</span>
@@ -1590,7 +1590,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="py-2.5 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors"
+                      className="min-h-[44px] py-2.5 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors"
                     >
                       <Upload className="w-4 h-4 text-slate-500" />
                       <span>Choisir une Image</span>
@@ -1847,9 +1847,9 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
             </form>
           ) : (
             /* Vehicle Form */
-            <form onSubmit={handleRegisterVehicle} className="p-6 space-y-4">
+            <form onSubmit={handleRegisterVehicle} className="p-4 sm:p-6 space-y-4">
               {/* Marque and Modèle at the top */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                     Marque du Véhicule *
@@ -1878,7 +1878,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                     N° Plaque Immatriculation *
@@ -1907,7 +1907,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                     N° Châssis (VIN) *
@@ -1973,7 +1973,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                     Année
@@ -2079,7 +2079,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                   )
                 ) : (
                   <div className="space-y-2.5">
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <input
                         type="text"
                         required
@@ -2097,7 +2097,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                         className="w-full px-3 py-1.5 border border-slate-300 bg-white rounded-lg text-xs"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <input
                         type="text"
                         required
@@ -2115,7 +2115,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                         className="w-full px-3 py-1.5 border border-slate-300 bg-white rounded-lg text-xs"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <select
                         value={newOwnerType}
                         onChange={(e) => setNewOwnerType(e.target.value as any)}
@@ -2390,20 +2390,20 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
               </p>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <div className="relative">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="relative flex-1 sm:flex-initial">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Rechercher NIN, Nom, Plaque..."
-                  className="pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-600 focus:outline-none w-48"
+                  className="pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-600 focus:outline-none w-full sm:w-48"
                 />
               </div>
 
               {isCommuneLocked ? (
-                <span className="px-2.5 py-1.5 border border-emerald-200 bg-emerald-50 text-emerald-800 rounded-lg text-xs font-bold flex items-center space-x-1">
+                <span className="px-2.5 py-1.5 border border-emerald-200 bg-emerald-50 text-emerald-800 rounded-lg text-xs font-bold flex items-center justify-center space-x-1">
                   <Lock className="w-3 h-3" />
                   <span>{lockedCommune}</span>
                 </span>
@@ -2411,7 +2411,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                 <select
                   value={communeFilter}
                   onChange={(e) => setCommuneFilter(e.target.value)}
-                  className="px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none"
+                  className="px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none w-full sm:w-auto"
                 >
                   <option value="ALL">Toutes Communes</option>
                   {CONAKRY_COMMUNES.map((comm) => (
@@ -2424,7 +2424,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
             </div>
           </div>
 
-          <div className="overflow-x-auto flex-1">
+          <div className="flex-1">
             {isLoading ? (
               <div className="p-10 text-center text-slate-500 text-sm">
                 Chargement des dossiers depuis PostgreSQL...
@@ -2435,177 +2435,316 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                   Aucun conducteur trouvé. Utilisez le formulaire à gauche pour enregistrer un conducteur.
                 </div>
               ) : (
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase border-b border-slate-200">
-                      <th className="py-3 px-4">Conducteur / NIN</th>
-                      <th className="py-3 px-4">Permis</th>
-                      <th className="py-3 px-4">Tél. Principal & Urgence</th>
-                      <th className="py-3 px-4">Statut</th>
-                      <th className="py-3 px-4 text-right">Dossier</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 text-sm">
+                <>
+                  {/* Mobile Card List for Drivers (< sm screens) */}
+                  <div className="sm:hidden divide-y divide-slate-100">
                     {filteredDrivers.map((d) => {
                       const docs = d.person?.documents || d.documents || [];
                       const hasPhoto = docs.some((doc) => doc.category === 'PHOTO_PORTRAIT');
                       return (
-                        <tr key={d.id} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="py-3.5 px-4">
-                            <div className="flex items-center space-x-2.5">
+                        <div key={d.id} className="p-4 space-y-2.5 hover:bg-slate-50 transition-colors">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center space-x-2.5 min-w-0">
                               <div
-                                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-extrabold ${
+                                className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-xs font-extrabold ${
                                   hasPhoto
                                     ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                                     : 'bg-slate-100 text-slate-600'
                                 }`}
-                                title={hasPhoto ? 'Photo portrait enregistrée' : 'Aucune photo'}
                               >
                                 {d.person?.firstName?.[0] || 'C'}
                                 {d.person?.lastName?.[0] || ''}
                               </div>
-                              <div>
-                                <div className="font-bold text-slate-800">
+                              <div className="min-w-0">
+                                <div className="font-bold text-slate-900 text-sm truncate">
                                   {d.person?.firstName} {d.person?.lastName}
                                 </div>
-                                <div className="text-xs text-slate-400 font-mono">
+                                <div className="text-xs text-slate-400 font-mono truncate">
                                   NIN: {d.person?.nin} • {d.person?.commune?.name || 'Conakry'}
                                 </div>
                               </div>
                             </div>
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <div className="font-mono text-xs font-bold text-slate-700">
-                              {d.drivingLicenseNumber}
-                            </div>
-                            <span className="inline-block mt-0.5 px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-extrabold">
-                              Cat. {d.licenseCategory}
-                            </span>
-                            {d.union && (
-                              <span className="ml-1.5 inline-block mt-0.5 px-1.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded text-[10px] font-extrabold font-mono" title={d.union.name}>
-                                {d.union.code}
+                            <div className="shrink-0">{renderStatusBadge(d.status)}</div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                            <div>
+                              <span className="text-slate-400 font-bold block text-[10px] uppercase">Permis</span>
+                              <span className="font-mono font-bold text-slate-800">{d.drivingLicenseNumber}</span>
+                              <span className="ml-1 text-[10px] bg-slate-200 text-slate-700 px-1 py-0.5 rounded font-bold">
+                                Cat. {d.licenseCategory}
                               </span>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <div className="text-xs font-bold text-slate-800">
-                              Tél: {d.person?.phoneNumber}
                             </div>
-                            {d.emergencyContactPhone ? (
-                              <div className="text-[11px] font-semibold text-amber-800 mt-0.5 flex items-center">
-                                <PhoneCall className="w-3 h-3 mr-1 text-amber-600 shrink-0" />
-                                <span>
-                                  Urg: {d.emergencyContactPhone}
-                                  {d.emergencyContactName ? ` (${d.emergencyContactName})` : ''}
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="text-[11px] text-slate-400 italic">
-                                Urgence: Non renseigné
-                              </div>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4">{renderStatusBadge(d.status)}</td>
-                          <td className="py-3.5 px-4 text-right">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenDriverDetails(d)}
-                              className="inline-flex items-center text-xs font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg transition-colors"
-                            >
-                              <Eye className="w-3.5 h-3.5 mr-1" />
-                              Consulter
-                            </button>
-                          </td>
-                        </tr>
+                            <div>
+                              <span className="text-slate-400 font-bold block text-[10px] uppercase">Téléphone</span>
+                              <span className="font-bold text-slate-800">{d.person?.phoneNumber}</span>
+                            </div>
+                          </div>
+
+                          {d.emergencyContactPhone && (
+                            <div className="text-[11px] font-semibold text-amber-800 flex items-center">
+                              <PhoneCall className="w-3 h-3 mr-1 text-amber-600 shrink-0" />
+                              <span className="truncate">Urg: {d.emergencyContactPhone} ({d.emergencyContactName || 'Urgence'})</span>
+                            </div>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDriverDetails(d)}
+                            className="w-full min-h-[40px] flex items-center justify-center space-x-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 py-2 rounded-lg border border-emerald-200 transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Consulter la Fiche Conducteur</span>
+                          </button>
+                        </div>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </div>
+
+                  {/* Desktop / Tablet Table (>= sm screens) */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase border-b border-slate-200">
+                          <th className="py-3 px-4">Conducteur / NIN</th>
+                          <th className="py-3 px-4">Permis</th>
+                          <th className="py-3 px-4">Tél. Principal & Urgence</th>
+                          <th className="py-3 px-4">Statut</th>
+                          <th className="py-3 px-4 text-right">Dossier</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 text-sm">
+                        {filteredDrivers.map((d) => {
+                          const docs = d.person?.documents || d.documents || [];
+                          const hasPhoto = docs.some((doc) => doc.category === 'PHOTO_PORTRAIT');
+                          return (
+                            <tr key={d.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="py-3.5 px-4">
+                                <div className="flex items-center space-x-2.5">
+                                  <div
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-extrabold ${
+                                      hasPhoto
+                                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                        : 'bg-slate-100 text-slate-600'
+                                    }`}
+                                    title={hasPhoto ? 'Photo portrait enregistrée' : 'Aucune photo'}
+                                  >
+                                    {d.person?.firstName?.[0] || 'C'}
+                                    {d.person?.lastName?.[0] || ''}
+                                  </div>
+                                  <div>
+                                    <div className="font-bold text-slate-800">
+                                      {d.person?.firstName} {d.person?.lastName}
+                                    </div>
+                                    <div className="text-xs text-slate-400 font-mono">
+                                      NIN: {d.person?.nin} • {d.person?.commune?.name || 'Conakry'}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <div className="font-mono text-xs font-bold text-slate-700">
+                                  {d.drivingLicenseNumber}
+                                </div>
+                                <span className="inline-block mt-0.5 px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-extrabold">
+                                  Cat. {d.licenseCategory}
+                                </span>
+                                {d.union && (
+                                  <span className="ml-1.5 inline-block mt-0.5 px-1.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded text-[10px] font-extrabold font-mono" title={d.union.name}>
+                                    {d.union.code}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <div className="text-xs font-bold text-slate-800">
+                                  Tél: {d.person?.phoneNumber}
+                                </div>
+                                {d.emergencyContactPhone ? (
+                                  <div className="text-[11px] font-semibold text-amber-800 mt-0.5 flex items-center">
+                                    <PhoneCall className="w-3 h-3 mr-1 text-amber-600 shrink-0" />
+                                    <span>
+                                      Urg: {d.emergencyContactPhone}
+                                      {d.emergencyContactName ? ` (${d.emergencyContactName})` : ''}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="text-[11px] text-slate-400 italic">
+                                    Urgence: Non renseigné
+                                  </div>
+                                )}
+                              </td>
+                              <td className="py-3.5 px-4">{renderStatusBadge(d.status)}</td>
+                              <td className="py-3.5 px-4 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenDriverDetails(d)}
+                                  className="inline-flex items-center text-xs font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg transition-colors"
+                                >
+                                  <Eye className="w-3.5 h-3.5 mr-1" />
+                                  Consulter
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )
             ) : filteredVehicles.length === 0 ? (
               <div className="p-10 text-center text-slate-500 text-sm">
                 Aucun véhicule trouvé. Utilisez le formulaire à gauche pour enregistrer un véhicule.
               </div>
             ) : (
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase border-b border-slate-200">
-                    <th className="py-3 px-4">Plaque / Châssis / Identifiants</th>
-                    <th className="py-3 px-4">Véhicule / Type</th>
-                    <th className="py-3 px-4">Propriétaire & Chauffeur</th>
-                    <th className="py-3 px-4">Statut</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 text-sm">
+              <>
+                {/* Mobile Card List for Vehicles (< sm screens) */}
+                <div className="sm:hidden divide-y divide-slate-100">
                   {filteredVehicles.map((v) => {
                     const activeDriver = v.assignments?.[0]?.driver;
                     return (
-                      <tr key={v.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-3.5 px-4">
-                          <div className="font-mono font-extrabold text-slate-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded inline-block text-xs">
-                            {v.plateNumber}
-                          </div>
-                          <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                            VIN: {v.chassisVin} • CG: {v.registrationCardNumber}
-                          </div>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {v.atrNumber ? (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-50 text-amber-900 border border-amber-300" title="Numéro officiel d'autorisation du transporteur en Guinée">
-                                ATR: {v.atrNumber}
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-slate-400 italic">Sans ATR</span>
-                            )}
-                            {v.aotucLicenseNumber && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-50 text-emerald-900 border border-emerald-300" title="Numéro de licence d'exploitation AOTUC">
-                                LIC: {v.aotucLicenseNumber}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-slate-800 text-xs">
-                            {v.make} {v.model} {v.year ? `(${v.year})` : ''}
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            {VEHICLE_TYPE_LABELS[v.vehicleType] || v.vehicleType}
-                            {v.seatingCapacity ? ` • ${v.seatingCapacity} places` : ''}
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <div className="text-xs font-bold text-slate-800">
-                            Prop: {v.owner?.person?.firstName} {v.owner?.person?.lastName}
-                            {v.owner?.businessName ? ` (${v.owner.businessName})` : ''}
-                          </div>
-                          {activeDriver ? (
-                            <div className="text-[11px] text-emerald-700 font-semibold mt-0.5 flex items-center">
-                              <UserCheck className="w-3 h-3 mr-1" />
-                              Chauffeur: {activeDriver.person?.firstName}{' '}
-                              {activeDriver.person?.lastName}
+                      <div key={v.id} className="p-4 space-y-2.5 hover:bg-slate-50 transition-colors">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="font-mono font-extrabold text-slate-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded inline-block text-xs">
+                              {v.plateNumber}
                             </div>
+                            <div className="font-bold text-slate-800 text-sm mt-1">
+                              {v.make} {v.model} {v.year ? `(${v.year})` : ''}
+                            </div>
+                          </div>
+                          <div className="shrink-0">{renderStatusBadge(v.status)}</div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-1 text-[10px]">
+                          {v.atrNumber ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono font-bold bg-amber-50 text-amber-900 border border-amber-300">
+                              ATR: {v.atrNumber}
+                            </span>
                           ) : (
-                            <div className="text-[11px] text-slate-400">
-                               {v.owner?.person?.commune?.name || 'Conakry'}
+                            <span className="text-slate-400 italic">Sans ATR</span>
+                          )}
+                          {v.aotucLicenseNumber && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono font-bold bg-emerald-50 text-emerald-900 border border-emerald-300">
+                              LIC: {v.aotucLicenseNumber}
+                            </span>
+                          )}
+                          <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-medium">
+                            {VEHICLE_TYPE_LABELS[v.vehicleType] || v.vehicleType}
+                          </span>
+                        </div>
+
+                        <div className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100 space-y-1">
+                          <div>
+                            <span className="text-slate-400 font-bold">Propriétaire: </span>
+                            <span className="font-semibold text-slate-800">
+                              {v.owner?.person?.firstName} {v.owner?.person?.lastName}
+                            </span>
+                          </div>
+                          {activeDriver && (
+                            <div className="text-emerald-700 flex items-center">
+                              <UserCheck className="w-3 h-3 mr-1" />
+                              <span>Chauffeur: {activeDriver.person?.firstName} {activeDriver.person?.lastName}</span>
                             </div>
                           )}
-                        </td>
-                        <td className="py-3.5 px-4">{renderStatusBadge(v.status)}</td>
-                        <td className="py-3.5 px-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenVehicleDetails(v)}
-                            className="inline-flex items-center text-xs font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg transition-colors"
-                          >
-                            <Eye className="w-3.5 h-3.5 mr-1" />
-                            Consulter
-                          </button>
-                        </td>
-                      </tr>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenVehicleDetails(v)}
+                          className="w-full min-h-[40px] flex items-center justify-center space-x-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 py-2 rounded-lg border border-emerald-200 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Consulter la Fiche Véhicule</span>
+                        </button>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
+                </div>
+
+                {/* Desktop / Tablet Table (>= sm screens) */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase border-b border-slate-200">
+                        <th className="py-3 px-4">Plaque / Châssis / Identifiants</th>
+                        <th className="py-3 px-4">Véhicule / Type</th>
+                        <th className="py-3 px-4">Propriétaire & Chauffeur</th>
+                        <th className="py-3 px-4">Statut</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 text-sm">
+                      {filteredVehicles.map((v) => {
+                        const activeDriver = v.assignments?.[0]?.driver;
+                        return (
+                          <tr key={v.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-3.5 px-4">
+                              <div className="font-mono font-extrabold text-slate-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded inline-block text-xs">
+                                {v.plateNumber}
+                              </div>
+                              <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                                VIN: {v.chassisVin} • CG: {v.registrationCardNumber}
+                              </div>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {v.atrNumber ? (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-50 text-amber-900 border border-amber-300" title="Numéro officiel d'autorisation du transporteur en Guinée">
+                                    ATR: {v.atrNumber}
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] text-slate-400 italic">Sans ATR</span>
+                                )}
+                                {v.aotucLicenseNumber && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-50 text-emerald-900 border border-emerald-300" title="Numéro de licence d'exploitation AOTUC">
+                                    LIC: {v.aotucLicenseNumber}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <div className="font-bold text-slate-800 text-xs">
+                                {v.make} {v.model} {v.year ? `(${v.year})` : ''}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                {VEHICLE_TYPE_LABELS[v.vehicleType] || v.vehicleType}
+                                {v.seatingCapacity ? ` • ${v.seatingCapacity} places` : ''}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <div className="text-xs font-bold text-slate-800">
+                                Prop: {v.owner?.person?.firstName} {v.owner?.person?.lastName}
+                                {v.owner?.businessName ? ` (${v.owner.businessName})` : ''}
+                              </div>
+                              {activeDriver ? (
+                                <div className="text-[11px] text-emerald-700 font-semibold mt-0.5 flex items-center">
+                                  <UserCheck className="w-3 h-3 mr-1" />
+                                  Chauffeur: {activeDriver.person?.firstName}{' '}
+                                  {activeDriver.person?.lastName}
+                                </div>
+                              ) : (
+                                <div className="text-[11px] text-slate-400">
+                                   {v.owner?.person?.commune?.name || 'Conakry'}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4">{renderStatusBadge(v.status)}</td>
+                            <td className="py-3.5 px-4 text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenVehicleDetails(v)}
+                                className="inline-flex items-center text-xs font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg transition-colors"
+                              >
+                                <Eye className="w-3.5 h-3.5 mr-1" />
+                                Consulter
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -2613,51 +2752,51 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
 
       {/* Driver Details / Profile Modal (Shows Photograph & Emergency Contact Information) */}
       {selectedDriver && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden">
-            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="bg-slate-900 text-white px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between shrink-0">
+              <div className="min-w-0 pr-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 block truncate">
                   Fiche Officielle Conducteur • PostgreSQL
                 </span>
-                <h4 className="text-base font-extrabold">
+                <h4 className="text-sm sm:text-base font-extrabold truncate">
                   {selectedDriver.person?.firstName} {selectedDriver.person?.lastName}
                 </h4>
               </div>
               <button
                 type="button"
                 onClick={handleCloseDriverDetails}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white"
+                className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
               {/* Top Profile Row with Photograph */}
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3 sm:space-x-4">
                 {selectedDriverPhotoUrl ? (
                   <img
                     src={selectedDriverPhotoUrl}
                     alt="Portrait officiel du conducteur"
-                    className="w-24 h-24 rounded-xl object-cover border-2 border-emerald-500 shadow-sm shrink-0"
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover border-2 border-emerald-500 shadow-sm shrink-0"
                   />
                 ) : (
-                  <div className="w-24 h-24 rounded-xl bg-slate-100 border border-slate-300 flex flex-col items-center justify-center text-slate-500 shrink-0">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-slate-100 border border-slate-300 flex flex-col items-center justify-center text-slate-500 shrink-0">
                     <Camera className="w-6 h-6 mb-1 text-slate-400" />
                     <span className="text-[10px] font-bold">Sans photo</span>
                   </div>
                 )}
 
-                <div className="space-y-1.5">
+                <div className="space-y-1 sm:space-y-1.5 min-w-0 flex-1">
                   <div>{renderStatusBadge(selectedDriver.status)}</div>
-                  <div className="text-xs font-mono text-slate-600">
+                  <div className="text-xs font-mono text-slate-600 truncate">
                     <strong>ID Base :</strong> {selectedDriver.id}
                   </div>
-                  <div className="text-xs font-mono text-slate-700">
+                  <div className="text-xs font-mono text-slate-700 truncate">
                     <strong>NIN :</strong> {selectedDriver.person?.nin}
                   </div>
-                  <div className="text-xs text-slate-600">
+                  <div className="text-xs text-slate-600 truncate">
                     <strong>Commune :</strong>{' '}
                     {selectedDriver.person?.commune?.name || 'Conakry'}
                   </div>
@@ -2719,7 +2858,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
               </div>
 
               {/* License Details */}
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-3 gap-2 text-xs">
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                 <div>
                   <span className="text-slate-400 font-bold block">N° Permis</span>
                   <span className="font-mono font-bold text-slate-800">
@@ -2862,50 +3001,50 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
 
       {/* Vehicle Details / Profile Modal */}
       {selectedVehicle && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
-              <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">
+            <div className="bg-slate-900 text-white px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between shrink-0">
+              <div className="min-w-0 pr-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 block truncate">
                   Fiche Officielle Véhicule • PostgreSQL
                 </span>
-                <h4 className="text-base font-extrabold">
+                <h4 className="text-sm sm:text-base font-extrabold truncate">
                   {selectedVehicle.make} {selectedVehicle.model} — {selectedVehicle.plateNumber}
                 </h4>
               </div>
               <button
                 type="button"
                 onClick={handleCloseVehicleDetails}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white"
+                className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4 overflow-y-auto">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
               {/* Top Overview Row */}
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3 sm:space-x-4">
                 {selectedVehiclePhotoUrl ? (
                   <img
                     src={selectedVehiclePhotoUrl}
                     alt="Photo du véhicule"
-                    className="w-24 h-24 rounded-xl object-cover border-2 border-emerald-500 shadow-sm shrink-0"
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover border-2 border-emerald-500 shadow-sm shrink-0"
                   />
                 ) : (
-                  <div className="w-24 h-24 rounded-xl bg-slate-100 border border-slate-300 flex flex-col items-center justify-center text-slate-500 shrink-0">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-slate-100 border border-slate-300 flex flex-col items-center justify-center text-slate-500 shrink-0">
                     <Car className="w-7 h-7 mb-1 text-slate-400" />
                     <span className="text-[10px] font-bold">Sans photo</span>
                   </div>
                 )}
 
-                <div className="space-y-1.5 flex-1 min-w-0">
+                <div className="space-y-1 sm:space-y-1.5 flex-1 min-w-0">
                   <div className="flex items-center space-x-2">
                     {renderStatusBadge(selectedVehicle.status)}
-                    <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                    <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded truncate">
                       {VEHICLE_TYPE_LABELS[selectedVehicle.vehicleType] || selectedVehicle.vehicleType}
                     </span>
                   </div>
-                  <div className="text-xs font-mono text-slate-600">
+                  <div className="text-xs font-mono text-slate-600 truncate">
                     <strong>Plaque :</strong> {selectedVehicle.plateNumber}
                   </div>
                   <div className="text-xs font-mono text-slate-700 truncate">
@@ -2951,7 +3090,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
               </div>
 
               {/* Technical Attributes */}
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-3 gap-2 text-xs">
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                 <div>
                   <span className="text-slate-400 font-bold block">Marque / Modèle</span>
                   <span className="font-bold text-slate-800">{selectedVehicle.make} {selectedVehicle.model}</span>

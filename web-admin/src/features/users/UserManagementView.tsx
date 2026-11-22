@@ -903,169 +903,290 @@ export const UserManagementView: React.FC<{
         </div>
       </div>
 
-      {/* Users Table */}
+      {/* Users Table & Mobile Cards */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[10px]">
-              <tr>
-                <th className="p-3">Collaborateur</th>
-                <th className="p-3">Email & Téléphone</th>
-                <th className="p-3">Poste / Fonction (Travail)</th>
-                <th className="p-3">Rôle RBAC</th>
-                <th className="p-3">Commune d Affectation</th>
-                <th className="p-3">Statut</th>
-                <th className="p-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-400">
-                    Aucun collaborateur ne correspond à vos critères de recherche.
-                  </td>
-                </tr>
-              ) : (
-                filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-slate-50/80 transition">
-                    <td className="p-3">
-                      <div className="flex items-center space-x-2.5">
-                        {user.avatarUrl ? (
-                          <img
-                            src={user.avatarUrl}
-                            alt={user.name}
-                            className="w-9 h-9 rounded-full object-cover border-2 border-emerald-500 shadow-sm flex-shrink-0"
-                          />
-                        ) : (
-                          <div className="w-9 h-9 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-xs shadow-sm flex-shrink-0">
-                            {user.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        <div>
-                          <div className="font-bold text-slate-900 flex items-center space-x-1.5">
-                            <span>{user.name}</span>
-                          </div>
-                          <div className="text-[10px] text-slate-400 font-mono">{user.id}</div>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="p-3">
-                      <div className="flex items-center space-x-1.5 text-slate-800">
-                        <Mail className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                        <span className="font-medium">{user.email}</span>
-                      </div>
-                      <div className="flex items-center space-x-1.5 text-[11px] text-slate-500 font-mono mt-0.5">
-                        <Phone className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                        <span>{user.phoneNumber}</span>
-                      </div>
-                    </td>
-
-                    <td className="p-3">
-                      <div className="flex items-center space-x-1.5 text-slate-800 font-medium">
-                        <Briefcase className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
-                        <span>{user.jobTitle || 'Collaborateur AOTUC'}</span>
-                      </div>
-                    </td>
-
-                    <td className="p-3">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                          user.role === 'DIRECTOR'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : user.role === 'SUPER_ADMIN'
-                            ? 'bg-slate-800 text-white'
-                            : user.role === 'CHEF_SERVICE'
-                            ? 'bg-blue-100 text-blue-800'
-                            : user.role === 'AGENT_TERRAIN'
-                            ? 'bg-amber-100 text-amber-900'
-                            : user.role === 'DISTRIBUTEUR'
-                            ? 'bg-orange-100 text-orange-800'
-                            : 'bg-purple-100 text-purple-800'
-                        }`}
-                      >
-                        {user.role}
-                      </span>
-                      <div className="text-[10px] text-slate-400 mt-0.5">{user.roleLabel}</div>
-                    </td>
-
-                    <td className="p-3">
-                      <div className="flex items-center space-x-1.5 text-slate-700">
-                        <Building2 className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                        <span>{user.commune}</span>
-                      </div>
-                    </td>
-
-                    <td className="p-3">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          user.isActive
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-rose-50 text-rose-700 border border-rose-200'
-                        }`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                            user.isActive ? 'bg-emerald-500' : 'bg-rose-500'
-                          }`}
+        {filteredUsers.length === 0 ? (
+          <div className="p-8 text-center text-slate-400 text-xs">
+            Aucun collaborateur ne correspond à vos critères de recherche.
+          </div>
+        ) : (
+          <>
+            {/* Mobile Cards View (< sm screens) */}
+            <div className="sm:hidden divide-y divide-slate-100">
+              {filteredUsers.map((user) => (
+                <div key={user.id} className="p-4 space-y-3 hover:bg-slate-50 transition">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center space-x-2.5 min-w-0">
+                      {user.avatarUrl ? (
+                        <img
+                          src={user.avatarUrl}
+                          alt={user.name}
+                          className="w-10 h-10 rounded-full object-cover border-2 border-emerald-500 shadow-sm shrink-0"
                         />
-                        {user.isActive ? 'Actif' : 'Désactivé'}
-                      </span>
-                    </td>
-
-                    <td className="p-3 text-right space-x-1.5 whitespace-nowrap">
-                      <button
-                        onClick={() => openEditPhotoModal(user)}
-                        className="px-2.5 py-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition inline-flex items-center space-x-1 cursor-pointer"
-                        title="Ajouter ou modifier la photo du collaborateur"
-                      >
-                        <Camera className="w-3 h-3 text-emerald-700" />
-                        <span>Photo</span>
-                      </button>
-
-                      <button
-                        onClick={() => openResetPasswordModal(user)}
-                        className="px-2.5 py-1 text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition inline-flex items-center space-x-1 cursor-pointer"
-                        title="Réinitialiser le mot de passe"
-                      >
-                        <KeyRound className="w-3 h-3 text-slate-500" />
-                        <span>Mot de passe</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleToggleStatus(user)}
-                        className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition inline-flex items-center space-x-1 cursor-pointer ${
-                          user.isActive
-                            ? 'text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200'
-                            : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
+                          {user.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className="font-bold text-slate-900 text-sm truncate">{user.name}</div>
+                        <div className="text-[10px] text-slate-400 font-mono truncate">{user.id}</div>
+                      </div>
+                    </div>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                        user.isActive
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-rose-50 text-rose-700 border border-rose-200'
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                          user.isActive ? 'bg-emerald-500' : 'bg-rose-500'
                         }`}
-                      >
-                        {user.isActive ? (
-                          <>
-                            <UserX className="w-3 h-3 text-rose-600" />
-                            <span>Désactiver</span>
-                          </>
-                        ) : (
-                          <>
-                            <UserCheck className="w-3 h-3 text-emerald-600" />
-                            <span>Réactiver</span>
-                          </>
-                        )}
-                      </button>
-                    </td>
+                      />
+                      {user.isActive ? 'Actif' : 'Désactivé'}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                    <span
+                      className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                        user.role === 'DIRECTOR'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : user.role === 'SUPER_ADMIN'
+                          ? 'bg-slate-800 text-white'
+                          : user.role === 'CHEF_SERVICE'
+                          ? 'bg-blue-100 text-blue-800'
+                          : user.role === 'AGENT_TERRAIN'
+                          ? 'bg-amber-100 text-amber-900'
+                          : user.role === 'DISTRIBUTEUR'
+                          ? 'bg-orange-100 text-orange-800'
+                          : 'bg-purple-100 text-purple-800'
+                      }`}
+                    >
+                      {user.role}
+                    </span>
+                    <span className="text-[11px] text-slate-500">• {user.commune}</span>
+                  </div>
+
+                  <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-xs space-y-1">
+                    <div className="flex items-center space-x-1.5 text-slate-800 truncate">
+                      <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate">{user.email}</span>
+                    </div>
+                    <div className="flex items-center space-x-1.5 text-slate-600 font-mono text-[11px]">
+                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>{user.phoneNumber}</span>
+                    </div>
+                    {user.jobTitle && (
+                      <div className="flex items-center space-x-1.5 text-slate-600 text-[11px] pt-0.5">
+                        <Briefcase className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span className="truncate">{user.jobTitle}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mobile Actions */}
+                  <div className="grid grid-cols-3 gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => openEditPhotoModal(user)}
+                      className="min-h-[40px] flex items-center justify-center space-x-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition"
+                    >
+                      <Camera className="w-3 h-3 text-emerald-700" />
+                      <span>Photo</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openResetPasswordModal(user)}
+                      className="min-h-[40px] flex items-center justify-center space-x-1 text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition"
+                    >
+                      <KeyRound className="w-3 h-3 text-slate-500" />
+                      <span>Pass</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleStatus(user)}
+                      className={`min-h-[40px] flex items-center justify-center space-x-1 text-[11px] font-bold rounded-lg transition ${
+                        user.isActive
+                          ? 'text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200'
+                          : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
+                      }`}
+                    >
+                      {user.isActive ? (
+                        <>
+                          <UserX className="w-3 h-3 text-rose-600" />
+                          <span>Bloquer</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserCheck className="w-3 h-3 text-emerald-600" />
+                          <span>Activer</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View (>= sm screens) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[10px]">
+                  <tr>
+                    <th className="p-3">Collaborateur</th>
+                    <th className="p-3">Email & Téléphone</th>
+                    <th className="p-3">Poste / Fonction (Travail)</th>
+                    <th className="p-3">Rôle RBAC</th>
+                    <th className="p-3">Commune d Affectation</th>
+                    <th className="p-3">Statut</th>
+                    <th className="p-3 text-right">Actions</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredUsers.map((user) => (
+                    <tr key={user.id} className="hover:bg-slate-50/80 transition">
+                      <td className="p-3">
+                        <div className="flex items-center space-x-2.5">
+                          {user.avatarUrl ? (
+                            <img
+                              src={user.avatarUrl}
+                              alt={user.name}
+                              className="w-9 h-9 rounded-full object-cover border-2 border-emerald-500 shadow-sm flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-9 h-9 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-xs shadow-sm flex-shrink-0">
+                              {user.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-bold text-slate-900 flex items-center space-x-1.5">
+                              <span>{user.name}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-mono">{user.id}</div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="p-3">
+                        <div className="flex items-center space-x-1.5 text-slate-800">
+                          <Mail className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                          <span className="font-medium">{user.email}</span>
+                        </div>
+                        <div className="flex items-center space-x-1.5 text-[11px] text-slate-500 font-mono mt-0.5">
+                          <Phone className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                          <span>{user.phoneNumber}</span>
+                        </div>
+                      </td>
+
+                      <td className="p-3">
+                        <div className="flex items-center space-x-1.5 text-slate-800 font-medium">
+                          <Briefcase className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                          <span>{user.jobTitle || 'Collaborateur AOTUC'}</span>
+                        </div>
+                      </td>
+
+                      <td className="p-3">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                            user.role === 'DIRECTOR'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : user.role === 'SUPER_ADMIN'
+                              ? 'bg-slate-800 text-white'
+                              : user.role === 'CHEF_SERVICE'
+                              ? 'bg-blue-100 text-blue-800'
+                              : user.role === 'AGENT_TERRAIN'
+                              ? 'bg-amber-100 text-amber-900'
+                              : user.role === 'DISTRIBUTEUR'
+                              ? 'bg-orange-100 text-orange-800'
+                              : 'bg-purple-100 text-purple-800'
+                          }`}
+                        >
+                          {user.role}
+                        </span>
+                        <div className="text-[10px] text-slate-400 mt-0.5">{user.roleLabel}</div>
+                      </td>
+
+                      <td className="p-3">
+                        <div className="flex items-center space-x-1.5 text-slate-700">
+                          <Building2 className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                          <span>{user.commune}</span>
+                        </div>
+                      </td>
+
+                      <td className="p-3">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            user.isActive
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-rose-50 text-rose-700 border border-rose-200'
+                          }`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                              user.isActive ? 'bg-emerald-500' : 'bg-rose-500'
+                            }`}
+                          />
+                          {user.isActive ? 'Actif' : 'Désactivé'}
+                        </span>
+                      </td>
+
+                      <td className="p-3 text-right space-x-1.5 whitespace-nowrap">
+                        <button
+                          onClick={() => openEditPhotoModal(user)}
+                          className="px-2.5 py-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition inline-flex items-center space-x-1 cursor-pointer"
+                          title="Ajouter ou modifier la photo du collaborateur"
+                        >
+                          <Camera className="w-3 h-3 text-emerald-700" />
+                          <span>Photo</span>
+                        </button>
+
+                        <button
+                          onClick={() => openResetPasswordModal(user)}
+                          className="px-2.5 py-1 text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition inline-flex items-center space-x-1 cursor-pointer"
+                          title="Réinitialiser le mot de passe"
+                        >
+                          <KeyRound className="w-3 h-3 text-slate-500" />
+                          <span>Mot de passe</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleToggleStatus(user)}
+                          className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition inline-flex items-center space-x-1 cursor-pointer ${
+                            user.isActive
+                              ? 'text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200'
+                              : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
+                          }`}
+                        >
+                          {user.isActive ? (
+                            <>
+                              <UserX className="w-3 h-3 text-rose-600" />
+                              <span>Désactiver</span>
+                            </>
+                          ) : (
+                            <>
+                              <UserCheck className="w-3 h-3 text-emerald-600" />
+                              <span>Réactiver</span>
+                            </>
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
 
       {/* CREATE USER MODAL */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-5 bg-slate-900 text-white flex justify-between items-center">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+            <div className="p-4 sm:p-5 bg-slate-900 text-white flex justify-between items-center shrink-0">
               <div className="flex items-center space-x-2.5">
                 <div className="p-2 bg-white/10 rounded-xl">
                   <Users className="w-5 h-5 text-blue-300" />
@@ -1077,13 +1198,13 @@ export const UserManagementView: React.FC<{
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-slate-400 hover:text-white transition p-1 cursor-pointer"
+                className="text-slate-400 hover:text-white transition p-2 min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateUser} className="p-5 space-y-3.5 text-xs max-h-[85vh] overflow-y-auto">
+            <form onSubmit={handleCreateUser} className="p-4 sm:p-5 space-y-3.5 text-xs overflow-y-auto flex-1">
               {createModalError && (
                 <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-start space-x-2 text-xs">
                   <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
@@ -1187,11 +1308,11 @@ export const UserManagementView: React.FC<{
                 )}
 
                 {!isCameraOpen && (
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => handleStartCamera()}
-                      className="py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm transition cursor-pointer"
+                      className="min-h-[44px] py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm transition cursor-pointer"
                     >
                       <Camera className="w-3.5 h-3.5" />
                       <span>{newAvatarUrl ? 'Reprendre (Caméra)' : 'Prendre une Photo'}</span>
@@ -1200,7 +1321,7 @@ export const UserManagementView: React.FC<{
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="py-2 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 transition cursor-pointer"
+                      className="min-h-[44px] py-2 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 transition cursor-pointer"
                     >
                       <Upload className="w-3.5 h-3.5 text-slate-500" />
                       <span>Choisir une Image</span>
@@ -1224,7 +1345,7 @@ export const UserManagementView: React.FC<{
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-700 font-semibold mb-1">Prénom *</label>
                   <input
@@ -1299,7 +1420,7 @@ export const UserManagementView: React.FC<{
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-700 font-semibold mb-1">Rôle RBAC *</label>
                   <select
@@ -1714,17 +1835,17 @@ export const UserManagementView: React.FC<{
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-2 w-full">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
                     <button
                       type="button"
                       onClick={() => handleStartCamera()}
-                      className="py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm transition cursor-pointer"
+                      className="min-h-[44px] py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm transition cursor-pointer"
                     >
                       <Camera className="w-4 h-4" />
                       <span>{editAvatarUrl ? 'Reprendre (Caméra)' : 'Prendre une Photo'}</span>
                     </button>
 
-                    <label className="py-2.5 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 transition cursor-pointer">
+                    <label className="min-h-[44px] py-2.5 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 transition cursor-pointer">
                       <Upload className="w-4 h-4 text-slate-500" />
                       <span>Choisir une Image</span>
                       <input

@@ -269,7 +269,7 @@ export const ConakryMapWidget: React.FC<ConakryMapWidgetProps> = ({
           <select
             value={filterCommune}
             onChange={(e) => setFilterCommune(e.target.value)}
-            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 max-w-[190px] sm:max-w-none"
           >
             <option value="TOUTES">Toutes les 13 Communes ({stops.length} arrêts)</option>
             {CONAKRY_COMMUNES.map((comm) => (
@@ -284,14 +284,14 @@ export const ConakryMapWidget: React.FC<ConakryMapWidgetProps> = ({
         </div>
 
         {/* Quick Corridor Filter Pills */}
-        <div className="flex items-center space-x-1.5 overflow-x-auto py-0.5">
+        <div className="flex items-center space-x-1.5 overflow-x-auto py-0.5 max-w-full">
           {lines.map((l) => {
             const isSelected = selectedLineId === l.id;
             return (
               <button
                 key={l.id}
                 onClick={() => handleSelectLine(l.id)}
-                className={`px-2 py-0.5 rounded-full text-[11px] font-semibold transition cursor-pointer border ${
+                className={`px-2 py-0.5 rounded-full text-[11px] font-semibold transition cursor-pointer border shrink-0 ${
                   isSelected
                     ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900'
                     : 'bg-white text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-400'
@@ -310,7 +310,7 @@ export const ConakryMapWidget: React.FC<ConakryMapWidgetProps> = ({
       </div>
 
       {/* Map Body & Controls */}
-      <div className="relative w-full" style={{ height }}>
+      <div className="relative w-full overflow-hidden" style={{ height }}>
         {/* DOM Leaflet Container */}
         <div ref={mapContainerRef} className="w-full h-full z-0" />
 
@@ -318,21 +318,21 @@ export const ConakryMapWidget: React.FC<ConakryMapWidgetProps> = ({
         <div className="absolute top-3 right-3 z-[400] flex flex-col space-y-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-md">
           <button
             onClick={handleZoomIn}
-            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg transition"
+            className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg transition"
             title="Zoom avant"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
             onClick={handleZoomOut}
-            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg transition"
+            className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg transition"
             title="Zoom arrière"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
           <button
             onClick={handleRecenter}
-            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg transition"
+            className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg transition"
             title="Recentrer sur Conakry"
           >
             <RotateCcw className="w-4 h-4" />
