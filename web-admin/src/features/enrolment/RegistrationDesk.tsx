@@ -18,6 +18,8 @@ import {
   Eye,
   RotateCcw,
   Building2,
+  FileText,
+  ExternalLink,
 } from 'lucide-react';
 import { UserContext } from '../../types';
 import { buildApiUrl, getStoredAuthToken, parseApiResponse } from '../../utils/api';
@@ -146,6 +148,9 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
   // Driver Details Modal state
   const [selectedDriver, setSelectedDriver] = useState<DriverRecord | null>(null);
   const [selectedDriverPhotoUrl, setSelectedDriverPhotoUrl] = useState<string | null>(null);
+  const [selectedDriverLicenceRectoUrl, setSelectedDriverLicenceRectoUrl] = useState<string | null>(null);
+  const [selectedDriverLicenceVersoUrl, setSelectedDriverLicenceVersoUrl] = useState<string | null>(null);
+  const [selectedDriverCniUrl, setSelectedDriverCniUrl] = useState<string | null>(null);
 
   // Driver Form State
   const [driverFirstName, setDriverFirstName] = useState('');
@@ -163,23 +168,46 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
   const [driverUnionId, setDriverUnionId] = useState<string>('');
   const [availableUnions, setAvailableUnions] = useState<Array<{ id: string; code: string; name: string }>>([]);
 
-  // Driver Photograph (Camera capture or uploaded image)
+  // Camera Target: 'portrait' | 'licence_recto' | 'licence_verso'
+  type CameraTarget = 'portrait' | 'licence_recto' | 'licence_verso';
+  const [cameraTarget, setCameraTarget] = useState<CameraTarget | null>(null);
+
+  // Driver Photograph (Portrait)
   const [driverPhotoBase64, setDriverPhotoBase64] = useState<string | null>(null);
   const [driverPhotoName, setDriverPhotoName] = useState<string>('photo_chauffeur.jpg');
   const [driverPhotoMime, setDriverPhotoMime] = useState<string>('image/jpeg');
+
+  // Driving Licence (Permis de Conduire) Documents: Front & Back
+  const [licenceRectoBase64, setLicenceRectoBase64] = useState<string | null>(null);
+  const [licenceRectoName, setLicenceRectoName] = useState<string>('permis_recto.jpg');
+  const [licenceRectoMime, setLicenceRectoMime] = useState<string>('image/jpeg');
+
+  const [licenceVersoBase64, setLicenceVersoBase64] = useState<string | null>(null);
+  const [licenceVersoName, setLicenceVersoName] = useState<string>('permis_verso.jpg');
+  const [licenceVersoMime, setLicenceVersoMime] = useState<string>('image/jpeg');
+
+  // CNI / Identity Document
+  const [cniDocBase64, setCniDocBase64] = useState<string | null>(null);
+  const [cniDocName, setCniDocName] = useState<string>('');
+  const [cniDocMime, setCniDocMime] = useState<string>('image/jpeg');
+
   const [isCameraOpen, setIsCameraOpen] = useState<boolean>(false);
   const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
   const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('user');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const mobileCameraInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Supporting Document names (CNI / Permis optional attachment)
-  const [extraDocBase64, setExtraDocBase64] = useState<string | null>(null);
-  const [extraDocName, setExtraDocName] = useState<string>('');
-  const [extraDocMime, setExtraDocMime] = useState<string>('image/jpeg');
+  const licenceRectoFileInputRef = useRef<HTMLInputElement | null>(null);
+  const mobileCameraLicenceRectoRef = useRef<HTMLInputElement | null>(null);
+
+  const licenceVersoFileInputRef = useRef<HTMLInputElement | null>(null);
+  const mobileCameraLicenceVersoRef = useRef<HTMLInputElement | null>(null);
+
+  const cniFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Vehicle Form State
   const [ownerMode, setOwnerMode] = useState<'existing' | 'new'>('existing');
@@ -212,6 +240,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
     }
     setIsVideoReady(false);
     setIsCameraOpen(false);
+    setCameraTarget(null);
   }, []);
 
   useEffect(() => {
@@ -291,14 +320,25 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
   }, [fetchAllRegistrationData]);
 
   // Start device camera via WebRTC getUserMedia with fallback for desktop/mobile webcams
-  const handleStartCamera = async (preferredFacing?: 'user' | 'environment') => {
+  const handleStartCamera = async (
+    target: CameraTarget = 'portrait',
+    preferredFacing?: 'user' | 'environment'
+  ) => {
     setCameraError(null);
-    const targetFacing = preferredFacing || cameraFacingMode;
+    setCameraTarget(target);
+    const targetFacing = preferredFacing || (target === 'portrait' ? 'user' : 'environment');
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      // Fallback to native HTML5 camera capture input on mobile browsers
-      if (mobileCameraInputRef.current) {
+      if (target === 'portrait' && mobileCameraInputRef.current) {
         mobileCameraInputRef.current.click();
+        return;
+      }
+      if (target === 'licence_recto' && mobileCameraLicenceRectoRef.current) {
+        mobileCameraLicenceRectoRef.current.click();
+        return;
+      }
+      if (target === 'licence_verso' && mobileCameraLicenceVersoRef.current) {
+        mobileCameraLicenceVersoRef.current.click();
         return;
       }
       setCameraError(
@@ -317,11 +357,10 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
       let stream: MediaStream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: targetFacing, width: { ideal: 640 }, height: { ideal: 480 } },
+          video: { facingMode: targetFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false,
         });
       } catch (_) {
-        // Fallback if webcam does not support facingMode or resolution constraints
         stream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: false,
@@ -337,7 +376,6 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
           "Accès à la caméra refusé. Veuillez autoriser l'accès à la caméra dans la barre d'adresse du navigateur ou choisir une image."
         );
       } else {
-        // Trigger native OS camera capture input as fallback if available
         setCameraError(
           "Caméra WebRTC indisponible ou occupée. Utilisez le bouton « Choisir une Image » ou l'appareil photo natif."
         );
@@ -347,7 +385,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
 
   const handleToggleCameraFacing = () => {
     const nextFacing = cameraFacingMode === 'user' ? 'environment' : 'user';
-    handleStartCamera(nextFacing);
+    handleStartCamera(cameraTarget || 'portrait', nextFacing);
   };
 
   const handleCapturePhotoFromCamera = () => {
@@ -363,9 +401,21 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
 
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-    setDriverPhotoBase64(dataUrl);
-    setDriverPhotoName(`portrait_${Date.now()}.jpg`);
-    setDriverPhotoMime('image/jpeg');
+
+    if (cameraTarget === 'portrait') {
+      setDriverPhotoBase64(dataUrl);
+      setDriverPhotoName(`portrait_${Date.now()}.jpg`);
+      setDriverPhotoMime('image/jpeg');
+    } else if (cameraTarget === 'licence_recto') {
+      setLicenceRectoBase64(dataUrl);
+      setLicenceRectoName(`permis_recto_${Date.now()}.jpg`);
+      setLicenceRectoMime('image/jpeg');
+    } else if (cameraTarget === 'licence_verso') {
+      setLicenceVersoBase64(dataUrl);
+      setLicenceVersoName(`permis_verso_${Date.now()}.jpg`);
+      setLicenceVersoMime('image/jpeg');
+    }
+
     stopCameraStream();
   };
 
@@ -394,19 +444,70 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
     reader.readAsDataURL(file);
   };
 
-  const handleExtraDocChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLicenceRectoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCameraError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'].includes(file.type)) {
+      setCameraError('Format non autorisé. Veuillez sélectionner une image JPEG/PNG ou un PDF.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setCameraError('Le document recto dépasse la taille maximale autorisée (5 Mo).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setLicenceRectoBase64(reader.result);
+        setLicenceRectoName(file.name);
+        setLicenceRectoMime(file.type || 'image/jpeg');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleLicenceVersoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCameraError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'].includes(file.type)) {
+      setCameraError('Format non autorisé. Veuillez sélectionner une image JPEG/PNG ou un PDF.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setCameraError('Le document verso dépasse la taille maximale autorisée (5 Mo).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setLicenceVersoBase64(reader.result);
+        setLicenceVersoName(file.name);
+        setLicenceVersoMime(file.type || 'image/jpeg');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCniFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCameraError(null);
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      setErrorMessage('Le document justificatif dépasse la taille maximale autorisée (5 Mo).');
+      setErrorMessage('La pièce d identité dépasse la taille maximale autorisée (5 Mo).');
       return;
     }
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
-        setExtraDocBase64(reader.result);
-        setExtraDocName(file.name);
-        setExtraDocMime(file.type || 'image/jpeg');
+        setCniDocBase64(reader.result);
+        setCniDocName(file.name);
+        setCniDocMime(file.type || 'image/jpeg');
       }
     };
     reader.readAsDataURL(file);
@@ -415,34 +516,73 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
   const handleOpenDriverDetails = async (driver: DriverRecord) => {
     setSelectedDriver(driver);
     setSelectedDriverPhotoUrl(null);
+    setSelectedDriverLicenceRectoUrl(null);
+    setSelectedDriverLicenceVersoUrl(null);
+    setSelectedDriverCniUrl(null);
 
     const allDocs = driver.person?.documents || driver.documents || [];
-    const portraitDoc = allDocs.find((d) => d.category === 'PHOTO_PORTRAIT') || allDocs[0];
-    if (!portraitDoc) return;
-
     const token = getStoredAuthToken();
-    if (!token) return;
+    if (!token || allDocs.length === 0) return;
 
-    try {
-      const res = await fetch(buildApiUrl(`/api/v1/documents/${portraitDoc.id}/download`), {
-        headers: { Authorization: `Bearer ${token}` },
+    const fetchDocBlobUrl = async (docId: string) => {
+      try {
+        const res = await fetch(buildApiUrl(`/api/v1/documents/${docId}/stream`), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const blob = await res.blob();
+          return URL.createObjectURL(blob);
+        }
+      } catch (_) {}
+      return null;
+    };
+
+    // 1. Portrait
+    const portraitDoc = allDocs.find((d) => d.category === 'PHOTO_PORTRAIT');
+    if (portraitDoc) {
+      fetchDocBlobUrl(portraitDoc.id).then((url) => {
+        if (url) setSelectedDriverPhotoUrl(url);
       });
-      if (res.ok) {
-        const blob = await res.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        setSelectedDriverPhotoUrl(objectUrl);
-      }
-    } catch (_) {
-      // Ignore image fetch failure
+    }
+
+    // 2. Licence Recto (or single PERMIS_CONDUIRE)
+    const licenceRectoDoc = allDocs.find(
+      (d) => d.category === 'PERMIS_CONDUIRE_RECTO' || d.category === 'PERMIS_CONDUIRE'
+    );
+    if (licenceRectoDoc) {
+      fetchDocBlobUrl(licenceRectoDoc.id).then((url) => {
+        if (url) setSelectedDriverLicenceRectoUrl(url);
+      });
+    }
+
+    // 3. Licence Verso
+    const licenceVersoDoc = allDocs.find((d) => d.category === 'PERMIS_CONDUIRE_VERSO');
+    if (licenceVersoDoc) {
+      fetchDocBlobUrl(licenceVersoDoc.id).then((url) => {
+        if (url) setSelectedDriverLicenceVersoUrl(url);
+      });
+    }
+
+    // 4. CNI
+    const cniDoc = allDocs.find((d) => d.category === 'CNI_RECTO' || d.category === 'CNI_VERSO');
+    if (cniDoc) {
+      fetchDocBlobUrl(cniDoc.id).then((url) => {
+        if (url) setSelectedDriverCniUrl(url);
+      });
     }
   };
 
   const handleCloseDriverDetails = () => {
-    if (selectedDriverPhotoUrl) {
-      URL.revokeObjectURL(selectedDriverPhotoUrl);
-    }
+    if (selectedDriverPhotoUrl) URL.revokeObjectURL(selectedDriverPhotoUrl);
+    if (selectedDriverLicenceRectoUrl) URL.revokeObjectURL(selectedDriverLicenceRectoUrl);
+    if (selectedDriverLicenceVersoUrl) URL.revokeObjectURL(selectedDriverLicenceVersoUrl);
+    if (selectedDriverCniUrl) URL.revokeObjectURL(selectedDriverCniUrl);
+
     setSelectedDriver(null);
     setSelectedDriverPhotoUrl(null);
+    setSelectedDriverLicenceRectoUrl(null);
+    setSelectedDriverLicenceVersoUrl(null);
+    setSelectedDriverCniUrl(null);
   };
 
   const handleRegisterDriver = async (e: React.FormEvent) => {
@@ -503,12 +643,30 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
       });
     }
 
-    if (extraDocBase64) {
+    if (licenceRectoBase64) {
       inlineDocuments.push({
-        category: 'PERMIS_CONDUIRE',
-        originalName: extraDocName || 'permis_conduire.jpg',
-        mimeType: extraDocMime || 'image/jpeg',
-        base64Data: extraDocBase64,
+        category: 'PERMIS_CONDUIRE_RECTO',
+        originalName: licenceRectoName || 'permis_conduire_recto.jpg',
+        mimeType: licenceRectoMime || 'image/jpeg',
+        base64Data: licenceRectoBase64,
+      });
+    }
+
+    if (licenceVersoBase64) {
+      inlineDocuments.push({
+        category: 'PERMIS_CONDUIRE_VERSO',
+        originalName: licenceVersoName || 'permis_conduire_verso.jpg',
+        mimeType: licenceVersoMime || 'image/jpeg',
+        base64Data: licenceVersoBase64,
+      });
+    }
+
+    if (cniDocBase64) {
+      inlineDocuments.push({
+        category: 'CNI_RECTO',
+        originalName: cniDocName || 'cni_piece_identite.jpg',
+        mimeType: cniDocMime || 'image/jpeg',
+        base64Data: cniDocBase64,
       });
     }
 
@@ -564,8 +722,12 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
       setDriverLicense('');
       setDriverAddress('');
       setDriverPhotoBase64(null);
-      setExtraDocBase64(null);
-      setExtraDocName('');
+      setLicenceRectoBase64(null);
+      setLicenceRectoName('permis_recto.jpg');
+      setLicenceVersoBase64(null);
+      setLicenceVersoName('permis_verso.jpg');
+      setCniDocBase64(null);
+      setCniDocName('');
 
       setShowSuccessBanner(
         `✓ Conducteur "${persistedDriver.person?.firstName || trimmedFirst} ${persistedDriver.person?.lastName || trimmedLast}" enregistré dans PostgreSQL (ID : ${persistedDriver.id.slice(0, 8).toUpperCase()})`
@@ -1161,6 +1323,18 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
 
                 {isCameraOpen && (
                   <div className="space-y-2.5 bg-slate-900 p-3 rounded-xl text-white">
+                    <div className="flex items-center justify-between text-xs font-bold text-emerald-400">
+                      <span>
+                        {cameraTarget === 'portrait'
+                          ? '📷 Portrait du Conducteur'
+                          : cameraTarget === 'licence_recto'
+                          ? '📷 Permis de Conduire — Face Avant (Recto)'
+                          : '📷 Permis de Conduire — Face Arrière (Verso)'}
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        {cameraFacingMode === 'user' ? 'Caméra Frontale' : 'Caméra Arrière'}
+                      </span>
+                    </div>
                     <div className="relative rounded-lg overflow-hidden bg-black aspect-video flex items-center justify-center">
                       <video
                         ref={videoRef}
@@ -1218,7 +1392,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                       <div className="flex items-center space-x-2 mt-1.5">
                         <button
                           type="button"
-                          onClick={() => handleStartCamera()}
+                          onClick={() => handleStartCamera('portrait', 'user')}
                           className="inline-flex items-center px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded text-[11px] font-bold"
                         >
                           <RotateCcw className="w-3 h-3 mr-1" />
@@ -1240,7 +1414,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                   <div className="grid grid-cols-2 gap-2.5">
                     <button
                       type="button"
-                      onClick={() => handleStartCamera()}
+                      onClick={() => handleStartCamera('portrait', 'user')}
                       className="py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm transition-colors"
                     >
                       <Camera className="w-4 h-4" />
@@ -1274,22 +1448,220 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                 )}
               </div>
 
-              {/* Optional Supporting Document (CNI / Permis) */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Copie CNI ou Permis (Optionnel)
-                </label>
-                <label className="border border-dashed border-slate-300 rounded-lg p-2.5 text-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer block">
+              {/* Dedicated Driving Licence Document Section */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center">
+                    <FileText className="w-4 h-4 mr-1.5 text-emerald-700" />
+                    Numérisation du Permis de Conduire (Obligatoire)
+                  </span>
+                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded">
+                    Pièces Officielles
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Prenez en photo ou joignez les deux faces du permis de conduire physique du chauffeur.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Face Avant (Recto) */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700">Face Avant (Recto) *</span>
+                      {licenceRectoBase64 && (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                          ✓ Capturé
+                        </span>
+                      )}
+                    </div>
+
+                    {licenceRectoBase64 ? (
+                      <div className="space-y-2">
+                        <div className="relative rounded-lg overflow-hidden border border-slate-200 aspect-[16/10] bg-slate-100">
+                          <img
+                            src={licenceRectoBase64}
+                            alt="Aperçu Permis Recto"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between gap-1 text-[11px]">
+                          <button
+                            type="button"
+                            onClick={() => handleStartCamera('licence_recto', 'environment')}
+                            className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded font-bold flex items-center space-x-1"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            <span>Reprendre</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => licenceRectoFileInputRef.current?.click()}
+                            className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-bold"
+                          >
+                            Remplacer
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setLicenceRectoBase64(null)}
+                            className="px-2 py-1 text-red-600 hover:bg-red-50 rounded font-bold"
+                          >
+                            Supprimer
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="rounded-lg border border-dashed border-slate-300 aspect-[16/10] flex flex-col items-center justify-center p-3 text-center text-slate-400 bg-slate-50">
+                          <FileText className="w-6 h-6 mb-1 text-slate-300" />
+                          <span className="text-[10px] font-medium">Aucune photo du recto</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleStartCamera('licence_recto', 'environment')}
+                            className="py-1.5 px-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center space-x-1"
+                          >
+                            <Camera className="w-3.5 h-3.5" />
+                            <span>Photo Recto</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => licenceRectoFileInputRef.current?.click()}
+                            className="py-1.5 px-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold flex items-center justify-center space-x-1"
+                          >
+                            <Upload className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Fichier</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <input
+                      ref={licenceRectoFileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,application/pdf"
+                      onChange={handleLicenceRectoFileChange}
+                      className="hidden"
+                    />
+                    <input
+                      ref={mobileCameraLicenceRectoRef}
+                      type="file"
+                      accept="image/jpeg,image/png"
+                      capture="environment"
+                      onChange={handleLicenceRectoFileChange}
+                      className="hidden"
+                    />
+                  </div>
+
+                  {/* Face Arrière (Verso) */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700">Face Arrière (Verso)</span>
+                      {licenceVersoBase64 && (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                          ✓ Capturé
+                        </span>
+                      )}
+                    </div>
+
+                    {licenceVersoBase64 ? (
+                      <div className="space-y-2">
+                        <div className="relative rounded-lg overflow-hidden border border-slate-200 aspect-[16/10] bg-slate-100">
+                          <img
+                            src={licenceVersoBase64}
+                            alt="Aperçu Permis Verso"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between gap-1 text-[11px]">
+                          <button
+                            type="button"
+                            onClick={() => handleStartCamera('licence_verso', 'environment')}
+                            className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded font-bold flex items-center space-x-1"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            <span>Reprendre</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => licenceVersoFileInputRef.current?.click()}
+                            className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-bold"
+                          >
+                            Remplacer
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setLicenceVersoBase64(null)}
+                            className="px-2 py-1 text-red-600 hover:bg-red-50 rounded font-bold"
+                          >
+                            Supprimer
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="rounded-lg border border-dashed border-slate-300 aspect-[16/10] flex flex-col items-center justify-center p-3 text-center text-slate-400 bg-slate-50">
+                          <FileText className="w-6 h-6 mb-1 text-slate-300" />
+                          <span className="text-[10px] font-medium">Optionnel (Verso)</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleStartCamera('licence_verso', 'environment')}
+                            className="py-1.5 px-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center space-x-1"
+                          >
+                            <Camera className="w-3.5 h-3.5" />
+                            <span>Photo Verso</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => licenceVersoFileInputRef.current?.click()}
+                            className="py-1.5 px-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold flex items-center justify-center space-x-1"
+                          >
+                            <Upload className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Fichier</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <input
+                      ref={licenceVersoFileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,application/pdf"
+                      onChange={handleLicenceVersoFileChange}
+                      className="hidden"
+                    />
+                    <input
+                      ref={mobileCameraLicenceVersoRef}
+                      type="file"
+                      accept="image/jpeg,image/png"
+                      capture="environment"
+                      onChange={handleLicenceVersoFileChange}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Pièce d'Identité Nationale (CNI / Passeport - Optionnel) */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 uppercase">
+                    Pièce d'Identité Nationale (CNI / Passeport - Optionnel)
+                  </label>
+                  <span className="text-[10px] text-slate-500">PDF / JPEG / PNG</span>
+                </div>
+                <label className="border border-dashed border-slate-300 rounded-lg p-2.5 text-center bg-white hover:bg-slate-100 transition-colors cursor-pointer block">
                   <input
+                    ref={cniFileInputRef}
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={handleExtraDocChange}
+                    onChange={handleCniFileChange}
                     className="hidden"
                   />
                   <span className="text-xs font-semibold text-slate-600">
-                    {extraDocName
-                      ? `✓ Pièce jointe : ${extraDocName}`
-                      : 'Cliquez pour joindre un scan CNI / Permis (Max 5 Mo)'}
+                    {cniDocName
+                      ? `✓ Pièce CNI jointe : ${cniDocName}`
+                      : 'Cliquez pour joindre la copie CNI ou Passeport (Max 5 Mo)'}
                   </span>
                 </label>
               </div>
@@ -1954,6 +2326,110 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                   </span>
                 </div>
               </div>
+
+              {/* Digitized Driving Licence Document Previews (Front & Back) */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase text-slate-500 flex items-center">
+                    <FileText className="w-3.5 h-3.5 mr-1 text-emerald-700" />
+                    Permis de Conduire Numérisé (Documents Officiels)
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-semibold">
+                    Stockage Sécurisé PostgreSQL & Disque
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Face Avant (Recto) */}
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] font-bold text-slate-700">Face Avant (Recto)</span>
+                      {selectedDriverLicenceRectoUrl && (
+                        <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded">
+                          ✓ Vérifié
+                        </span>
+                      )}
+                    </div>
+                    {selectedDriverLicenceRectoUrl ? (
+                      <div className="relative group rounded-lg overflow-hidden border border-slate-200 aspect-[16/10] bg-slate-100">
+                        <img
+                          src={selectedDriverLicenceRectoUrl}
+                          alt="Permis de conduire - Recto"
+                          className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
+                          onClick={() => window.open(selectedDriverLicenceRectoUrl, '_blank')}
+                        />
+                        <a
+                          href={selectedDriverLicenceRectoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="absolute bottom-1.5 right-1.5 px-2 py-0.5 bg-slate-900/80 hover:bg-slate-900 text-white text-[10px] font-bold rounded flex items-center space-x-1"
+                        >
+                          <ExternalLink className="w-2.5 h-2.5" />
+                          <span>Plein écran</span>
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-dashed border-slate-300 aspect-[16/10] flex flex-col items-center justify-center text-slate-400 p-3 text-center">
+                        <FileText className="w-6 h-6 mb-1 text-slate-300" />
+                        <span className="text-[11px] font-medium">Aucun scan recto joint</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Face Arrière (Verso) */}
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] font-bold text-slate-700">Face Arrière (Verso)</span>
+                      {selectedDriverLicenceVersoUrl && (
+                        <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded">
+                          ✓ Vérifié
+                        </span>
+                      )}
+                    </div>
+                    {selectedDriverLicenceVersoUrl ? (
+                      <div className="relative group rounded-lg overflow-hidden border border-slate-200 aspect-[16/10] bg-slate-100">
+                        <img
+                          src={selectedDriverLicenceVersoUrl}
+                          alt="Permis de conduire - Verso"
+                          className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
+                          onClick={() => window.open(selectedDriverLicenceVersoUrl, '_blank')}
+                        />
+                        <a
+                          href={selectedDriverLicenceVersoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="absolute bottom-1.5 right-1.5 px-2 py-0.5 bg-slate-900/80 hover:bg-slate-900 text-white text-[10px] font-bold rounded flex items-center space-x-1"
+                        >
+                          <ExternalLink className="w-2.5 h-2.5" />
+                          <span>Plein écran</span>
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-dashed border-slate-300 aspect-[16/10] flex flex-col items-center justify-center text-slate-400 p-3 text-center">
+                        <FileText className="w-6 h-6 mb-1 text-slate-300" />
+                        <span className="text-[11px] font-medium">Aucun scan verso joint</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* CNI Preview if attached */}
+              {selectedDriverCniUrl && (
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                  <span className="text-[10px] font-extrabold uppercase text-slate-500 block">
+                    Pièce d'Identité Nationale (CNI / Passeport)
+                  </span>
+                  <div className="relative rounded-lg overflow-hidden border border-slate-200 aspect-[16/10] bg-slate-100 max-w-xs">
+                    <img
+                      src={selectedDriverCniUrl}
+                      alt="CNI du conducteur"
+                      className="w-full h-full object-cover cursor-pointer"
+                      onClick={() => window.open(selectedDriverCniUrl, '_blank')}
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="flex justify-end">
                 <button

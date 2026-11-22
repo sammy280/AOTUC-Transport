@@ -21,9 +21,19 @@ router.post(
   DocumentController.upload
 );
 
-// Secure streaming endpoint (Authorized reviewers and agents)
+// Secure streaming & download endpoints (Authorized reviewers, agents, and supervisors)
 router.get(
   '/:id/stream',
+  requirePermissions(
+    PERMISSIONS.DOCUMENTS_VERIFY,
+    PERMISSIONS.DOCUMENTS_UPLOAD,
+    PERMISSIONS.DRIVERS_READ
+  ),
+  DocumentController.stream
+);
+
+router.get(
+  '/:id/download',
   requirePermissions(
     PERMISSIONS.DOCUMENTS_VERIFY,
     PERMISSIONS.DOCUMENTS_UPLOAD,

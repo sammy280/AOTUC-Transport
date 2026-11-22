@@ -1248,13 +1248,18 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
           ),
           _buildDocumentCaptureRow(
             docsMap: _driverDocs,
-            category: 'CNI_RECTO',
-            label: 'Pièce d Identité Nationale (CNI)',
+            category: 'PERMIS_CONDUIRE',
+            label: 'Permis de Conduire (Face Avant / Recto)',
           ),
           _buildDocumentCaptureRow(
             docsMap: _driverDocs,
-            category: 'PERMIS_CONDUIRE',
-            label: 'Permis de Conduire Biométrique',
+            category: 'PERMIS_CONDUIRE_VERSO',
+            label: 'Permis de Conduire (Face Arrière / Verso)',
+          ),
+          _buildDocumentCaptureRow(
+            docsMap: _driverDocs,
+            category: 'CNI_RECTO',
+            label: 'Pièce d Identité Nationale (CNI / Passeport)',
           ),
           const SizedBox(height: 12),
           _buildSubmitButtons(

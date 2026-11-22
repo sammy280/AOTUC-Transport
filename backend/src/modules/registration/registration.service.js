@@ -731,6 +731,30 @@ export class RegistrationService {
   }
 
   /**
+   * Get single Driver by ID with full details & documents
+   */
+  static async getDriverById(id, actorUser) {
+    const driver = await prisma.driver.findUnique({
+      where: { id },
+      include: {
+        person: { include: { commune: true, documents: true } },
+        union: true,
+      },
+    });
+    if (!driver) {
+      throw new AppError('Conducteur introuvable.', 404, 'DRIVER_NOT_FOUND');
+    }
+
+    if (actorUser && actorUser.communeId && driver.person?.communeId && actorUser.communeId !== driver.person.communeId) {
+      const isPrivileged = Array.isArray(actorUser.roles) && (actorUser.roles.includes('SUPER_ADMIN') || actorUser.roles.includes('DIRECTOR'));
+      if (!isPrivileged) {
+        throw new AppError('Accès refusé. Ce conducteur relève d une autre commune.', 403, 'FORBIDDEN_COMMUNE_SCOPE');
+      }
+    }
+    return driver;
+  }
+
+  /**
    * List Owners with Pagination and Commune Scope
    */
   static async listOwners({ page = 1, limit = 20, search = '', communeId = null }, actorUser) {

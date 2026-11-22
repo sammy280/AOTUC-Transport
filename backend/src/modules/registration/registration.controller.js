@@ -86,6 +86,18 @@ export class RegistrationController {
     }
   }
 
+  static async getDriverById(req, res, next) {
+    try {
+      const driver = await RegistrationService.getDriverById(req.params.id, req.user);
+      return res.status(200).json({
+        success: true,
+        data: driver,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   static async listOwners(req, res, next) {
     try {
       const page = parseInt(req.query.page) || 1;

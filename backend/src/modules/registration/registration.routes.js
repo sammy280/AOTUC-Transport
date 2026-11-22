@@ -54,6 +54,12 @@ router.get(
 );
 
 router.get(
+  '/drivers/:id',
+  requirePermissions(PERMISSIONS.DRIVERS_READ),
+  RegistrationController.getDriverById
+);
+
+router.get(
   '/owners',
   requirePermissions(PERMISSIONS.DRIVERS_READ),
   RegistrationController.listOwners
