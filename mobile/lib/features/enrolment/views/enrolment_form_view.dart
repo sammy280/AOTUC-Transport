@@ -30,6 +30,14 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
     'Matam',
     'Ratoma',
     'Matoto',
+    'Kassa',
+    'Gbessia',
+    'Tombolia',
+    'Lambanyi',
+    'Sonfonia',
+    'Kagbélen',
+    'Sanoyah',
+    'Manéah',
   ];
 
   late final RegistrationApiService _apiService;

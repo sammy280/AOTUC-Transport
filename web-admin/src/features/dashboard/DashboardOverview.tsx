@@ -518,11 +518,18 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   ];
 
   const communeData = [
-    { name: 'Matoto', count: 540, percentage: 38, color: 'bg-emerald-500' },
-    { name: 'Ratoma', count: 412, percentage: 29, color: 'bg-blue-500' },
-    { name: 'Dixinn', count: 185, percentage: 13, color: 'bg-indigo-500' },
-    { name: 'Matam', count: 162, percentage: 11, color: 'bg-amber-500' },
-    { name: 'Kaloum', count: 114, percentage: 8, color: 'bg-purple-500' },
+    { name: 'Matoto', count: 320, percentage: 22, color: 'bg-emerald-500' },
+    { name: 'Ratoma', count: 260, percentage: 18, color: 'bg-blue-500' },
+    { name: 'Gbessia', count: 175, percentage: 12, color: 'bg-teal-500' },
+    { name: 'Lambanyi', count: 140, percentage: 10, color: 'bg-cyan-500' },
+    { name: 'Dixinn', count: 125, percentage: 9, color: 'bg-indigo-500' },
+    { name: 'Matam', count: 110, percentage: 8, color: 'bg-amber-500' },
+    { name: 'Kaloum', count: 95, percentage: 7, color: 'bg-purple-500' },
+    { name: 'Sonfonia', count: 80, percentage: 6, color: 'bg-sky-500' },
+    { name: 'Kagbélen', count: 50, percentage: 3, color: 'bg-orange-500' },
+    { name: 'Tombolia', count: 42, percentage: 3, color: 'bg-rose-500' },
+    { name: 'Sanoyah', count: 30, percentage: 2, color: 'bg-violet-500' },
+    { name: 'Manéah', count: 20, percentage: 1, color: 'bg-lime-600' },
     { name: 'Kassa', count: 15, percentage: 1, color: 'bg-slate-400' },
   ];
 

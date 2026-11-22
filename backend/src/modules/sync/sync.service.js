@@ -138,7 +138,7 @@ export class SyncService {
 
     // 4. Communes Reference
     const communes = await prisma.commune.findMany({
-      select: { id: true, code: true, name: true },
+      select: { id: true, code: true, name: true, description: true, administrativeOrigin: true },
       orderBy: { name: 'asc' },
     });
 

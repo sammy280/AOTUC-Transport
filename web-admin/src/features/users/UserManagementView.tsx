@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { UserContext, RoleType } from '../../types';
 import { buildApiUrl, getStoredAuthToken } from '../../utils/api';
+import { OFFICIAL_COMMUNES } from '../../config/communes';
 
 interface ManagedUser {
   id: string;
@@ -52,14 +53,12 @@ interface CommuneOption {
   description?: string;
 }
 
-const INITIAL_COMMUNES: CommuneOption[] = [
-  { id: 'comm-klm', code: 'KLM', name: 'Kaloum', description: 'Centre administratif et des affaires' },
-  { id: 'comm-dxn', code: 'DXN', name: 'Dixinn', description: 'Commune universitaire et résidentielle' },
-  { id: 'comm-mtm', code: 'MTM', name: 'Matam', description: 'Commune commerciale et portuaire' },
-  { id: 'comm-rtm', code: 'RTM', name: 'Ratoma', description: 'Axes routiers et résidentiels' },
-  { id: 'comm-mtt', code: 'MTT', name: 'Matoto', description: 'Plus grande commune urbaine' },
-  { id: 'comm-kss', code: 'KSS', name: 'Kassa', description: 'Îles de Loos' },
-];
+const INITIAL_COMMUNES: CommuneOption[] = OFFICIAL_COMMUNES.map((c) => ({
+  id: `comm-${c.code.toLowerCase()}`,
+  code: c.code,
+  name: c.name,
+  description: c.description,
+}));
 
 const INITIAL_USERS: ManagedUser[] = [
   {

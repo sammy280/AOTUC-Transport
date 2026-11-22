@@ -12,6 +12,7 @@ import {
   Clock,
   Navigation,
 } from 'lucide-react';
+import { CONAKRY_COMMUNES } from '../../config/communes';
 
 interface TransportStop {
   id: string;
@@ -130,7 +131,12 @@ const INITIAL_CONAKRY_STOPS: TransportStop[] = [
   { id: 's12', code: 'ARR-ALM-01', name: 'Kaloum Almamya Banques', commune: 'Kaloum', latitude: 9.5125, longitude: -13.7088, isSheltered: true, dailyPassengers: 3800 },
   { id: 's13', code: 'ARR-DON-02', name: 'Donka Hôpital National', commune: 'Dixinn', latitude: 9.5412, longitude: -13.6745, isSheltered: true, dailyPassengers: 5400 },
   { id: 's14', code: 'ARR-KIP-03', name: 'Kipé Centre Commercial', commune: 'Ratoma', latitude: 9.6089, longitude: -13.6189, isSheltered: true, dailyPassengers: 4700 },
-  { id: 's15', code: 'ARR-LAM-04', name: 'Lambanyi Marché', commune: 'Ratoma', latitude: 9.6385, longitude: -13.5872, isSheltered: false, dailyPassengers: 3900 },
+  { id: 's15', code: 'ARR-LAM-04', name: 'Lambanyi Marché', commune: 'Lambanyi', latitude: 9.6385, longitude: -13.5872, isSheltered: false, dailyPassengers: 3900 },
+  { id: 's16', code: 'ARR-GBE-01', name: 'Gbessia Aéroport Rond-Point', commune: 'Gbessia', latitude: 9.5780, longitude: -13.6150, isSheltered: true, dailyPassengers: 6800 },
+  { id: 's17', code: 'ARR-TMB-01', name: 'Tombolia Transit Matoto', commune: 'Tombolia', latitude: 9.6150, longitude: -13.5650, isSheltered: false, dailyPassengers: 3200 },
+  { id: 's18', code: 'ARR-SNY-01', name: 'Sanoyah Km 36', commune: 'Sanoyah', latitude: 9.6700, longitude: -13.4800, isSheltered: true, dailyPassengers: 4100 },
+  { id: 's19', code: 'ARR-MNH-01', name: 'Manéah Carrefour Préfecture', commune: 'Manéah', latitude: 9.6950, longitude: -13.4450, isSheltered: false, dailyPassengers: 2900 },
+  { id: 's20', code: 'ARR-KSS-01', name: 'Kassa Port Îles de Los', commune: 'Kassa', latitude: 9.4850, longitude: -13.7500, isSheltered: true, dailyPassengers: 1100 },
 ];
 
 export const NetworkMapView: React.FC = () => {
@@ -423,12 +429,11 @@ export const NetworkMapView: React.FC = () => {
                 className="bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="TOUTES">Toutes les Communes</option>
-                <option value="Kaloum">Kaloum</option>
-                <option value="Dixinn">Dixinn</option>
-                <option value="Matam">Matam</option>
-                <option value="Ratoma">Ratoma</option>
-                <option value="Matoto">Matoto</option>
-                <option value="Sonfonia">Sonfonia</option>
+                {CONAKRY_COMMUNES.map((comm) => (
+                  <option key={comm} value={comm}>
+                    {comm}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -630,12 +635,11 @@ export const NetworkMapView: React.FC = () => {
                     onChange={(e) => setNewStopCommune(e.target.value)}
                     className="w-full border border-slate-300 rounded-lg p-2"
                   >
-                    <option value="Kaloum">Kaloum</option>
-                    <option value="Dixinn">Dixinn</option>
-                    <option value="Matam">Matam</option>
-                    <option value="Ratoma">Ratoma</option>
-                    <option value="Matoto">Matoto</option>
-                    <option value="Sonfonia">Sonfonia</option>
+                    {CONAKRY_COMMUNES.map((comm) => (
+                      <option key={comm} value={comm}>
+                        {comm}
+                      </option>
+                    ))}
                     <option value="Dubréka-Frontière">Dubréka-Frontière</option>
                   </select>
                 </div>

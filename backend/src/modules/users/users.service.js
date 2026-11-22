@@ -502,6 +502,7 @@ export class UsersService {
         code: true,
         name: true,
         description: true,
+        administrativeOrigin: true,
       },
       orderBy: { name: 'asc' },
     });

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { UserContext } from '../../types';
 import { buildApiUrl, getStoredAuthToken, parseApiResponse } from '../../utils/api';
+import { CONAKRY_COMMUNES } from '../../config/communes';
 
 interface DocumentItem {
   id: string;
@@ -1439,11 +1440,11 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                       onChange={(e) => setDriverCommune(e.target.value)}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-600 focus:outline-none"
                     >
-                      <option value="Kaloum">Kaloum</option>
-                      <option value="Dixinn">Dixinn</option>
-                      <option value="Matam">Matam</option>
-                      <option value="Ratoma">Ratoma</option>
-                      <option value="Matoto">Matoto</option>
+                      {CONAKRY_COMMUNES.map((comm) => (
+                        <option key={comm} value={comm}>
+                          {comm}
+                        </option>
+                      ))}
                     </select>
                   )}
                 </div>
@@ -2014,11 +2015,11 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                       onChange={(e) => setVehicleCommune(e.target.value)}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-600 focus:outline-none"
                     >
-                      <option value="Kaloum">Kaloum</option>
-                      <option value="Dixinn">Dixinn</option>
-                      <option value="Matam">Matam</option>
-                      <option value="Ratoma">Ratoma</option>
-                      <option value="Matoto">Matoto</option>
+                      {CONAKRY_COMMUNES.map((comm) => (
+                        <option key={comm} value={comm}>
+                          {comm}
+                        </option>
+                      ))}
                     </select>
                   )}
                 </div>
@@ -2413,11 +2414,11 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                   className="px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none"
                 >
                   <option value="ALL">Toutes Communes</option>
-                  <option value="Kaloum">Kaloum</option>
-                  <option value="Dixinn">Dixinn</option>
-                  <option value="Matam">Matam</option>
-                  <option value="Ratoma">Ratoma</option>
-                  <option value="Matoto">Matoto</option>
+                  {CONAKRY_COMMUNES.map((comm) => (
+                    <option key={comm} value={comm}>
+                      {comm}
+                    </option>
+                  ))}
                 </select>
               )}
             </div>

@@ -27,18 +27,13 @@ import {
   FieldAssignmentStatus,
 } from '../../types';
 import { buildApiUrl, getStoredAuthToken } from '../../utils/api';
+import { OFFICIAL_COMMUNES } from '../../config/communes';
 
 interface FieldOperationsViewProps {
   currentUser: UserContext;
 }
 
-const CONAKRY_COMMUNES = [
-  { code: 'KLM', name: 'Kaloum' },
-  { code: 'DXN', name: 'Dixinn' },
-  { code: 'MTM', name: 'Matam' },
-  { code: 'RTM', name: 'Ratoma' },
-  { code: 'MTT', name: 'Matoto' },
-];
+const CONAKRY_COMMUNES = OFFICIAL_COMMUNES;
 
 export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ currentUser }) => {
   const [summary, setSummary] = useState<FieldDashboardSummary | null>(null);

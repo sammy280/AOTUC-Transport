@@ -17,12 +17,13 @@ datasource db {
 // ==============================================================================
 
 model Commune {
-  id          String   @id @default(uuid())
-  code        String   @unique // e.g., "KLM", "DXN", "MTM", "RTM", "MTT"
-  name        String   @unique // e.g., "Kaloum", "Dixinn", "Matam", "Ratoma", "Matoto"
-  description String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id                   String   @id @default(uuid())
+  code                 String   @unique // e.g., "KLM", "DXN", "MTM", "RTM", "MTT"
+  name                 String   @unique // e.g., "Kaloum", "Dixinn", "Matam", "Ratoma", "Matoto"
+  description          String?
+  administrativeOrigin String?  @map("administrative_origin")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
 
   users              User[]
   persons            Person[]

@@ -23,18 +23,11 @@ import {
 import { UserContext, TransportUnionRecord, UnionStatus } from '../../types';
 import { hasRolePermission, PERMISSIONS } from '../../utils/permissions';
 import { buildApiUrl, parseApiResponse, getStoredAuthToken } from '../../utils/api';
+import { CONAKRY_COMMUNES } from '../../config/communes';
 
 interface UnionManagementViewProps {
   currentUser: UserContext;
 }
-
-const CONAKRY_COMMUNES = [
-  'Kaloum',
-  'Dixinn',
-  'Matam',
-  'Ratoma',
-  'Matoto',
-];
 
 export const UnionManagementView: React.FC<UnionManagementViewProps> = ({ currentUser }) => {
   const [unions, setUnions] = useState<TransportUnionRecord[]>([]);
