@@ -15,6 +15,7 @@ class OfflineDatabase {
   static final List<Map<String, dynamic>> _memoryInspectionLogs = [];
   static final Map<String, Map<String, dynamic>> _memorySyncMeta = {};
   static final Map<String, Map<String, dynamic>> _memoryFieldAssignments = {};
+  static final Map<String, Map<String, dynamic>> _memoryCachedUnions = {};
 
   OfflineDatabase._init();
 
@@ -26,6 +27,7 @@ class OfflineDatabase {
     _memoryInspectionLogs.clear();
     _memorySyncMeta.clear();
     _memoryFieldAssignments.clear();
+    _memoryCachedUnions.clear();
   }
 
   /// Simulates an application restart / cold boot while preserving durable SQLite data.
@@ -69,7 +71,7 @@ class OfflineDatabase {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -159,6 +161,19 @@ class OfflineDatabase {
         status TEXT NOT NULL DEFAULT 'ASSIGNED'
       )
     ''');
+
+    // 7. Cached Transport Unions / Syndicats
+    await db.execute('''
+      CREATE TABLE cached_unions (
+        id TEXT PRIMARY KEY,
+        code TEXT NOT NULL,
+        name TEXT NOT NULL,
+        registration_number TEXT,
+        status TEXT NOT NULL DEFAULT 'ACTIF',
+        commune_id TEXT,
+        cached_at TEXT NOT NULL
+      )
+    ''');
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -213,6 +228,19 @@ class OfflineDatabase {
           target_vehicles INTEGER NOT NULL DEFAULT 0,
           instructions TEXT,
           status TEXT NOT NULL DEFAULT 'ASSIGNED'
+        )
+      ''');
+    }
+    if (oldVersion < 5) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS cached_unions (
+          id TEXT PRIMARY KEY,
+          code TEXT NOT NULL,
+          name TEXT NOT NULL,
+          registration_number TEXT,
+          status TEXT NOT NULL DEFAULT 'ACTIF',
+          commune_id TEXT,
+          cached_at TEXT NOT NULL
         )
       ''');
     }
@@ -1038,6 +1066,83 @@ class OfflineDatabase {
     }
     final db = await instance.database;
     final rows = await db.rawQuery('SELECT COUNT(*) AS cnt FROM field_assignments');
+    if (rows.isEmpty) return 0;
+    return (rows.first['cnt'] as int?) ?? 0;
+  }
+
+  /// Caches or updates transport unions received from /sync/pull or API.
+  Future<void> saveUnionsBatch(List<dynamic> unions) async {
+    final nowIso = DateTime.now().toIso8601String();
+    if (_useInMemoryTestStore) {
+      for (final raw in unions) {
+        if (raw is Map) {
+          final id = (raw['id'] ?? raw['unionId'])?.toString();
+          if (id != null && id.isNotEmpty) {
+            _memoryCachedUnions[id] = {
+              'id': id,
+              'code': (raw['code'] ?? 'SYN').toString(),
+              'name': (raw['name'] ?? 'Syndicat').toString(),
+              'registration_number': raw['registrationNumber']?.toString() ?? raw['registration_number']?.toString(),
+              'status': (raw['status'] ?? 'ACTIF').toString(),
+              'commune_id': (raw['communeId'] ?? raw['commune_id'])?.toString(),
+              'cached_at': nowIso,
+            };
+          }
+        }
+      }
+      return;
+    }
+
+    final db = await instance.database;
+    final batch = db.batch();
+    for (final raw in unions) {
+      if (raw is Map) {
+        final id = (raw['id'] ?? raw['unionId'])?.toString();
+        if (id != null && id.isNotEmpty) {
+          batch.insert(
+            'cached_unions',
+            {
+              'id': id,
+              'code': (raw['code'] ?? 'SYN').toString(),
+              'name': (raw['name'] ?? 'Syndicat').toString(),
+              'registration_number': raw['registrationNumber']?.toString() ?? raw['registration_number']?.toString(),
+              'status': (raw['status'] ?? 'ACTIF').toString(),
+              'commune_id': (raw['communeId'] ?? raw['commune_id'])?.toString(),
+              'cached_at': nowIso,
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+      }
+    }
+    await batch.commit(noResult: true);
+  }
+
+  /// Retrieves all cached transport unions for offline selection.
+  Future<List<Map<String, dynamic>>> getCachedUnions() async {
+    if (_useInMemoryTestStore) {
+      return _memoryCachedUnions.values
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList()
+        ..sort((a, b) => (a['code'] ?? '').toString().compareTo((b['code'] ?? '').toString()));
+    }
+
+    final db = await instance.database;
+    final rows = await db.query(
+      'cached_unions',
+      where: "status != 'REJETE'",
+      orderBy: 'code ASC',
+    );
+    return rows.map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  /// Returns total count of cached unions.
+  Future<int> getCachedUnionsCount() async {
+    if (_useInMemoryTestStore) {
+      return _memoryCachedUnions.length;
+    }
+    final db = await instance.database;
+    final rows = await db.rawQuery('SELECT COUNT(*) AS cnt FROM cached_unions');
     if (rows.isEmpty) return 0;
     return (rows.first['cnt'] as int?) ?? 0;
   }

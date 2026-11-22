@@ -437,9 +437,11 @@ export class RegistrationService {
           ownerType: data.ownerType || 'INDIVIDU',
           businessName: data.businessName || null,
           taxNumber: data.taxNumber || null,
+          unionId: data.unionId || null,
         },
         include: {
           person: { include: { commune: true } },
+          union: true,
         },
       });
 
@@ -768,6 +770,7 @@ export class RegistrationService {
         take: limit,
         include: {
           person: { include: { commune: true } },
+          union: true,
           _count: { select: { vehicles: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -843,6 +846,131 @@ export class RegistrationService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  /**
+   * Update an existing Driver record (including union affiliation)
+   */
+  static async updateDriver(id, data, actorUser) {
+    const existing = await prisma.driver.findUnique({
+      where: { id },
+      include: { person: true, union: true },
+    });
+    if (!existing) {
+      throw new AppError('Conducteur introuvable.', 404, 'DRIVER_NOT_FOUND');
+    }
+
+    if (data.unionId) {
+      const unionExists = await prisma.transportUnion.findUnique({ where: { id: data.unionId } });
+      if (!unionExists) {
+        throw new AppError('Syndicat spécifié introuvable.', 404, 'UNION_NOT_FOUND');
+      }
+    }
+
+    const driverUpdate = {};
+    if (data.unionId !== undefined) driverUpdate.unionId = data.unionId || null;
+    if (data.licenseCategory !== undefined) driverUpdate.licenseCategory = data.licenseCategory;
+    if (data.licenseExpirationDate !== undefined) driverUpdate.licenseExpirationDate = new Date(data.licenseExpirationDate);
+    if (data.emergencyContactName !== undefined) driverUpdate.emergencyContactName = data.emergencyContactName ? data.emergencyContactName.trim() : null;
+    if (data.emergencyContactPhone !== undefined) driverUpdate.emergencyContactPhone = data.emergencyContactPhone ? normalizeGuineanPhone(data.emergencyContactPhone) : null;
+    if (data.emergencyContactRelation !== undefined) driverUpdate.emergencyContactRelation = data.emergencyContactRelation ? data.emergencyContactRelation.trim() : null;
+
+    const personUpdate = {};
+    if (data.address !== undefined) personUpdate.address = data.address ? data.address.trim() : null;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      if (Object.keys(personUpdate).length > 0) {
+        await tx.person.update({
+          where: { id: existing.personId },
+          data: personUpdate,
+        });
+      }
+      return tx.driver.update({
+        where: { id },
+        data: driverUpdate,
+        include: {
+          person: { include: { commune: true, documents: true } },
+          union: true,
+        },
+      });
+    });
+
+    try {
+      await prisma.auditLog.create({
+        data: {
+          actorId: actorUser.id,
+          action: 'DRIVER_UPDATED',
+          targetModule: 'REGISTRATION',
+          targetRecordId: id,
+          previousValues: { unionId: existing.unionId },
+          newValues: driverUpdate,
+        },
+      });
+    } catch (_) {}
+
+    return updated;
+  }
+
+  /**
+   * Update an existing Owner record (including union affiliation)
+   */
+  static async updateOwner(id, data, actorUser) {
+    const existing = await prisma.owner.findUnique({
+      where: { id },
+      include: { person: true, union: true },
+    });
+    if (!existing) {
+      throw new AppError('Propriétaire introuvable.', 404, 'OWNER_NOT_FOUND');
+    }
+
+    if (data.unionId) {
+      const unionExists = await prisma.transportUnion.findUnique({ where: { id: data.unionId } });
+      if (!unionExists) {
+        throw new AppError('Syndicat spécifié introuvable.', 404, 'UNION_NOT_FOUND');
+      }
+    }
+
+    const ownerUpdate = {};
+    if (data.unionId !== undefined) ownerUpdate.unionId = data.unionId || null;
+    if (data.ownerType !== undefined) ownerUpdate.ownerType = data.ownerType;
+    if (data.businessName !== undefined) ownerUpdate.businessName = data.businessName ? data.businessName.trim() : null;
+    if (data.taxNumber !== undefined) ownerUpdate.taxNumber = data.taxNumber ? data.taxNumber.trim() : null;
+
+    const personUpdate = {};
+    if (data.address !== undefined) personUpdate.address = data.address ? data.address.trim() : null;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      if (Object.keys(personUpdate).length > 0) {
+        await tx.person.update({
+          where: { id: existing.personId },
+          data: personUpdate,
+        });
+      }
+      return tx.owner.update({
+        where: { id },
+        data: ownerUpdate,
+        include: {
+          person: { include: { commune: true } },
+          union: true,
+          _count: { select: { vehicles: true } },
+        },
+      });
+    });
+
+    try {
+      await prisma.auditLog.create({
+        data: {
+          actorId: actorUser.id,
+          action: 'OWNER_UPDATED',
+          targetModule: 'REGISTRATION',
+          targetRecordId: id,
+          previousValues: { unionId: existing.unionId },
+          newValues: ownerUpdate,
+        },
+      });
+    } catch (_) {}
+
+    return updated;
   }
 }
 

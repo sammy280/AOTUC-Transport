@@ -3,6 +3,8 @@ import {
   registerDriverSchema,
   registerOwnerSchema,
   registerVehicleSchema,
+  updateDriverSchema,
+  updateOwnerSchema,
 } from './registration.schemas.js';
 
 export class RegistrationController {
@@ -120,6 +122,34 @@ export class RegistrationController {
       return res.status(200).json({
         success: true,
         data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async updateDriver(req, res, next) {
+    try {
+      const validatedData = updateDriverSchema.parse(req.body);
+      const driver = await RegistrationService.updateDriver(req.params.id, validatedData, req.user);
+      return res.status(200).json({
+        success: true,
+        message: 'Conducteur mis à jour avec succès.',
+        data: driver,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async updateOwner(req, res, next) {
+    try {
+      const validatedData = updateOwnerSchema.parse(req.body);
+      const owner = await RegistrationService.updateOwner(req.params.id, validatedData, req.user);
+      return res.status(200).json({
+        success: true,
+        message: 'Propriétaire mis à jour avec succès.',
+        data: owner,
       });
     } catch (err) {
       next(err);

@@ -41,6 +41,8 @@ interface DriverRecord {
   emergencyContactName?: string | null;
   emergencyContactPhone?: string | null;
   emergencyContactRelation?: string | null;
+  unionId?: string | null;
+  union?: { id: string; code: string; name: string } | null;
   createdAt: string;
   person: {
     id: string;
@@ -64,6 +66,8 @@ interface OwnerRecord {
   ownerType: 'INDIVIDU' | 'ENTREPRISE';
   businessName?: string | null;
   taxNumber?: string | null;
+  unionId?: string | null;
+  union?: { id: string; code: string; name: string } | null;
   person: {
     id: string;
     firstName: string;
@@ -156,6 +160,8 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
   const [driverLicenseExp, setDriverLicenseExp] = useState('2029-12-31');
   const [driverAddress, setDriverAddress] = useState('');
   const [driverCommune, setDriverCommune] = useState(lockedCommune);
+  const [driverUnionId, setDriverUnionId] = useState<string>('');
+  const [availableUnions, setAvailableUnions] = useState<Array<{ id: string; code: string; name: string }>>([]);
 
   // Driver Photograph (Camera capture or uploaded image)
   const [driverPhotoBase64, setDriverPhotoBase64] = useState<string | null>(null);
@@ -184,6 +190,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
   const [newOwnerPhone, setNewOwnerPhone] = useState('');
   const [newOwnerType, setNewOwnerType] = useState<'INDIVIDU' | 'ENTREPRISE'>('INDIVIDU');
   const [newOwnerBusinessName, setNewOwnerBusinessName] = useState('');
+  const [newOwnerUnionId, setNewOwnerUnionId] = useState<string>('');
 
   const [vehiclePlate, setVehiclePlate] = useState('');
   const [vehicleRegistrationCard, setVehicleRegistrationCard] = useState('');
@@ -234,17 +241,25 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
         Accept: 'application/json',
       };
 
-      const [driversRes, vehiclesRes, ownersRes] = await Promise.all([
+      const [driversRes, vehiclesRes, ownersRes, unionsRes] = await Promise.all([
         fetch(buildApiUrl('/api/v1/registration/drivers?limit=100'), { headers }),
         fetch(buildApiUrl('/api/v1/registration/vehicles?limit=100'), { headers }),
         fetch(buildApiUrl('/api/v1/registration/owners?limit=100'), { headers }),
+        fetch(buildApiUrl('/api/v1/unions?limit=100'), { headers }),
       ]);
 
-      const [driversBody, vehiclesBody, ownersBody] = await Promise.all([
+      const [driversBody, vehiclesBody, ownersBody, unionsBody] = await Promise.all([
         parseApiResponse<any>(driversRes),
         parseApiResponse<any>(vehiclesRes),
         parseApiResponse<any>(ownersRes),
+        parseApiResponse<any>(unionsRes),
       ]);
+
+      if (unionsRes.ok && unionsBody?.data?.items) {
+        setAvailableUnions(unionsBody.data.items);
+      } else if (unionsRes.ok && unionsBody?.items) {
+        setAvailableUnions(unionsBody.items);
+      }
 
       if (driversRes.ok && driversBody?.data?.items) {
         setDrivers(driversBody.data.items);
@@ -518,6 +533,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
           licenseExpirationDate: driverLicenseExp,
           address: driverAddress.trim() || null,
           commune: isCommuneLocked ? lockedCommune : driverCommune,
+          unionId: driverUnionId || null,
           documents: inlineDocuments,
         }),
       });
@@ -620,6 +636,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
             phoneNumber: newOwnerPhone.trim(),
             ownerType: newOwnerType,
             businessName: newOwnerBusinessName.trim() || null,
+            unionId: newOwnerUnionId || null,
             commune: isCommuneLocked ? lockedCommune : vehicleCommune,
           }),
         });
@@ -1105,6 +1122,25 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                 </div>
               </div>
 
+              {/* Driver Syndicat Selection Form Input */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Syndicat / Organisation Professionnelle
+                </label>
+                <select
+                  value={driverUnionId}
+                  onChange={(e) => setDriverUnionId(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                >
+                  <option value="">Indépendant (Aucune affiliation syndicale)</option>
+                  {availableUnions.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.code} — {u.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Driver Photograph Section: Camera Capture + Preview + Retake + File Upload */}
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
@@ -1523,6 +1559,20 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                         className="w-full px-3 py-1.5 border border-slate-300 bg-white rounded-lg text-xs"
                       />
                     </div>
+                    <div>
+                      <select
+                        value={newOwnerUnionId}
+                        onChange={(e) => setNewOwnerUnionId(e.target.value)}
+                        className="w-full px-3 py-1.5 border border-slate-300 bg-white rounded-lg text-xs"
+                      >
+                        <option value="">Syndicat du propriétaire : Indépendant (Aucun)</option>
+                        {availableUnions.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.code} — {u.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1669,6 +1719,11 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                             <span className="inline-block mt-0.5 px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-extrabold">
                               Cat. {d.licenseCategory}
                             </span>
+                            {d.union && (
+                              <span className="ml-1.5 inline-block mt-0.5 px-1.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded text-[10px] font-extrabold font-mono" title={d.union.name}>
+                                {d.union.code}
+                              </span>
+                            )}
                           </td>
                           <td className="py-3.5 px-4">
                             <div className="text-xs font-bold text-slate-800">
@@ -1859,6 +1914,21 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                     </p>
                   )}
                 </div>
+              </div>
+
+              {/* Driver Syndicat Affiliation Display */}
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between">
+                <div>
+                  <span className="text-slate-400 font-bold block">Syndicat / Organisation Affiliée</span>
+                  <span className="font-semibold text-slate-800">
+                    {selectedDriver.union ? `${selectedDriver.union.code} — ${selectedDriver.union.name}` : 'Indépendant (Aucune affiliation)'}
+                  </span>
+                </div>
+                {selectedDriver.union && (
+                  <span className="px-2 py-0.5 font-mono font-extrabold text-[11px] rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    {selectedDriver.union.code}
+                  </span>
+                )}
               </div>
 
               {/* License Details */}

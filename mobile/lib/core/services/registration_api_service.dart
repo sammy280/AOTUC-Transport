@@ -162,8 +162,28 @@ class RegistrationApiService {
         for (final u in (data['unions'] as List<dynamic>? ?? [])) {
           unions.add(Map<String, dynamic>.from(u as Map));
         }
+        if (unions.isNotEmpty) {
+          await OfflineDatabase.instance.saveUnionsBatch(unions);
+        }
       }
     } catch (_) {}
+
+    // If offline or network failed, populate unions from local SQLite database cache
+    if (unions.isEmpty) {
+      try {
+        final cached = await OfflineDatabase.instance.getCachedUnions();
+        for (final u in cached) {
+          unions.add({
+            'id': u['id'],
+            'code': u['code'],
+            'name': u['name'],
+            'registrationNumber': u['registration_number'],
+            'status': u['status'],
+            'communeId': u['commune_id'],
+          });
+        }
+      } catch (_) {}
+    }
 
     return ReferenceCatalog(
       owners: owners,

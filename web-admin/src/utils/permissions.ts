@@ -50,6 +50,10 @@ export const PERMISSIONS = {
   FIELD_PROGRESS_READ: 'field_progress.read',
   FIELD_RECEIPTS_CREATE: 'field_receipts.create',
   FIELD_RECEIPTS_READ: 'field_receipts.read',
+
+  // Transport Unions / Syndicats Management
+  UNIONS_MANAGE: 'unions.manage',
+  UNIONS_READ: 'unions.read',
 } as const;
 
 export type PermissionKey = typeof PERMISSIONS[keyof typeof PERMISSIONS];
@@ -77,6 +81,7 @@ export const ROLE_PERMISSIONS: Record<RoleType, PermissionKey[]> = {
     PERMISSIONS.FIELD_ASSIGNMENTS_READ,
     PERMISSIONS.FIELD_PROGRESS_READ,
     PERMISSIONS.FIELD_RECEIPTS_READ,
+    PERMISSIONS.UNIONS_READ,
   ],
   SUPER_ADMIN: [
     PERMISSIONS.USERS_READ,
@@ -97,6 +102,8 @@ export const ROLE_PERMISSIONS: Record<RoleType, PermissionKey[]> = {
     PERMISSIONS.FIELD_ASSIGNMENTS_READ,
     PERMISSIONS.FIELD_PROGRESS_READ,
     PERMISSIONS.FIELD_RECEIPTS_READ,
+    PERMISSIONS.UNIONS_MANAGE,
+    PERMISSIONS.UNIONS_READ,
   ],
   CHEF_SERVICE: [
     PERMISSIONS.APPLICATIONS_REVIEW_L2,
@@ -114,6 +121,7 @@ export const ROLE_PERMISSIONS: Record<RoleType, PermissionKey[]> = {
     PERMISSIONS.FIELD_ASSIGNMENTS_READ,
     PERMISSIONS.FIELD_PROGRESS_READ,
     PERMISSIONS.FIELD_RECEIPTS_READ,
+    PERMISSIONS.UNIONS_READ,
   ],
   AGENT_TERRAIN: [
     PERMISSIONS.DRIVERS_CREATE,
@@ -125,6 +133,7 @@ export const ROLE_PERMISSIONS: Record<RoleType, PermissionKey[]> = {
     PERMISSIONS.FIELD_ASSIGNMENTS_READ,
     PERMISSIONS.FIELD_RECEIPTS_CREATE,
     PERMISSIONS.FIELD_RECEIPTS_READ,
+    PERMISSIONS.UNIONS_READ,
   ],
   DISTRIBUTEUR: [
     PERMISSIONS.TICKETS_SELL,
@@ -135,6 +144,7 @@ export const ROLE_PERMISSIONS: Record<RoleType, PermissionKey[]> = {
   SYNDICAT: [
     PERMISSIONS.DRIVERS_READ,
     PERMISSIONS.CREDENTIALS_VERIFY,
+    PERMISSIONS.UNIONS_READ,
   ],
 };
 
@@ -146,6 +156,7 @@ export const ROLE_ALLOWED_TABS: Record<RoleType, string[]> = {
     'dashboard',
     'field',
     'enrolment',
+    'unions',
     'validation',
     'badges',
     'licences',
@@ -157,6 +168,7 @@ export const ROLE_ALLOWED_TABS: Record<RoleType, string[]> = {
     'dashboard',
     'field',
     'enrolment',
+    'unions',
     'users',
     'audit',
     'mapping',
@@ -166,6 +178,7 @@ export const ROLE_ALLOWED_TABS: Record<RoleType, string[]> = {
     'field',
     'validation',
     'enrolment',
+    'unions',
     'badges',
     'licences',
     'mapping',
@@ -174,6 +187,7 @@ export const ROLE_ALLOWED_TABS: Record<RoleType, string[]> = {
     'dashboard',
     'field',
     'enrolment',
+    'unions',
     'validation',
   ],
   DISTRIBUTEUR: [
@@ -182,6 +196,7 @@ export const ROLE_ALLOWED_TABS: Record<RoleType, string[]> = {
   ],
   SYNDICAT: [
     'dashboard',
+    'unions',
     'mapping',
   ],
 };

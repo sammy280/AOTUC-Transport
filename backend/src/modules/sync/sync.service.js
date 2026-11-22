@@ -146,7 +146,15 @@ export class SyncService {
     let unions = [];
     try {
       unions = await prisma.transportUnion.findMany({
-        select: { id: true, code: true, name: true, communeId: true },
+        where: { status: { in: ['ACTIF', 'EN_ATTENTE_VALIDATION'] } },
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          registrationNumber: true,
+          status: true,
+          communeId: true,
+        },
         orderBy: { code: 'asc' },
       });
     } catch (_) {
@@ -612,6 +620,7 @@ export class SyncService {
                 ownerType: payload.ownerType === 'ENTREPRISE' ? 'ENTREPRISE' : 'INDIVIDU',
                 businessName: payload.businessName ? payload.businessName.trim() : null,
                 taxNumber: payload.taxNumber ? payload.taxNumber.trim() : null,
+                unionId: payload.unionId || null,
               },
             });
 

@@ -97,8 +97,27 @@ export const registerOwnerSchema = z.object({
   ownerType: z.enum(['INDIVIDU', 'ENTREPRISE']).default('INDIVIDU'),
   businessName: z.string().optional().nullable(),
   taxNumber: z.string().optional().nullable(),
+  unionId: z.string().uuid('Syndicat invalide.').optional().nullable(),
   documents: z.array(inlineDocumentSchema).optional(),
   ...gpsFields,
+});
+
+export const updateDriverSchema = z.object({
+  unionId: z.string().uuid('Syndicat invalide.').optional().nullable(),
+  licenseCategory: z.string().optional(),
+  licenseExpirationDate: z.string().optional(),
+  emergencyContactName: z.string().optional().nullable(),
+  emergencyContactPhone: z.string().optional().nullable(),
+  emergencyContactRelation: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+});
+
+export const updateOwnerSchema = z.object({
+  unionId: z.string().uuid('Syndicat invalide.').optional().nullable(),
+  ownerType: z.enum(['INDIVIDU', 'ENTREPRISE']).optional(),
+  businessName: z.string().optional().nullable(),
+  taxNumber: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
 });
 
 export const registerVehicleSchema = z.object({

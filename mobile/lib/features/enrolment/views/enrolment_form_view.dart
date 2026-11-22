@@ -81,6 +81,7 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
   final _ownEmailCtrl = TextEditingController();
   final _ownAddressCtrl = TextEditingController();
   String? _ownSelectedCommune;
+  String? _ownSelectedUnionId;
   final Map<String, CapturedDocument> _ownerDocs = {};
 
   // --- 3. VEHICLE FORM CONTROLLERS & STATE ---
@@ -360,6 +361,7 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
       'address': _ownAddressCtrl.text.trim().isEmpty ? null : _ownAddressCtrl.text.trim(),
       'commune': effectiveCommune,
       'communeId': user.communeId,
+      'unionId': _ownSelectedUnionId,
       'registeredByUserId': user.id,
       if (_currentGps?.hasCoordinates == true) ...{
         'latitude': _currentGps!.latitude,
@@ -1219,7 +1221,12 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
                     ..._catalog.unions.map(
                       (u) => DropdownMenuItem<String?>(
                         value: u['id']?.toString(),
-                        child: Text('${u['code']}'),
+                        child: Text(
+                          u['name'] != null && u['name'].toString().isNotEmpty
+                              ? '${u['code']} — ${u['name']}'
+                              : '${u['code']}',
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
                   ],
@@ -1426,6 +1433,34 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String?>(
+            key: const Key('owner_union_dropdown'),
+            initialValue: _ownSelectedUnionId,
+            decoration: const InputDecoration(
+              labelText: 'Syndicat / Organisation Professionnelle (Optionnel)',
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            ),
+            items: [
+              const DropdownMenuItem<String?>(
+                value: null,
+                child: Text('Indépendant (Aucun syndicat)'),
+              ),
+              ..._catalog.unions.map(
+                (u) => DropdownMenuItem<String?>(
+                  value: u['id']?.toString(),
+                  child: Text(
+                    u['name'] != null && u['name'].toString().isNotEmpty
+                        ? '${u['code']} — ${u['name']}'
+                        : '${u['code']}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ],
+            onChanged: (v) => setState(() => _ownSelectedUnionId = v),
           ),
           const SizedBox(height: 12),
           const Text(

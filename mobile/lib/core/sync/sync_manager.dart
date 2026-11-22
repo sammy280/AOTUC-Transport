@@ -145,6 +145,7 @@ class SyncManager extends ChangeNotifier {
         final publicKeys = (data['publicKeys'] as List<dynamic>?) ?? [];
         final revocations = (data['revocations'] as List<dynamic>?) ?? [];
         final fieldAssignments = (data['fieldAssignments'] as List<dynamic>?) ?? [];
+        final unions = (data['unions'] as List<dynamic>?) ?? [];
 
         if (publicKeys.isNotEmpty) {
           await OfflineDatabase.instance.savePublicKeysBatch(publicKeys);
@@ -154,6 +155,9 @@ class SyncManager extends ChangeNotifier {
         }
         if (fieldAssignments.isNotEmpty) {
           await OfflineDatabase.instance.saveFieldAssignmentsBatch(fieldAssignments);
+        }
+        if (unions.isNotEmpty) {
+          await OfflineDatabase.instance.saveUnionsBatch(unions);
         }
         notifyListeners();
         return true;

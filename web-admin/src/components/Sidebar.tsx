@@ -10,6 +10,7 @@ import {
   ShieldAlert,
   UserCog,
   Compass,
+  Building2,
 } from 'lucide-react';
 import { UserContext } from '../types';
 import { isTabAllowed } from '../utils/permissions';
@@ -37,6 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       badge: pendingCount > 0 ? pendingCount : null,
     },
     { id: 'enrolment', label: 'Registre & Enrôlement', icon: UserPlus },
+    { id: 'unions', label: 'Syndicats & Organisations', icon: Building2 },
     { id: 'badges', label: 'Badges Chauffeurs (CR80)', icon: IdCard },
     { id: 'licences', label: 'Licences & Stickers', icon: FileCheck2 },
     { id: 'mapping', label: 'Réseau & Carte Conakry', icon: MapPin },

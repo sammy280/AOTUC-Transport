@@ -258,12 +258,16 @@ model Owner {
   ownerType    OwnerType @default(INDIVIDU) @map("owner_type")
   businessName String?   @map("business_name")
   taxNumber    String?   @map("tax_number") // Numéro d'Identification Fiscale (NIF)
+  unionId      String?   @map("union_id")
+  union        TransportUnion? @relation(fields: [unionId], references: [id], onDelete: SetNull)
+
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
   person   Person    @relation(fields: [personId], references: [id], onDelete: Restrict)
   vehicles Vehicle[]
 
+  @@index([unionId])
   @@map("owners")
 }
 
@@ -370,13 +374,24 @@ model VehicleAssignment {
 // 9. TRANSPORT UNIONS (Module 2)
 // ==============================================================================
 
+enum UnionStatus {
+  ACTIF
+  SUSPENDU
+  EN_ATTENTE_VALIDATION
+  REJETE
+}
+
 model TransportUnion {
-  id                  String   @id @default(uuid())
-  code                String   @unique // e.g., "FNTG", "USTG"
-  name                String   @unique
-  contactPhone        String?  @map("contact_phone")
-  contactEmail        String?  @map("contact_email")
-  headquartersAddress String?  @map("headquarters_address")
+  id                  String      @id @default(uuid())
+  code                String      @unique // e.g., "FNTG", "USTG"
+  name                String      @unique
+  registrationNumber  String?     @unique @map("registration_number") // Numéro d'agrément / récépissé
+  presidentName       String?     @map("president_name")
+  contactPhone        String?     @map("contact_phone")
+  contactEmail        String?     @map("contact_email")
+  headquartersAddress String?     @map("headquarters_address")
+  logoUrl             String?     @map("logo_url")
+  status              UnionStatus @default(ACTIF)
 
   communeId String?  @map("commune_id")
   commune   Commune? @relation(fields: [communeId], references: [id], onDelete: SetNull)
@@ -390,9 +405,13 @@ model TransportUnion {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  members Driver[]
-  users   User[]
+  members   Driver[]
+  owners    Owner[]
+  users     User[]
+  documents Document[] @relation("UnionDocuments")
 
+  @@index([status])
+  @@index([code])
   @@map("transport_unions")
 }
 
@@ -434,11 +453,15 @@ model Document {
   vehicleId String?  @map("vehicle_id")
   vehicle   Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
 
+  unionId   String?         @map("union_id")
+  union     TransportUnion? @relation("UnionDocuments", fields: [unionId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([uploadedByUserId])
   @@index([personId])
   @@index([vehicleId])
+  @@index([unionId])
   @@index([category])
   @@map("documents")
 }

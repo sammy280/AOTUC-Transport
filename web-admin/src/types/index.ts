@@ -75,7 +75,7 @@ export interface NotificationItem {
   message: string;
   timestamp: string;
   isRead: boolean;
-  linkTab?: 'dashboard' | 'field' | 'validation' | 'enrolment' | 'mapping' | 'badges' | 'licences' | 'ticketing' | 'audit';
+  linkTab?: 'dashboard' | 'field' | 'validation' | 'enrolment' | 'unions' | 'mapping' | 'badges' | 'licences' | 'ticketing' | 'audit';
   metadata?: Record<string, string>;
 }
 
@@ -222,4 +222,64 @@ export interface FieldDashboardSummary {
     completionRate: number;
   }[];
   timestamp: string;
+}
+
+// ==============================================================================
+// TRANSPORT UNIONS / SYNDICATS MANAGEMENT
+// ==============================================================================
+
+export type UnionStatus =
+  | 'ACTIF'
+  | 'SUSPENDU'
+  | 'EN_ATTENTE_VALIDATION'
+  | 'REJETE';
+
+export interface TransportUnionRecord {
+  id: string;
+  code: string;
+  name: string;
+  registrationNumber?: string | null;
+  presidentName?: string | null;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
+  headquartersAddress?: string | null;
+  logoUrl?: string | null;
+  status: UnionStatus;
+  communeId?: string | null;
+  commune?: { id: string; code: string; name: string } | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  registeredByUserId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    members: number;
+    owners: number;
+    users: number;
+    documents?: number;
+  };
+  members?: Array<{
+    id: string;
+    drivingLicenseNumber: string;
+    person?: {
+      firstName: string;
+      lastName: string;
+      nin: string;
+      phoneNumber: string;
+      photoUrl?: string | null;
+      commune?: { name: string };
+    };
+  }>;
+  owners?: Array<{
+    id: string;
+    ownerType: string;
+    businessName?: string | null;
+    person?: {
+      firstName: string;
+      lastName: string;
+      nin: string;
+      phoneNumber: string;
+      commune?: { name: string };
+    };
+  }>;
 }
