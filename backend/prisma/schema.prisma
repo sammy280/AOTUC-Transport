@@ -392,10 +392,13 @@ model TransportUnion {
   name                String      @unique
   registrationNumber  String?     @unique @map("registration_number") // Numéro d'agrément / récépissé
   presidentName       String?     @map("president_name")
+  fonction            String?     @map("fonction") // Official position (Président, Vice-président, Secrétaire général, etc.)
   contactPhone        String?     @map("contact_phone")
   contactEmail        String?     @map("contact_email")
   headquartersAddress String?     @map("headquarters_address")
   logoUrl             String?     @map("logo_url")
+  photoUrl            String?     @map("photo_url") // Representative portrait photo
+  cniNumber           String?     @map("cni_number") // National Identity Card number
   status              UnionStatus @default(ACTIF)
 
   communeId String?  @map("commune_id")

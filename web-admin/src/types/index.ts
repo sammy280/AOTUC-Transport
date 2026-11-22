@@ -240,6 +240,9 @@ export interface TransportUnionRecord {
   name: string;
   registrationNumber?: string | null;
   presidentName?: string | null;
+  fonction?: string | null;
+  photoUrl?: string | null;
+  cniNumber?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
   headquartersAddress?: string | null;
@@ -252,6 +255,15 @@ export interface TransportUnionRecord {
   registeredByUserId?: string | null;
   createdAt: string;
   updatedAt: string;
+  documents?: Array<{
+    id: string;
+    fileName: string;
+    originalName: string;
+    mimeType: string;
+    category: string;
+    createdAt: string;
+    fileSizeBytes?: number;
+  }>;
   _count?: {
     members: number;
     owners: number;

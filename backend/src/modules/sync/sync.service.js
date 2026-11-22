@@ -33,6 +33,8 @@ async function resolveCommuneId(rawCommune, fallbackCommuneId = null) {
 }
 
 const ENTITY_SYNC_PRIORITY = {
+  UNION: 0,
+  TRANSPORT_UNION: 0,
   OWNER: 1,
   DRIVER: 2,
   VEHICLE: 3,
@@ -157,6 +159,10 @@ export class SyncService {
           code: true,
           name: true,
           registrationNumber: true,
+          presidentName: true,
+          fonction: true,
+          photoUrl: true,
+          cniNumber: true,
           status: true,
           communeId: true,
         },
@@ -293,6 +299,119 @@ export class SyncService {
               ? new Date(payload.gpsCapturedAt)
               : offlineDate
             : null;
+
+        // ====================================================================
+        // 0. PROCESS TRANSPORT UNION (SYNDICAT)
+        // ====================================================================
+        if (entityType === 'UNION' || entityType === 'TRANSPORT_UNION') {
+          const rawCode = (payload.code || '').trim().toUpperCase();
+          const rawName = (payload.name || '').trim();
+
+          if (!rawCode || !rawName) {
+            pushResult({
+              clientGeneratedId,
+              entityType,
+              status: 'ERROR',
+              errorCode: 'MISSING_UNION_FIELDS',
+              error: 'Le sigle (code) et le nom officiel sont obligatoires pour un syndicat.',
+            });
+            failed++;
+            continue;
+          }
+
+          let existingUnion = await prisma.transportUnion.findFirst({
+            where: {
+              OR: [
+                { code: { equals: rawCode, mode: 'insensitive' } },
+                { name: { equals: rawName, mode: 'insensitive' } },
+              ],
+            },
+          });
+
+          let savedUnion;
+          if (existingUnion) {
+            savedUnion = existingUnion;
+          } else {
+            const resolvedCommuneId = await resolveCommuneId(payload.communeId || payload.commune, actorUser.communeId);
+            const hasGps = payload.latitude !== undefined && payload.latitude !== null && payload.longitude !== undefined && payload.longitude !== null;
+
+            savedUnion = await prisma.transportUnion.create({
+              data: {
+                code: rawCode,
+                name: rawName,
+                registrationNumber: payload.registrationNumber ? String(payload.registrationNumber).trim() : null,
+                presidentName: payload.presidentName ? String(payload.presidentName).trim() : null,
+                fonction: payload.fonction ? String(payload.fonction).trim() : null,
+                photoUrl: payload.photoUrl ? String(payload.photoUrl).trim() : null,
+                cniNumber: payload.cniNumber ? String(payload.cniNumber).trim() : null,
+                contactPhone: payload.contactPhone ? String(payload.contactPhone).trim() : null,
+                contactEmail: payload.contactEmail ? String(payload.contactEmail).trim().toLowerCase() : null,
+                headquartersAddress: payload.headquartersAddress ? String(payload.headquartersAddress).trim() : null,
+                communeId: resolvedCommuneId,
+                status: payload.status || 'ACTIF',
+                latitude: hasGps ? Number(payload.latitude) : null,
+                longitude: hasGps ? Number(payload.longitude) : null,
+                gpsCapturedAt: hasGps ? offlineDate : null,
+                registeredByUserId: actorUser.id,
+              },
+            });
+
+            // Save inline documents if provided
+            if (Array.isArray(payload.documents) && payload.documents.length > 0) {
+              const savedDocs = [];
+              for (const doc of payload.documents) {
+                if (!doc.base64Data || !doc.category) continue;
+                const cleanBase64 = doc.base64Data.replace(/^data:[^;]+;base64,/, '');
+                const fileBuffer = Buffer.from(cleanBase64, 'base64');
+                const d = await DocumentStorageService.storeFile({
+                  fileBuffer,
+                  originalName: doc.originalName || `${doc.category.toLowerCase()}.jpg`,
+                  declaredMime: doc.mimeType || 'image/jpeg',
+                  category: doc.category,
+                  uploadedByUserId: actorUser.id,
+                  unionId: savedUnion.id,
+                  expectedSha256: doc.fileHashSha256 || null,
+                });
+                savedDocs.push(d);
+              }
+              const portraitDoc = savedDocs.find((d) => d.category === 'PHOTO_PORTRAIT');
+              if (portraitDoc && !savedUnion.photoUrl) {
+                const streamUrl = `/api/v1/documents/${portraitDoc.id}/stream`;
+                await prisma.transportUnion.update({
+                  where: { id: savedUnion.id },
+                  data: { photoUrl: streamUrl },
+                });
+                savedUnion.photoUrl = streamUrl;
+              }
+            }
+          }
+
+          clientToServerIdMap.set(clientGeneratedId, savedUnion.id);
+
+          await prisma.auditLog.create({
+            data: {
+              actorId: actorUser.id,
+              action: 'OFFLINE_SYNC_ACCEPTED',
+              targetModule: 'UNIONS',
+              targetRecordId: clientGeneratedId,
+              newValues: {
+                serverRecordId: savedUnion.id,
+                code: savedUnion.code,
+                name: savedUnion.name,
+                fonction: savedUnion.fonction,
+              },
+            },
+          });
+
+          pushResult({
+            clientGeneratedId,
+            entityType,
+            status: 'SUCCESS',
+            serverRecordId: savedUnion.id,
+          });
+          accepted++;
+          continue;
+        }
 
         // ====================================================================
         // A. PROCESS DRIVER
@@ -972,6 +1091,20 @@ export class SyncService {
             }
           }
 
+          let resolvedUnionId = payload.unionId || null;
+          if (!resolvedUnionId && payload.unionClientGeneratedId) {
+            resolvedUnionId = clientToServerIdMap.get(payload.unionClientGeneratedId) || null;
+            if (!resolvedUnionId) {
+              const unionAudit = await prisma.auditLog.findFirst({
+                where: {
+                  action: 'OFFLINE_SYNC_ACCEPTED',
+                  targetRecordId: payload.unionClientGeneratedId,
+                },
+              });
+              resolvedUnionId = unionAudit?.newValues?.serverRecordId || null;
+            }
+          }
+
           const cleanBase64 = payload.base64Data.replace(/^data:[^;]+;base64,/, '');
           const fileBuffer = Buffer.from(cleanBase64, 'base64');
 
@@ -983,6 +1116,7 @@ export class SyncService {
             uploadedByUserId: actorUser.id,
             personId: resolvedPersonId,
             vehicleId: resolvedVehicleId,
+            unionId: resolvedUnionId,
             expectedSha256: payload.fileHashSha256 || null,
           });
 
@@ -998,6 +1132,7 @@ export class SyncService {
                 serverRecordId: savedDoc.id,
                 personId: resolvedPersonId,
                 vehicleId: resolvedVehicleId,
+                unionId: resolvedUnionId,
                 category: payload.category,
                 createdOfflineAt,
               },
@@ -1012,6 +1147,7 @@ export class SyncService {
             serverRecordId: savedDoc.id,
             personId: resolvedPersonId,
             vehicleId: resolvedVehicleId,
+            unionId: resolvedUnionId,
           });
           accepted++;
           continue;

@@ -1,6 +1,45 @@
 import prisma from '../../utils/prisma.js';
 import { AppError } from '../../middlewares/errorHandler.js';
 import logger from '../../utils/logger.js';
+import DocumentStorageService from '../../services/documentStorageService.js';
+
+function validateInlineDocuments(documents, actorUserId) {
+  if (!Array.isArray(documents) || documents.length === 0) return;
+
+  for (const doc of documents) {
+    if (!doc.base64Data || !doc.category) continue;
+    const cleanBase64 = doc.base64Data.replace(/^data:[^;]+;base64,/, '');
+    const fileBuffer = Buffer.from(cleanBase64, 'base64');
+    DocumentStorageService.validateFileBuffer({
+      fileBuffer,
+      originalName: doc.originalName || `${doc.category.toLowerCase()}.jpg`,
+      declaredMime: doc.mimeType || 'image/jpeg',
+      expectedSha256: doc.fileHashSha256 || null,
+      uploadedByUserId: actorUserId,
+    });
+  }
+}
+
+async function saveInlineDocuments(documents, { actorUserId, unionId }) {
+  if (!Array.isArray(documents) || documents.length === 0) return [];
+  const saved = [];
+  for (const doc of documents) {
+    if (!doc.base64Data || !doc.category) continue;
+    const cleanBase64 = doc.base64Data.replace(/^data:[^;]+;base64,/, '');
+    const fileBuffer = Buffer.from(cleanBase64, 'base64');
+    const record = await DocumentStorageService.storeFile({
+      fileBuffer,
+      originalName: doc.originalName || `${doc.category.toLowerCase()}.jpg`,
+      declaredMime: doc.mimeType || 'image/jpeg',
+      category: doc.category,
+      uploadedByUserId: actorUserId,
+      unionId,
+      expectedSha256: doc.fileHashSha256 || null,
+    });
+    saved.push(record);
+  }
+  return saved;
+}
 
 export class UnionService {
   /**
@@ -11,6 +50,11 @@ export class UnionService {
     const trimmedName = data.name.trim();
     const trimmedCode = data.code.trim().toUpperCase();
     const trimmedRegNum = data.registrationNumber ? data.registrationNumber.trim() : null;
+
+    // Validate documents if provided inline
+    if (data.documents && Array.isArray(data.documents)) {
+      validateInlineDocuments(data.documents, actorUser.id);
+    }
 
     // 1. Check duplicate official name (case-insensitive)
     const existingByName = await prisma.transportUnion.findFirst({
@@ -69,17 +113,22 @@ export class UnionService {
     // 5. Create Union record
     const hasGps = data.latitude !== undefined && data.latitude !== null && data.longitude !== undefined && data.longitude !== null;
 
+    let initialPhotoUrl = data.photoUrl ? data.photoUrl.trim() : null;
+
     const union = await prisma.transportUnion.create({
       data: {
         name: trimmedName,
         code: trimmedCode,
         registrationNumber: trimmedRegNum,
         presidentName: data.presidentName ? data.presidentName.trim() : null,
+        fonction: data.fonction ? data.fonction.trim() : null,
         contactPhone: data.contactPhone ? data.contactPhone.trim() : null,
         contactEmail: data.contactEmail ? data.contactEmail.trim().toLowerCase() : null,
         headquartersAddress: data.headquartersAddress ? data.headquartersAddress.trim() : null,
         communeId: data.communeId || null,
         logoUrl: data.logoUrl ? data.logoUrl.trim() : null,
+        photoUrl: initialPhotoUrl,
+        cniNumber: data.cniNumber ? data.cniNumber.trim() : null,
         latitude: hasGps ? Number(data.latitude) : null,
         longitude: hasGps ? Number(data.longitude) : null,
         gpsCapturedAt: hasGps ? new Date() : null,
@@ -94,7 +143,28 @@ export class UnionService {
       },
     });
 
-    // 6. Security Audit Log
+    // 6. Save attached documents (Photo Portrait, CNI Recto/Verso)
+    let savedDocuments = [];
+    if (data.documents && Array.isArray(data.documents) && data.documents.length > 0) {
+      savedDocuments = await saveInlineDocuments(data.documents, {
+        actorUserId: actorUser.id,
+        unionId: union.id,
+      });
+
+      // If photoUrl was not explicitly provided but a portrait photo was uploaded, point to stream endpoint
+      const portraitDoc = savedDocuments.find((d) => d.category === 'PHOTO_PORTRAIT');
+      if (portraitDoc && !initialPhotoUrl) {
+        const streamUrl = `/api/v1/documents/${portraitDoc.id}/stream`;
+        await prisma.transportUnion.update({
+          where: { id: union.id },
+          data: { photoUrl: streamUrl },
+        });
+        union.photoUrl = streamUrl;
+      }
+    }
+    union.documents = savedDocuments;
+
+    // 7. Security Audit Log
     try {
       await prisma.auditLog.create({
         data: {
@@ -106,8 +176,13 @@ export class UnionService {
             code: union.code,
             name: union.name,
             registrationNumber: union.registrationNumber,
+            presidentName: union.presidentName,
+            fonction: union.fonction,
+            photoUrl: union.photoUrl,
+            cniNumber: union.cniNumber,
             status: union.status,
             communeId: union.communeId,
+            documentsCount: savedDocuments.length,
           },
         },
       });
@@ -136,6 +211,8 @@ export class UnionService {
               { code: { contains: search, mode: 'insensitive' } },
               { registrationNumber: { contains: search, mode: 'insensitive' } },
               { presidentName: { contains: search, mode: 'insensitive' } },
+              { fonction: { contains: search, mode: 'insensitive' } },
+              { cniNumber: { contains: search, mode: 'insensitive' } },
               { contactPhone: { contains: search, mode: 'insensitive' } },
               { headquartersAddress: { contains: search, mode: 'insensitive' } },
             ],
@@ -152,7 +229,19 @@ export class UnionService {
         include: {
           commune: { select: { id: true, code: true, name: true } },
           _count: {
-            select: { members: true, owners: true, users: true },
+            select: { members: true, owners: true, users: true, documents: true },
+          },
+          documents: {
+            where: { category: { in: ['PHOTO_PORTRAIT', 'CNI_RECTO', 'CNI_VERSO'] } },
+            select: {
+              id: true,
+              category: true,
+              fileName: true,
+              originalName: true,
+              mimeType: true,
+              fileSizeBytes: true,
+              createdAt: true,
+            },
           },
         },
       }),
@@ -215,7 +304,7 @@ export class UnionService {
           },
         },
         documents: {
-          take: 20,
+          take: 50,
           orderBy: { createdAt: 'desc' },
           select: {
             id: true,
@@ -223,6 +312,7 @@ export class UnionService {
             originalName: true,
             mimeType: true,
             category: true,
+            fileSizeBytes: true,
             createdAt: true,
           },
         },
@@ -295,11 +385,42 @@ export class UnionService {
       }
     }
 
+    // 1. Handle document removals if requested
+    if (data.removePhoto) {
+      await prisma.document.deleteMany({
+        where: { unionId: id, category: 'PHOTO_PORTRAIT' },
+      });
+    }
+
+    if (data.removeDocuments && Array.isArray(data.removeDocuments) && data.removeDocuments.length > 0) {
+      await prisma.document.deleteMany({
+        where: {
+          unionId: id,
+          OR: [
+            { id: { in: data.removeDocuments } },
+            { category: { in: data.removeDocuments } },
+          ],
+        },
+      });
+    }
+
+    // 2. Save any new inline documents
+    let newlySavedDocs = [];
+    if (data.documents && Array.isArray(data.documents) && data.documents.length > 0) {
+      validateInlineDocuments(data.documents, actorUser.id);
+      newlySavedDocs = await saveInlineDocuments(data.documents, {
+        actorUserId: actorUser.id,
+        unionId: id,
+      });
+    }
+
     const updatePayload = {};
     if (data.name !== undefined) updatePayload.name = data.name.trim();
     if (data.code !== undefined) updatePayload.code = data.code.trim().toUpperCase();
     if (data.registrationNumber !== undefined) updatePayload.registrationNumber = data.registrationNumber ? data.registrationNumber.trim() : null;
     if (data.presidentName !== undefined) updatePayload.presidentName = data.presidentName ? data.presidentName.trim() : null;
+    if (data.fonction !== undefined) updatePayload.fonction = data.fonction ? data.fonction.trim() : null;
+    if (data.cniNumber !== undefined) updatePayload.cniNumber = data.cniNumber ? data.cniNumber.trim() : null;
     if (data.contactPhone !== undefined) updatePayload.contactPhone = data.contactPhone ? data.contactPhone.trim() : null;
     if (data.contactEmail !== undefined) updatePayload.contactEmail = data.contactEmail ? data.contactEmail.trim().toLowerCase() : null;
     if (data.headquartersAddress !== undefined) updatePayload.headquartersAddress = data.headquartersAddress ? data.headquartersAddress.trim() : null;
@@ -309,13 +430,36 @@ export class UnionService {
     if (data.longitude !== undefined) updatePayload.longitude = data.longitude !== null ? Number(data.longitude) : null;
     if (data.status !== undefined) updatePayload.status = data.status;
 
+    if (data.removePhoto) {
+      updatePayload.photoUrl = null;
+    } else if (data.photoUrl !== undefined) {
+      updatePayload.photoUrl = data.photoUrl ? data.photoUrl.trim() : null;
+    } else if (newlySavedDocs.length > 0) {
+      const portraitDoc = newlySavedDocs.find((d) => d.category === 'PHOTO_PORTRAIT');
+      if (portraitDoc) {
+        updatePayload.photoUrl = `/api/v1/documents/${portraitDoc.id}/stream`;
+      }
+    }
+
     const updated = await prisma.transportUnion.update({
       where: { id },
       data: updatePayload,
       include: {
         commune: { select: { id: true, code: true, name: true } },
         _count: {
-          select: { members: true, owners: true, users: true },
+          select: { members: true, owners: true, users: true, documents: true },
+        },
+        documents: {
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            fileName: true,
+            originalName: true,
+            mimeType: true,
+            category: true,
+            fileSizeBytes: true,
+            createdAt: true,
+          },
         },
       },
     });

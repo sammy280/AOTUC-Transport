@@ -30,6 +30,44 @@ export const createUnionSchema = z.object({
     .optional()
     .nullable()
     .or(z.literal('')),
+  fonction: z
+    .string()
+    .trim()
+    .max(100, 'La fonction ne doit pas dépasser 100 caractères.')
+    .optional()
+    .nullable()
+    .or(z.literal('')),
+  photoUrl: z
+    .string()
+    .trim()
+    .optional()
+    .nullable()
+    .or(z.literal('')),
+  cniNumber: z
+    .string()
+    .trim()
+    .max(50, 'Le numéro de CNI ne doit pas dépasser 50 caractères.')
+    .optional()
+    .nullable()
+    .or(z.literal('')),
+  documents: z
+    .array(
+      z.object({
+        category: z.enum([
+          'PHOTO_PORTRAIT',
+          'CNI_RECTO',
+          'CNI_VERSO',
+          'ATTESTATION_SYNDICALE',
+          'AUTRE',
+        ]),
+        originalName: z.string().optional(),
+        mimeType: z.string().optional(),
+        base64Data: z.string().optional(),
+        fileHashSha256: z.string().optional(),
+      })
+    )
+    .optional()
+    .nullable(),
   contactPhone: z
     .string()
     .transform((v) => (v ? v.replace(/[\s\-\.\(\)]/g, '') : v))
@@ -74,7 +112,10 @@ export const createUnionSchema = z.object({
     .default('ACTIF'),
 });
 
-export const updateUnionSchema = createUnionSchema.partial();
+export const updateUnionSchema = createUnionSchema.partial().extend({
+  removePhoto: z.boolean().optional(),
+  removeDocuments: z.array(z.string()).optional(),
+});
 
 export const updateUnionStatusSchema = z.object({
   status: z.enum(['ACTIF', 'SUSPENDU', 'EN_ATTENTE_VALIDATION', 'REJETE'], {

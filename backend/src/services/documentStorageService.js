@@ -127,6 +127,7 @@ export class DocumentStorageService {
     uploadedByUserId,
     personId = null,
     vehicleId = null,
+    unionId = null,
     expectedSha256 = null,
   }) {
     // 1–3. Validate Size, Magic Bytes & SHA-256 Integrity
@@ -160,6 +161,7 @@ export class DocumentStorageService {
         uploadedByUserId,
         personId,
         vehicleId,
+        unionId,
       },
     });
 
@@ -170,7 +172,7 @@ export class DocumentStorageService {
         action: 'DOCUMENT_UPLOADED',
         targetModule: 'DOCUMENTS',
         targetRecordId: document.id,
-        newValues: { category, fileSizeBytes: fileBuffer.length, originalName },
+        newValues: { category, fileSizeBytes: fileBuffer.length, originalName, unionId },
       },
     });
 
@@ -190,6 +192,7 @@ export class DocumentStorageService {
             owner: { include: { person: true } },
           },
         },
+        union: true,
       },
     });
 
@@ -202,7 +205,7 @@ export class DocumentStorageService {
     
     if (!isSuperAdminOrDirector) {
       // If user is CHEF_SERVICE or AGENT_TERRAIN, ensure document belongs to their assigned commune
-      const docCommuneId = document.person?.communeId || document.vehicle?.owner?.person?.communeId;
+      const docCommuneId = document.person?.communeId || document.vehicle?.owner?.person?.communeId || document.union?.communeId;
       if (docCommuneId && userContext.communeId && docCommuneId !== userContext.communeId) {
         logger.warn('Forbidden document access attempt across communes', {
           userId: userContext.id,

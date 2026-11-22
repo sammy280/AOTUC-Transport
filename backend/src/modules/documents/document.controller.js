@@ -12,7 +12,7 @@ export class DocumentController {
         throw new AppError('Aucun fichier n a été transmis.', 400, 'NO_FILE_PROVIDED');
       }
 
-      const { category, personId, vehicleId } = req.body;
+      const { category, personId, vehicleId, unionId } = req.body;
       if (!category) {
         throw new AppError('La catégorie de document est obligatoire.', 400, 'CATEGORY_REQUIRED');
       }
@@ -25,6 +25,7 @@ export class DocumentController {
         uploadedByUserId: req.user.id,
         personId: personId || null,
         vehicleId: vehicleId || null,
+        unionId: unionId || null,
       });
 
       return res.status(201).json({
