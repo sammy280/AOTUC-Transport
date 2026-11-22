@@ -17,6 +17,7 @@ import {
   Send,
 } from 'lucide-react';
 import { UserContext } from '../../types';
+import ConakryMapWidget from '../mapping/ConakryMapWidget';
 
 interface DashboardOverviewProps {
   currentUser: UserContext;
@@ -138,6 +139,15 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             );
           })}
         </div>
+
+        {/* Conakry Interactive GIS Map Widget for Admin */}
+        <ConakryMapWidget
+          currentUser={currentUser}
+          height="380px"
+          onOpenFullMap={() => navigateTo('mapping')}
+          title="Supervision SIG Réseau & Infrastructure — Conakry"
+          subtitle="Visualisation géospatiale des couloirs de transport urbain et des 20 stations régulées sur les 13 communes."
+        />
 
         {/* Technical Services Status */}
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
@@ -262,6 +272,16 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             );
           })}
         </div>
+
+        {/* Conakry Interactive GIS Map Widget for Chef de Service (scoped) */}
+        <ConakryMapWidget
+          currentUser={currentUser}
+          height="360px"
+          onOpenFullMap={() => navigateTo('mapping')}
+          initialCommune={currentUser.communeName || 'Matoto'}
+          title={`Cartographie Réseau & Arrêts Régulés — ${currentUser.communeName || 'Matoto'}`}
+          subtitle="Implantation des arrêts, couloirs urbains et circulation dans le périmètre communal."
+        />
 
         {/* Territorial Scope Card */}
         <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start space-x-3 text-xs text-emerald-900">
@@ -463,6 +483,15 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             );
           })}
         </div>
+
+        {/* Conakry Interactive GIS Map Widget for Distributor */}
+        <ConakryMapWidget
+          currentUser={currentUser}
+          height="380px"
+          onOpenFullMap={() => navigateTo('mapping')}
+          title="Réseau Urbain de Conakry & Points de Desserte Billetterie"
+          subtitle="Localisation des stations de correspondance et lignes de transport urbain desservies par le réseau de billetterie."
+        />
 
         <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl text-xs text-orange-950 space-y-1">
           <div className="font-bold">Confidentialité & Immuabilité des Encaissements :</div>
@@ -703,6 +732,15 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Conakry Interactive GIS Map Widget for Executive Director */}
+      <ConakryMapWidget
+        currentUser={currentUser}
+        height="380px"
+        onOpenFullMap={() => navigateTo('mapping')}
+        title="Cartographie Nationale & Couverture Territoriale (13 Communes)"
+        subtitle="Supervision exécutive des corridors autoroutiers et du réseau de transport urbain du Grand Conakry."
+      />
 
       {/* Recent Security & Audit Logs Section */}
       <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">

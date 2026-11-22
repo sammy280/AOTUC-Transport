@@ -193,6 +193,7 @@ export const ROLE_ALLOWED_TABS: Record<RoleType, string[]> = {
   DISTRIBUTEUR: [
     'dashboard',
     'ticketing',
+    'mapping',
   ],
   SYNDICAT: [
     'dashboard',
