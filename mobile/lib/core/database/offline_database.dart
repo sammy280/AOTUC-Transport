@@ -40,6 +40,9 @@ class OfflineDatabase {
 
   static int _entityPriority(String entityType) {
     switch (entityType.toUpperCase()) {
+      case 'UNION':
+      case 'TRANSPORT_UNION':
+        return 0;
       case 'OWNER':
         return 1;
       case 'DRIVER':

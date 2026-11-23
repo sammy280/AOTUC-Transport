@@ -99,6 +99,18 @@ class RegistrationApiService {
           'drivingLicenseNumber': payload['drivingLicenseNumber'],
           'isOfflineDraft': true,
         });
+      } else if (entityType == 'UNION' || entityType == 'TRANSPORT_UNION') {
+        unions.add({
+          'id': clientId,
+          'clientGeneratedId': clientId,
+          'code': payload['code'],
+          'name': payload['name'],
+          'label': '${payload['code']} — ${payload['name']} (Hors-ligne)',
+          'registrationNumber': payload['registrationNumber'],
+          'status': payload['status'] ?? 'ACTIF',
+          'communeId': payload['communeId'],
+          'isOfflineDraft': true,
+        });
       }
     }
 
@@ -254,6 +266,13 @@ class RegistrationApiService {
             'subtitle':
                 'Carte Grise: ${payload['registrationCardNumber']} • VIN: ${payload['chassisVin']}',
           });
+        } else if (entityType == 'UNION' || entityType == 'TRANSPORT_UNION') {
+          matches.add({
+            'type': 'SYNDICAT (Hors-ligne)',
+            'title': '${payload['code']} — ${payload['name']}',
+            'subtitle':
+                'Agrément: ${payload['registrationNumber'] ?? "En attente"} • Représentant: ${payload['presidentName'] ?? "N/A"}${payload['fonction'] != null ? " (${payload['fonction']})" : ""}',
+          });
         }
       }
     }
@@ -330,6 +349,24 @@ class RegistrationApiService {
       }
     } catch (_) {}
 
+    try {
+      final unionRes = await _httpClient
+          .get(Uri.parse('$baseUrl/api/v1/unions?search=$encoded'), headers: headers)
+          .timeout(const Duration(seconds: 5));
+      if (unionRes.statusCode == 200) {
+        final items =
+            ((jsonDecode(unionRes.body) as Map<String, dynamic>)['data']?['items'] as List?) ?? [];
+        for (final u in items) {
+          matches.add({
+            'type': 'SYNDICAT (Serveur)',
+            'title': '${u['code']} — ${u['name']}',
+            'subtitle':
+                'Agrément: ${u['registrationNumber'] ?? "N/A"} • Représentant: ${u['presidentName'] ?? "N/A"}${u['fonction'] != null ? " (${u['fonction']})" : ""}',
+          });
+        }
+      }
+    } catch (_) {}
+
     return matches;
   }
 
@@ -391,14 +428,28 @@ class RegistrationApiService {
           return 'Doublon détecté : le châssis VIN "$vin" est déjà enregistré dans votre file.';
         }
       }
+
+      if ((entityType == 'UNION' || entityType == 'TRANSPORT_UNION') &&
+          (rowType == 'UNION' || rowType == 'TRANSPORT_UNION')) {
+        final code = payload['code']?.toString().trim().toUpperCase();
+        final name = payload['name']?.toString().trim().toUpperCase();
+        final existingCode = existing['code']?.toString().trim().toUpperCase();
+        final existingName = existing['name']?.toString().trim().toUpperCase();
+        if (code != null && code.isNotEmpty && existingCode == code) {
+          return 'Doublon détecté : un syndicat avec le sigle "$code" est déjà dans votre file hors-ligne.';
+        }
+        if (name != null && name.isNotEmpty && existingName == name) {
+          return 'Doublon détecté : un syndicat nommé "$name" est déjà dans votre file hors-ligne.';
+        }
+      }
     }
 
     return null;
   }
 
-  /// Submits a registration (DRIVER, OWNER, or VEHICLE).
+  /// Submits a registration (DRIVER, OWNER, VEHICLE, or UNION).
   /// - If [preferOffline] is false and server is reachable (and parent references are server UUIDs),
-  ///   submits directly to `/api/v1/registration/*`.
+  ///   submits directly to `/api/v1/registration/*` or `/api/v1/unions`.
   /// - If server returns 409 Conflict or 400 Validation Error, rejects immediately with the server message.
   /// - If network is offline or [preferOffline] is true (or vehicle references an offline-queued owner),
   ///   stores the record encrypted with AES-256-GCM in SQLite ready for `/api/v1/sync/push`.
@@ -456,7 +507,9 @@ class RegistrationApiService {
           ? '/api/v1/registration/drivers'
           : entityType == 'OWNER'
               ? '/api/v1/registration/owners'
-              : '/api/v1/registration/vehicles';
+              : (entityType == 'UNION' || entityType == 'TRANSPORT_UNION')
+                  ? '/api/v1/unions'
+                  : '/api/v1/registration/vehicles';
 
       try {
         final devId = await authService.getOrCreateDeviceId();

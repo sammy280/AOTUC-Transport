@@ -209,7 +209,20 @@ class SyncManager extends ChangeNotifier {
   ) async {
     final payload = Map<String, dynamic>.from(rawPayload);
 
-    if (entityType == 'VEHICLE') {
+    if (entityType == 'DRIVER' || entityType == 'OWNER') {
+      final unionClientRef = payload['unionClientGeneratedId']?.toString();
+      if ((payload['unionId'] == null || payload['unionId'].toString().isEmpty) &&
+          unionClientRef != null &&
+          unionClientRef.isNotEmpty) {
+        final resolvedUnionId = await OfflineDatabase.instance.getResolvedServerId(
+          clientId: unionClientRef,
+          agentUserId: agentUserId,
+        );
+        if (resolvedUnionId != null && resolvedUnionId.isNotEmpty) {
+          payload['unionId'] = resolvedUnionId;
+        }
+      }
+    } else if (entityType == 'VEHICLE') {
       final ownerClientRef = payload['ownerClientGeneratedId']?.toString();
       if ((payload['ownerId'] == null || payload['ownerId'].toString().isEmpty) &&
           ownerClientRef != null &&

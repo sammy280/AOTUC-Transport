@@ -112,7 +112,22 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
   String? _selectedLineId;
   final Map<String, CapturedDocument> _vehicleDocs = {};
 
-  // --- 4. SEARCH & DUPLICATE CHECK STATE ---
+  // --- 4. SYNDICAT / UNION FORM CONTROLLERS & STATE ---
+  final _unionFormKey = GlobalKey<FormState>();
+  final _unionCodeCtrl = TextEditingController();
+  final _unionNameCtrl = TextEditingController();
+  final _unionRegNumCtrl = TextEditingController();
+  final _unionLeaderCtrl = TextEditingController();
+  String _unionFonction = 'Président';
+  final _unionCustomFonctionCtrl = TextEditingController();
+  final _unionCniCtrl = TextEditingController();
+  final _unionPhoneCtrl = TextEditingController(text: '+224 ');
+  final _unionEmailCtrl = TextEditingController();
+  final _unionAddressCtrl = TextEditingController();
+  String? _unionSelectedCommune;
+  final Map<String, CapturedDocument> _unionDocs = {};
+
+  // --- 5. SEARCH & DUPLICATE CHECK STATE ---
   final _searchCtrl = TextEditingController();
   bool _isSearching = false;
   List<Map<String, dynamic>> _searchResults = [];
@@ -126,6 +141,7 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
     if (user != null) {
       _drvSelectedCommune = user.assignedCommuneName ?? _allCommunes.first;
       _ownSelectedCommune = user.assignedCommuneName ?? _allCommunes.first;
+      _unionSelectedCommune = user.assignedCommuneName ?? _allCommunes.first;
     }
     _refreshOutboxAndCatalog();
   }
@@ -163,6 +179,15 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
     _vehInspCertCtrl.dispose();
     _vehInspCenterCtrl.dispose();
     _vehInspExpCtrl.dispose();
+    _unionCodeCtrl.dispose();
+    _unionNameCtrl.dispose();
+    _unionRegNumCtrl.dispose();
+    _unionLeaderCtrl.dispose();
+    _unionCustomFonctionCtrl.dispose();
+    _unionCniCtrl.dispose();
+    _unionPhoneCtrl.dispose();
+    _unionEmailCtrl.dispose();
+    _unionAddressCtrl.dispose();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -498,6 +523,85 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
     }
   }
 
+  Future<void> _submitUnion({required bool preferOffline}) async {
+    if (!_unionFormKey.currentState!.validate()) return;
+    final user = widget.authService.currentUser!;
+
+    setState(() {
+      _isSubmitting = true;
+      _statusMessage = null;
+    });
+
+    final fonctionValue = _unionFonction == 'Autre'
+        ? _unionCustomFonctionCtrl.text.trim()
+        : _unionFonction;
+
+    final phoneClean = _unionPhoneCtrl.text.trim();
+    final hasValidPhone = phoneClean.isNotEmpty &&
+        phoneClean != '+224' &&
+        phoneClean.replaceAll(RegExp(r'\s+'), '').length > 4;
+
+    final payload = <String, dynamic>{
+      'code': _unionCodeCtrl.text.trim().toUpperCase(),
+      'name': _unionNameCtrl.text.trim(),
+      'registrationNumber': _unionRegNumCtrl.text.trim().isEmpty
+          ? null
+          : _unionRegNumCtrl.text.trim(),
+      'presidentName': _unionLeaderCtrl.text.trim().isEmpty
+          ? null
+          : _unionLeaderCtrl.text.trim(),
+      'fonction': fonctionValue.isEmpty ? null : fonctionValue,
+      'cniNumber': _unionCniCtrl.text.trim().isEmpty
+          ? null
+          : _unionCniCtrl.text.trim().toUpperCase(),
+      'contactPhone': hasValidPhone ? phoneClean : null,
+      'contactEmail': _unionEmailCtrl.text.trim().isEmpty
+          ? null
+          : _unionEmailCtrl.text.trim().toLowerCase(),
+      'headquartersAddress': _unionAddressCtrl.text.trim().isEmpty
+          ? null
+          : _unionAddressCtrl.text.trim(),
+      'communeId': user.communeId,
+      'commune': _unionSelectedCommune ?? user.assignedCommuneName,
+      'status': 'ACTIF',
+      'registeredByUserId': user.id,
+      if (_currentGps?.hasCoordinates == true) ...{
+        'latitude': _currentGps!.latitude,
+        'longitude': _currentGps!.longitude,
+        'gpsCapturedAt': _currentGps!.capturedAt?.toIso8601String(),
+      },
+      'documents': _unionDocs.values.map((d) => d.toJson()).toList(),
+    };
+
+    final res = await _apiService.submitRegistration(
+      entityType: 'UNION',
+      payload: payload,
+      preferOffline: preferOffline,
+    );
+
+    await _refreshOutboxAndCatalog();
+
+    if (mounted) {
+      setState(() {
+        _isSubmitting = false;
+        _statusIsError = !res.success;
+        _statusMessage = res.message;
+        if (res.success) {
+          _unionCodeCtrl.clear();
+          _unionNameCtrl.clear();
+          _unionRegNumCtrl.clear();
+          _unionLeaderCtrl.clear();
+          _unionCustomFonctionCtrl.clear();
+          _unionCniCtrl.clear();
+          _unionPhoneCtrl.text = '+224 ';
+          _unionEmailCtrl.clear();
+          _unionAddressCtrl.clear();
+          _unionDocs.clear();
+        }
+      });
+    }
+  }
+
   Future<void> _runSearch() async {
     setState(() {
       _isSearching = true;
@@ -603,7 +707,7 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
           _buildGpsCaptureBar(),
           const SizedBox(height: 12),
 
-          // 4. Section Switcher (Chauffeur | Propriétaire | Véhicule | Recherche)
+          // 4. Section Switcher (Chauffeur | Propriétaire | Véhicule | Syndicat | Recherche)
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -631,6 +735,13 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
                 const SizedBox(width: 6),
                 _buildTabChip(
                   index: 3,
+                  key: const Key('tab_union_registration'),
+                  icon: Icons.groups_outlined,
+                  label: '4. Syndicat',
+                ),
+                const SizedBox(width: 6),
+                _buildTabChip(
+                  index: 4,
                   key: const Key('tab_search_duplicates'),
                   icon: Icons.manage_search,
                   label: 'Recherche / Doublons',
@@ -681,7 +792,8 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
           if (_activeSection == 0) _buildDriverSection(user),
           if (_activeSection == 1) _buildOwnerSection(user),
           if (_activeSection == 2) _buildVehicleSection(user),
-          if (_activeSection == 3) _buildSearchSection(),
+          if (_activeSection == 3) _buildUnionSection(user),
+          if (_activeSection == 4) _buildSearchSection(),
         ],
       ),
     );
@@ -1223,6 +1335,7 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
               const SizedBox(width: 8),
               Expanded(
                 child: DropdownButtonFormField<String?>(
+                  isExpanded: true,
                   initialValue: _drvSelectedUnionId,
                   decoration: const InputDecoration(
                     labelText: 'Syndicat / Organisation',
@@ -1236,7 +1349,7 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
                     ),
                     ..._catalog.unions.map(
                       (u) => DropdownMenuItem<String?>(
-                        value: u['id']?.toString(),
+                        value: (u['id'] ?? u['clientGeneratedId'])?.toString(),
                         child: Text(
                           u['name'] != null && u['name'].toString().isNotEmpty
                               ? '${u['code']} — ${u['name']}'
@@ -1458,6 +1571,7 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
           const SizedBox(height: 10),
           DropdownButtonFormField<String?>(
             key: const Key('owner_union_dropdown'),
+            isExpanded: true,
             initialValue: _ownSelectedUnionId,
             decoration: const InputDecoration(
               labelText: 'Syndicat / Organisation Professionnelle (Optionnel)',
@@ -1471,7 +1585,7 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
               ),
               ..._catalog.unions.map(
                 (u) => DropdownMenuItem<String?>(
-                  value: u['id']?.toString(),
+                  value: (u['id'] ?? u['clientGeneratedId'])?.toString(),
                   child: Text(
                     u['name'] != null && u['name'].toString().isNotEmpty
                         ? '${u['code']} — ${u['name']}'
@@ -1533,6 +1647,7 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
           // Owner Association Dropdown
           DropdownButtonFormField<int>(
             key: const Key('vehicle_owner_dropdown'),
+            isExpanded: true,
             initialValue: (_selectedOwnerIndex != null &&
                     _selectedOwnerIndex! < _catalog.owners.length)
                 ? _selectedOwnerIndex
@@ -1731,6 +1846,7 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
           // Assigned Driver & Transport Line
           DropdownButtonFormField<int?>(
             key: const Key('vehicle_driver_dropdown'),
+            isExpanded: true,
             initialValue: _selectedDriverIndex,
             decoration: const InputDecoration(
               labelText: 'Chauffeur Affecté (optionnel)',
@@ -1846,7 +1962,236 @@ class _EnrolmentFormViewState extends State<EnrolmentFormView> {
   }
 
   // ===========================================================================
-  // 4. SEARCH & DUPLICATE PREVENTION SECTION
+  // 4. SYNDICAT / UNION FORM SECTION
+  // ===========================================================================
+  Widget _buildUnionSection(MobileUser user) {
+    return Form(
+      key: _unionFormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'D. ENRÔLEMENT SYNDICAT OU ORGANISATION PROFESSIONNELLE',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: Color(0xFF0B1E36),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                flex: 1,
+                child: TextFormField(
+                  key: const Key('union_code_input'),
+                  controller: _unionCodeCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Sigle / Acronyme *',
+                    hintText: 'ex. FNTG, USTG',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                  validator: (v) => (v == null || v.trim().length < 2)
+                      ? 'Sigle obligatoire (min. 2 car.)'
+                      : null,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: TextFormField(
+                  key: const Key('union_name_input'),
+                  controller: _unionNameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nom Officiel de l Organisation *',
+                    hintText: 'ex. Fédération Nationale...',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                  validator: (v) => (v == null || v.trim().length < 2)
+                      ? 'Nom officiel obligatoire'
+                      : null,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  key: const Key('union_reg_number_input'),
+                  controller: _unionRegNumCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'N° Agrément / Récépissé',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextFormField(
+                  key: const Key('union_leader_input'),
+                  controller: _unionLeaderCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nom du Responsable',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  key: const Key('union_fonction_dropdown'),
+                  initialValue: _unionFonction,
+                  decoration: const InputDecoration(
+                    labelText: 'Fonction officielle *',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'Président', child: Text('Président')),
+                    DropdownMenuItem(value: 'Vice-président', child: Text('Vice-président')),
+                    DropdownMenuItem(value: 'Secrétaire général', child: Text('Secrétaire général')),
+                    DropdownMenuItem(value: 'Trésorier', child: Text('Trésorier')),
+                    DropdownMenuItem(value: 'Responsable', child: Text('Responsable')),
+                    DropdownMenuItem(value: 'Membre', child: Text('Membre')),
+                    DropdownMenuItem(value: 'Autre', child: Text('Autre (préciser)')),
+                  ],
+                  onChanged: (v) => setState(() => _unionFonction = v ?? 'Président'),
+                ),
+              ),
+              if (_unionFonction == 'Autre') ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextFormField(
+                    key: const Key('union_custom_fonction_input'),
+                    controller: _unionCustomFonctionCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Préciser la fonction *',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    ),
+                    validator: (v) => (_unionFonction == 'Autre' && (v == null || v.trim().isEmpty))
+                        ? 'Veuillez préciser la fonction'
+                        : null,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  key: const Key('union_cni_input'),
+                  controller: _unionCniCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'N° Carte d Identité (CNI)',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextFormField(
+                  key: const Key('union_phone_input'),
+                  controller: _unionPhoneCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Téléphone de Contact',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  key: const Key('union_email_input'),
+                  controller: _unionEmailCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Email de Contact',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  key: const Key('union_commune_dropdown'),
+                  initialValue: _unionSelectedCommune,
+                  decoration: const InputDecoration(
+                    labelText: 'Commune de Siège',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                  items: _allCommunes
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      .toList(),
+                  onChanged: (v) => setState(() => _unionSelectedCommune = v),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            key: const Key('union_address_input'),
+            controller: _unionAddressCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Adresse / Siège du Syndicat',
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Pièces Justificatives & Identité du Responsable',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          _buildDocumentCaptureRow(
+            docsMap: _unionDocs,
+            category: 'PHOTO_PORTRAIT',
+            label: 'Photo Portrait du Responsable (4x4)',
+          ),
+          _buildDocumentCaptureRow(
+            docsMap: _unionDocs,
+            category: 'CNI_RECTO',
+            label: 'Carte d Identité CNI (Face Avant / Recto)',
+          ),
+          _buildDocumentCaptureRow(
+            docsMap: _unionDocs,
+            category: 'CNI_VERSO',
+            label: 'Carte d Identité CNI (Face Arrière / Verso)',
+          ),
+          const SizedBox(height: 12),
+          _buildSubmitButtons(
+            onOnlineSubmit: () => _submitUnion(preferOffline: false),
+            onOfflineSubmit: () => _submitUnion(preferOffline: true),
+            onlineKey: 'submit_union_online_button',
+            offlineKey: 'save_union_offline_button',
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // 5. SEARCH & DUPLICATE PREVENTION SECTION
   // ===========================================================================
   Widget _buildSearchSection() {
     return Column(

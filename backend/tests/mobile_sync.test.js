@@ -484,5 +484,76 @@ describe('Phase 1 — Real PostgreSQL Mobile Synchronization & Field Foundations
       expect(dbVehicle.make).toBe('Toyota');
       expect(dbVehicle.model).toBe('HiAce');
     });
+
+    test('should persist UNION (Syndicat) with fonction, cniNumber, photoUrl, and inline documents into real PostgreSQL', async () => {
+      const unionClientId = crypto.randomUUID();
+      const testUnionCode = `UN-${suffix}`;
+      const testUnionName = `Union Syndicale de Test ${suffix}`;
+
+      const res = await request(app)
+        .post('/api/v1/sync/push')
+        .set('Authorization', `Bearer ${agentToken}`)
+        .send({
+          deviceId: 'TABLET-CONAKRY-MATOTO-REAL-01',
+          items: [
+            {
+              clientGeneratedId: unionClientId,
+              entityType: 'UNION',
+              payload: {
+                code: testUnionCode,
+                name: testUnionName,
+                registrationNumber: `AGR-${suffix}`,
+                presidentName: 'Mamadouba Camara',
+                fonction: 'Secrétaire général',
+                cniNumber: `CNI-UNION-${suffix}`,
+                contactPhone: `+224628${suffix}`,
+                contactEmail: `contact.${suffix}@syndicat.test`,
+                commune: 'Matoto',
+                latitude: 9.5800,
+                longitude: -13.6100,
+                documents: [
+                  {
+                    category: 'PHOTO_PORTRAIT',
+                    originalName: 'portrait.jpg',
+                    mimeType: 'image/jpeg',
+                    base64Data: VALID_JPEG_BASE64,
+                  },
+                  {
+                    category: 'CNI_RECTO',
+                    originalName: 'cni_recto.jpg',
+                    mimeType: 'image/jpeg',
+                    base64Data: VALID_JPEG_BASE64,
+                  },
+                ],
+              },
+              createdOfflineAt: new Date().toISOString(),
+            },
+          ],
+        });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.results[0].status).toBe('SUCCESS');
+      const serverUnionId = res.body.data.results[0].serverRecordId;
+
+      // Verify directly in real PostgreSQL
+      const dbUnion = await prisma.transportUnion.findUnique({
+        where: { id: serverUnionId },
+        include: { documents: true },
+      });
+
+      expect(dbUnion).not.toBeNull();
+      expect(dbUnion.code).toBe(testUnionCode);
+      expect(dbUnion.name).toBe(testUnionName);
+      expect(dbUnion.fonction).toBe('Secrétaire général');
+      expect(dbUnion.cniNumber).toBe(`CNI-UNION-${suffix}`);
+      expect(dbUnion.photoUrl).toContain('/api/v1/documents/');
+      expect(dbUnion.documents.length).toBe(2);
+
+      // Clean up the created test union
+      await prisma.document.deleteMany({ where: { unionId: serverUnionId } });
+      await prisma.auditLog.deleteMany({ where: { targetRecordId: unionClientId } });
+      await prisma.transportUnion.delete({ where: { id: serverUnionId } });
+    });
   });
 });

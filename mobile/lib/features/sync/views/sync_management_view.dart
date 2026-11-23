@@ -163,6 +163,10 @@ class _SyncManagementViewState extends State<SyncManagementView> {
     );
     final vinCtrl =
         TextEditingController(text: payload['chassisVin']?.toString() ?? '');
+    final unionCodeCtrl =
+        TextEditingController(text: payload['code']?.toString() ?? '');
+    final unionNameCtrl =
+        TextEditingController(text: payload['name']?.toString() ?? '');
 
     final shouldRetry = await showDialog<bool>(
       context: context,
@@ -254,6 +258,25 @@ class _SyncManagementViewState extends State<SyncManagementView> {
                     ),
                   ),
                 ],
+                if (entityType == 'UNION' || entityType == 'TRANSPORT_UNION') ...[
+                  TextField(
+                    key: const Key('conflict_edit_union_code_input'),
+                    controller: unionCodeCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Sigle / Code Syndicat',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    key: const Key('conflict_edit_union_name_input'),
+                    controller: unionNameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Nom Officiel du Syndicat',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -288,6 +311,10 @@ class _SyncManagementViewState extends State<SyncManagementView> {
         payload['plateNumber'] = plateCtrl.text.trim().toUpperCase();
         payload['registrationCardNumber'] = cardCtrl.text.trim().toUpperCase();
         payload['chassisVin'] = vinCtrl.text.trim().toUpperCase();
+      }
+      if (entityType == 'UNION' || entityType == 'TRANSPORT_UNION') {
+        payload['code'] = unionCodeCtrl.text.trim().toUpperCase();
+        payload['name'] = unionNameCtrl.text.trim();
       }
 
       final devId = await widget.authService.getOrCreateDeviceId();
@@ -740,6 +767,9 @@ class _SyncManagementViewState extends State<SyncManagementView> {
     if (entityType == 'VEHICLE') {
       return 'Plaque ${p['plateNumber'] ?? ''} — ${p['make'] ?? ''} ${p['model'] ?? ''}';
     }
+    if (entityType == 'UNION' || entityType == 'TRANSPORT_UNION') {
+      return '${p['code'] ?? ''} — ${p['name'] ?? ''}';
+    }
     if (entityType == 'DOCUMENT') {
       return '${p['category'] ?? 'Document'} (${p['originalName'] ?? 'fichier'})';
     }
@@ -762,6 +792,19 @@ class _SyncManagementViewState extends State<SyncManagementView> {
     } else if (entityType == 'VEHICLE') {
       extras.add('Carte Grise: ${p['registrationCardNumber'] ?? '-'}');
       extras.add('VIN: ${p['chassisVin'] ?? '-'}');
+    } else if (entityType == 'UNION' || entityType == 'TRANSPORT_UNION') {
+      if (p['registrationNumber'] != null && p['registrationNumber'].toString().isNotEmpty) {
+        extras.add('Agrément: ${p['registrationNumber']}');
+      }
+      if (p['presidentName'] != null && p['presidentName'].toString().isNotEmpty) {
+        final func = p['fonction'] != null && p['fonction'].toString().isNotEmpty
+            ? ' (${p['fonction']})'
+            : '';
+        extras.add('Resp: ${p['presidentName']}$func');
+      }
+      if (p['contactPhone'] != null && p['contactPhone'].toString().isNotEmpty) {
+        extras.add('Tél: ${p['contactPhone']}');
+      }
     }
     if (docCount > 0) extras.add('$docCount pièce(s) jointe(s)');
     if (hasGps) extras.add('GPS acquis');
@@ -776,6 +819,9 @@ class _SyncManagementViewState extends State<SyncManagementView> {
         return Icons.business_center;
       case 'VEHICLE':
         return Icons.directions_bus;
+      case 'UNION':
+      case 'TRANSPORT_UNION':
+        return Icons.groups;
       case 'DOCUMENT':
         return Icons.description;
       default:
@@ -791,6 +837,9 @@ class _SyncManagementViewState extends State<SyncManagementView> {
         return 'PROPRIÉTAIRE';
       case 'VEHICLE':
         return 'VÉHICULE';
+      case 'UNION':
+      case 'TRANSPORT_UNION':
+        return 'SYNDICAT';
       case 'DOCUMENT':
         return 'DOCUMENT';
       default:
