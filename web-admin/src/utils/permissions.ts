@@ -160,6 +160,10 @@ export const ROLE_PERMISSIONS: Record<RoleType, PermissionKey[]> = {
     PERMISSIONS.CREDENTIALS_VERIFY,
     PERMISSIONS.UNIONS_READ,
   ],
+  AUTHORITY: [
+    PERMISSIONS.AUTHORITIES_READ,
+    PERMISSIONS.FINANCIAL_REPORTS_READ,
+  ],
 };
 
 /**
@@ -216,6 +220,9 @@ export const ROLE_ALLOWED_TABS: Record<RoleType, string[]> = {
     'unions',
     'mapping',
   ],
+  AUTHORITY: [
+    'dashboard',
+  ],
 };
 
 /**
@@ -228,6 +235,7 @@ export const ROLE_DEFAULT_TAB: Record<RoleType, string> = {
   AGENT_TERRAIN: 'dashboard',
   DISTRIBUTEUR: 'dashboard',
   SYNDICAT: 'dashboard',
+  AUTHORITY: 'dashboard',
 };
 
 export function hasRolePermission(role: RoleType, permission: PermissionKey): boolean {

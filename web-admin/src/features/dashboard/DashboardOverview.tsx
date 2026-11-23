@@ -505,8 +505,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   }
 
   // --------------------------------------------------------------------------
-  // ROLE 1: DIRECTOR GENERAL (L3) STRATEGIC DASHBOARD (DEFAULT)
+  // ROLE 1: DIRECTOR GENERAL (L3) & AUTHORITY MINISTERIAL STRATEGIC DASHBOARD
   // --------------------------------------------------------------------------
+  const isAuthority = currentUser.role === 'AUTHORITY';
+
   const directorStats = [
     {
       title: 'Chauffeurs Enrôlés (National)',
@@ -543,7 +545,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       color: 'text-amber-600',
       bgColor: 'bg-amber-50',
       borderColor: 'border-amber-100',
-      action: onOpenValidationQueue,
+      action: !isAuthority ? onOpenValidationQueue : undefined,
     },
   ];
 
@@ -608,22 +610,39 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
               RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS
             </div>
-            <h1 className="text-xl font-black text-slate-900 tracking-tight">
-              Tableau de Bord Stratégique — Direction Générale AOTUC
+            <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center space-x-2">
+              <span>
+                {isAuthority
+                  ? 'Tableau de Bord Stratégique — Hautes Autorités & Ministère'
+                  : 'Tableau de Bord Stratégique — Direction Générale AOTUC'}
+              </span>
+              {isAuthority && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-[#0B1E36] text-[#FCD116] border border-[#FCD116]/40">
+                  Vue Ministérielle
+                </span>
+              )}
             </h1>
             <p className="text-xs text-slate-500">
-              Supervision exécutive de la régulation des transports, décrets d agrément et émission des titres officiels.
+              {isAuthority
+                ? 'Supervision exécutive en lecture seule : indicateurs clés, régulation des transports et couverture territoriale.'
+                : 'Supervision exécutive de la régulation des transports, décrets d agrément et émission des titres officiels.'}
             </p>
           </div>
         </div>
         <div className="flex items-center space-x-2 w-full sm:w-auto">
-          <button
-            onClick={onOpenValidationQueue}
-            className="w-full sm:w-auto justify-center flex items-center space-x-2 bg-[#CE1126] hover:bg-red-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer min-h-[44px]"
-          >
-            <span>Examiner les Dossiers Niveau 3</span>
-            <ArrowUpRight className="w-4 h-4" />
-          </button>
+          {isAuthority ? (
+            <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+              Accès Consultation Exécutive
+            </span>
+          ) : (
+            <button
+              onClick={onOpenValidationQueue}
+              className="w-full sm:w-auto justify-center flex items-center space-x-2 bg-[#CE1126] hover:bg-red-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer min-h-[44px]"
+            >
+              <span>Examiner les Dossiers Niveau 3</span>
+              <ArrowUpRight className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 

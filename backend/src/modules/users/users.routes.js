@@ -11,17 +11,27 @@ router.use(authenticateToken);
 // 1. Reference: List official communes for territorial scope assignment
 router.get('/communes', UsersController.listCommunes);
 
-// 2. List users (Super Admin / DSI)
+// 2. List users (Super Admin / DSI, Director)
 router.get(
   '/',
-  requirePermissions(PERMISSIONS.USERS_READ),
+  (req, res, next) => {
+    if (req.user?.roles?.includes('SUPER_ADMIN') || req.user?.roles?.includes('DIRECTOR') || req.user?.permissions?.includes(PERMISSIONS.USERS_READ)) {
+      return next();
+    }
+    return requirePermissions(PERMISSIONS.USERS_READ)(req, res, next);
+  },
   UsersController.listUsers
 );
 
-// 3. Create user
+// 3. Create user (Super Admin and Director can both register Authority accounts)
 router.post(
   '/',
-  requirePermissions(PERMISSIONS.USERS_CREATE),
+  (req, res, next) => {
+    if (req.user?.roles?.includes('SUPER_ADMIN') || req.user?.roles?.includes('DIRECTOR') || req.user?.permissions?.includes(PERMISSIONS.USERS_CREATE)) {
+      return next();
+    }
+    return requirePermissions(PERMISSIONS.USERS_CREATE)(req, res, next);
+  },
   UsersController.createUser
 );
 

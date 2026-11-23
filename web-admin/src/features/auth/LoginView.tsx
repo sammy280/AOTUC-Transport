@@ -33,6 +33,8 @@ const getRoleLabel = (role: RoleType): string => {
       return 'Distributeur Billetterie Agréé';
     case 'SYNDICAT':
       return 'Délégué Syndical FNTG';
+    case 'AUTHORITY':
+      return 'Haute Autorité Ministérielle';
     default:
       return 'Accréditation Validée AOTUC';
   }

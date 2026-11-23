@@ -33,6 +33,23 @@ export class LicenceController {
       next(err);
     }
   }
+
+  static async confirmPayment(req, res, next) {
+    try {
+      const { id } = req.params; // vehicleId
+      const { paymentReference } = req.body || {};
+
+      const result = await LicenceService.confirmSuperAdminPayment(id, req.user, { paymentReference });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Paiement du véhicule confirmé par le Super Administrateur. La vignette pare-brise est prête pour délivrance et impression.',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export default LicenceController;

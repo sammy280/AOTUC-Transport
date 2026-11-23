@@ -34,6 +34,15 @@ export class BadgeService {
       );
     }
 
+    // Payment Gate: Badge can only become valid and issued after payment has been confirmed
+    if (driver.isPaymentConfirmed === false) {
+      throw new AppError(
+        'Délivrance impossible : Le paiement des droits d enrôlement du chauffeur n a pas encore été confirmé.',
+        400,
+        'PAYMENT_NOT_CONFIRMED'
+      );
+    }
+
     // 2. Compute 1-year validity period
     const issuedAt = new Date();
     const expiresAt = new Date();
@@ -88,6 +97,7 @@ export class BadgeService {
           issuedAt,
           expiresAt,
           status: 'ACTIF',
+          isPaymentConfirmed: driver.isPaymentConfirmed ?? true,
           replacesBadgeId,
         },
         include: {
@@ -179,6 +189,15 @@ export class BadgeService {
 
     if (!badge) throw new AppError('Badge introuvable.', 404, 'BADGE_NOT_FOUND');
 
+    // Payment Gate: Badge only becomes valid and printable after the driver's payment has been confirmed
+    if (badge.isPaymentConfirmed === false || badge.driver?.isPaymentConfirmed === false) {
+      throw new AppError(
+        'Impression impossible : Le badge ne peut être imprimé qu après confirmation officielle du paiement du chauffeur.',
+        400,
+        'PAYMENT_NOT_CONFIRMED'
+      );
+    }
+
     const pdfBuffer = await PdfBadgeService.generateDriverBadgePdf({
       badgeNumber: badge.badgeNumber,
       driverName: `${badge.driver.person.firstName} ${badge.driver.person.lastName}`,
@@ -269,6 +288,45 @@ export class BadgeService {
       message: 'Badge officiel AOTUC authentique, valide et en règle.',
       payload,
     };
+  }
+
+  /**
+   * Confirms payment for a driver and their badge.
+   */
+  static async confirmDriverPayment(driverId, actorUser, { paymentReference = null } = {}) {
+    return await prisma.$transaction(async (tx) => {
+      const driver = await tx.driver.findUnique({
+        where: { id: driverId },
+        include: { badges: true, person: true },
+      });
+      if (!driver) throw new AppError('Chauffeur introuvable.', 404, 'DRIVER_NOT_FOUND');
+
+      const updatedDriver = await tx.driver.update({
+        where: { id: driverId },
+        data: { isPaymentConfirmed: true },
+      });
+
+      // Update all badges for driver
+      await tx.driverBadge.updateMany({
+        where: { driverId },
+        data: {
+          isPaymentConfirmed: true,
+          ...(paymentReference ? { paymentReference } : {}),
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actorUser.id,
+          action: 'DRIVER_PAYMENT_CONFIRMED',
+          targetModule: 'BADGES',
+          targetRecordId: driverId,
+          newValues: { paymentReference, confirmedBy: actorUser.id },
+        },
+      });
+
+      return updatedDriver;
+    });
   }
 
   /**

@@ -181,6 +181,13 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.CREDENTIALS_VERIFY,
     PERMISSIONS.UNIONS_READ,
   ],
+
+  // Autorité Ministérielle & Hauts Cadres de l'État (Tableau de bord exécutif lecture seule)
+  AUTHORITY: [
+    PERMISSIONS.AUTHORITIES_READ,
+    PERMISSIONS.FINANCIAL_REPORTS_READ,
+    PERMISSIONS.SYSTEM_HEALTH_READ,
+  ],
 };
 
 /**

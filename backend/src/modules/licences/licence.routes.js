@@ -21,4 +21,17 @@ router.get(
   LicenceController.downloadStickerPdf
 );
 
+// Confirm vehicle payment by Super Admin
+router.post(
+  '/vehicles/:id/confirm-payment',
+  requirePermissions(PERMISSIONS.SYSTEM_SETTINGS_MANAGE, PERMISSIONS.ROLES_MANAGE, PERMISSIONS.USERS_UPDATE),
+  LicenceController.confirmPayment
+);
+
+router.post(
+  '/:id/confirm-payment',
+  requirePermissions(PERMISSIONS.SYSTEM_SETTINGS_MANAGE, PERMISSIONS.ROLES_MANAGE, PERMISSIONS.USERS_UPDATE),
+  LicenceController.confirmPayment
+);
+
 export default router;

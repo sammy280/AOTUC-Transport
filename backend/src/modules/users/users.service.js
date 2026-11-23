@@ -208,6 +208,20 @@ export class UsersService {
    * Creates a new system user account with secure password, email, role, and job/work assignment.
    */
   static async createUser(data, actorUser) {
+    // Both SUPER_ADMIN and DIRECTOR can register accounts; DIRECTOR is authorized specifically for AUTHORITY accounts
+    const isSuperAdmin = actorUser?.roles?.includes('SUPER_ADMIN');
+    const isDirector = actorUser?.roles?.includes('DIRECTOR');
+
+    if (isDirector && !isSuperAdmin) {
+      if (data.role !== 'AUTHORITY') {
+        throw new AppError(
+          'Habilitation restreinte : Le Directeur Général peut uniquement enregistrer des comptes Autorités (Ministères et hauts responsables).',
+          403,
+          'FORBIDDEN_ROLE'
+        );
+      }
+    }
+
     const normalizedPhone = normalizePhoneNumber(data.phoneNumber);
     const normalizedEmail = data.email ? data.email.trim().toLowerCase() : null;
 
@@ -278,7 +292,11 @@ export class UsersService {
           roleRecord = await tx.role.upsert({
             where: { name: data.role },
             update: {},
-            create: { name: data.role, description: `Rôle ${data.role}` },
+            create: {
+              name: data.role,
+              labelFr: data.role === 'AUTHORITY' ? 'Haute Autorité' : `Rôle ${data.role}`,
+              description: `Rôle ${data.role}`,
+            },
           });
         }
 
@@ -375,7 +393,11 @@ export class UsersService {
           roleRecord = await tx.role.upsert({
             where: { name: data.role },
             update: {},
-            create: { name: data.role, description: `Rôle ${data.role}` },
+            create: {
+              name: data.role,
+              labelFr: data.role === 'AUTHORITY' ? 'Haute Autorité' : `Rôle ${data.role}`,
+              description: `Rôle ${data.role}`,
+            },
           });
         }
         if (roleRecord) {

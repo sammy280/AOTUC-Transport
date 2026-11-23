@@ -42,9 +42,9 @@ export const DirectorAuthoritiesWidget: React.FC<DirectorAuthoritiesWidgetProps>
   onOpenRegisterAuthority,
 }) => {
   // STRICT SECURITY & RBAC ENFORCEMENT:
-  // "AUTORITÉS — juste tableau de bord du directeur"
-  // Must render ONLY for DIRECTOR role
-  if (currentUser.role !== 'DIRECTOR') {
+  // "AUTORITÉS — juste tableau de bord du directeur" & Ministerial Authority leaders view
+  // Render ONLY for DIRECTOR and AUTHORITY roles
+  if (currentUser.role !== 'DIRECTOR' && currentUser.role !== 'AUTHORITY') {
     return null;
   }
 
@@ -113,23 +113,31 @@ export const DirectorAuthoritiesWidget: React.FC<DirectorAuthoritiesWidgetProps>
         </div>
 
         <div className="flex items-center space-x-2">
-          {onOpenRegisterAuthority && (
-            <button
-              onClick={onOpenRegisterAuthority}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center space-x-1.5 transition cursor-pointer"
-            >
-              <UserPlus className="w-3.5 h-3.5 text-blue-600" />
-              <span>Enregistrer</span>
-            </button>
-          )}
+          {currentUser.role === 'DIRECTOR' ? (
+            <>
+              {onOpenRegisterAuthority && (
+                <button
+                  onClick={onOpenRegisterAuthority}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center space-x-1.5 transition cursor-pointer"
+                >
+                  <UserPlus className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Enregistrer</span>
+                </button>
+              )}
 
-          <button
-            onClick={() => onNavigateTab('authorities')}
-            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white flex items-center space-x-1.5 shadow transition cursor-pointer"
-          >
-            <span>Consulter le Registre</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-[#FCD116]" />
-          </button>
+              <button
+                onClick={() => onNavigateTab('authorities')}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white flex items-center space-x-1.5 shadow transition cursor-pointer"
+              >
+                <span>Consulter le Registre</span>
+                <ArrowUpRight className="w-3.5 h-3.5 text-[#FCD116]" />
+              </button>
+            </>
+          ) : (
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+              Lecture Seule Stratégique
+            </span>
+          )}
         </div>
       </div>
 

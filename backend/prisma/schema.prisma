@@ -49,6 +49,7 @@ enum RoleType {
   AGENT_TERRAIN
   SYNDICAT
   DISTRIBUTEUR
+  AUTHORITY
 }
 
 model Role {
@@ -224,6 +225,7 @@ model Driver {
   licenseCategory       String       @default("B") @map("license_category") // e.g., "B", "C", "D"
   licenseExpirationDate DateTime     @map("license_expiration_date")
   status                DriverStatus @default(EN_ATTENTE_VALIDATION)
+  isPaymentConfirmed    Boolean      @default(true) @map("is_payment_confirmed")
 
   // Emergency Contact Information (Nullable for backward compatibility with existing drivers)
   emergencyContactName     String?   @map("emergency_contact_name")
@@ -309,6 +311,8 @@ model Vehicle {
   year                   Int? // Année de mise en circulation
   seatingCapacity        Int?          @map("seating_capacity")
   status                 VehicleStatus @default(EN_ATTENTE_VALIDATION)
+  isPaymentConfirmed     Boolean       @default(true) @map("is_payment_confirmed")
+  superAdminConfirmed    Boolean       @default(true) @map("super_admin_confirmed")
 
   // Field Registration GPS & Provenance
   latitude               Float?
@@ -631,6 +635,8 @@ model DriverBadge {
   replacesBadgeId  String?          @map("replaces_badge_id")
   printedAt        DateTime?        @map("printed_at")
   printCount       Int              @default(0) @map("print_count")
+  isPaymentConfirmed Boolean        @default(true) @map("is_payment_confirmed")
+  paymentReference   String?        @map("payment_reference")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -657,9 +663,12 @@ model TransportLicence {
   status            CredentialStatus @default(ACTIF)
   suspendedAt       DateTime?        @map("suspended_at")
   suspensionReason  String?          @map("suspension_reason")
-  replacesLicenceId String?          @map("replaces_licence_id")
-  printedAt         DateTime?        @map("printed_at")
-  printCount        Int              @default(0) @map("print_count")
+  replacesLicenceId     String?          @map("replaces_licence_id")
+  printedAt             DateTime?        @map("printed_at")
+  printCount            Int              @default(0) @map("print_count")
+  isPaymentConfirmed    Boolean          @default(true) @map("is_payment_confirmed")
+  superAdminConfirmedAt DateTime?        @map("super_admin_confirmed_at")
+  superAdminUserId      String?          @map("super_admin_user_id")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

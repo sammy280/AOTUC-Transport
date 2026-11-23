@@ -161,6 +161,8 @@ const getRoleLabel = (role: RoleType): string => {
       return 'Distributeur Billetterie Agréé';
     case 'SYNDICAT':
       return 'Délégué Syndical FNTG';
+    case 'AUTHORITY':
+      return 'Haute Autorité Ministérielle';
     default:
       return role;
   }
@@ -1095,6 +1097,8 @@ export const UserManagementView: React.FC<{
                               ? 'bg-emerald-100 text-emerald-800'
                               : user.role === 'SUPER_ADMIN'
                               ? 'bg-slate-800 text-white'
+                              : user.role === 'AUTHORITY'
+                              ? 'bg-[#0B1E36] text-[#FCD116]'
                               : user.role === 'CHEF_SERVICE'
                               ? 'bg-blue-100 text-blue-800'
                               : user.role === 'AGENT_TERRAIN'
@@ -1434,6 +1438,7 @@ export const UserManagementView: React.FC<{
                     <option value="SYNDICAT">Délégué Syndical FNTG</option>
                     <option value="DIRECTOR">Directeur Général (L3)</option>
                     <option value="SUPER_ADMIN">Super Administrateur DSI</option>
+                    <option value="AUTHORITY">Haute Autorité Ministérielle (Consultation DG)</option>
                   </select>
                 </div>
 

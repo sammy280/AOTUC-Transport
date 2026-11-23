@@ -37,6 +37,15 @@ export class LicenceService {
       );
     }
 
+    // Payment Gate: Vehicle sticker requires registration and confirmation of payment by the Super Admin
+    if (vehicle.isPaymentConfirmed === false || vehicle.superAdminConfirmed === false) {
+      throw new AppError(
+        'Délivrance impossible : La vignette pare-brise exige l enregistrement du véhicule et la confirmation préalable du paiement par le Super Administrateur.',
+        400,
+        'SUPER_ADMIN_PAYMENT_CONFIRMATION_REQUIRED'
+      );
+    }
+
     // Check inspection validity
     const latestInspection = vehicle.inspections[0];
     if (!latestInspection || new Date() > latestInspection.expirationDate || !latestInspection.isConform) {
@@ -132,6 +141,15 @@ export class LicenceService {
 
     if (!licence) throw new AppError('Licence introuvable.', 404, 'LICENCE_NOT_FOUND');
 
+    // Payment Gate: Vehicle sticker only becomes printable after vehicle registration and confirmation of payment by Super Admin
+    if (licence.isPaymentConfirmed === false || licence.vehicle?.isPaymentConfirmed === false || licence.vehicle?.superAdminConfirmed === false) {
+      throw new AppError(
+        'Impression de la vignette pare-brise impossible : Le paiement doit être préalablement confirmé par le Super Administrateur.',
+        400,
+        'SUPER_ADMIN_PAYMENT_CONFIRMATION_REQUIRED'
+      );
+    }
+
     const pdfBuffer = await PdfBadgeService.generateLicenceStickerPdf({
       licenceNumber: licence.licenceNumber,
       plateNumber: licence.vehicle.plateNumber,
@@ -162,6 +180,57 @@ export class LicenceService {
       pdfBuffer,
       fileName: `AOTUC_Sticker_${licence.licenceNumber}.pdf`,
     };
+  }
+
+  /**
+   * Confirms vehicle registration payment by Super Admin.
+   */
+  static async confirmSuperAdminPayment(vehicleId, actorUser, { paymentReference = null } = {}) {
+    const isSuperAdmin = actorUser?.roles?.includes('SUPER_ADMIN');
+    if (!isSuperAdmin) {
+      throw new AppError(
+        'Action réservée : Seul le Super Administrateur est habilité à confirmer le paiement de la vignette véhicule.',
+        403,
+        'FORBIDDEN_SUPER_ADMIN_ONLY'
+      );
+    }
+
+    return await prisma.$transaction(async (tx) => {
+      const vehicle = await tx.vehicle.findUnique({
+        where: { id: vehicleId },
+        include: { licences: true },
+      });
+      if (!vehicle) throw new AppError('Véhicule introuvable.', 404, 'VEHICLE_NOT_FOUND');
+
+      const updatedVehicle = await tx.vehicle.update({
+        where: { id: vehicleId },
+        data: {
+          isPaymentConfirmed: true,
+          superAdminConfirmed: true,
+        },
+      });
+
+      await tx.transportLicence.updateMany({
+        where: { vehicleId },
+        data: {
+          isPaymentConfirmed: true,
+          superAdminConfirmedAt: new Date(),
+          superAdminUserId: actorUser.id,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actorUser.id,
+          action: 'VEHICLE_PAYMENT_CONFIRMED_SUPER_ADMIN',
+          targetModule: 'LICENCES',
+          targetRecordId: vehicleId,
+          newValues: { paymentReference, superAdminId: actorUser.id },
+        },
+      });
+
+      return updatedVehicle;
+    });
   }
 }
 

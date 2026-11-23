@@ -35,6 +35,23 @@ export class BadgeController {
     }
   }
 
+  static async confirmPayment(req, res, next) {
+    try {
+      const { id } = req.params; // driverId
+      const { paymentReference } = req.body || {};
+
+      const result = await BadgeService.confirmDriverPayment(id, req.user, { paymentReference });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Paiement du chauffeur confirmé avec succès. Le badge est désormais éligible à la délivrance et l impression.',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   static async suspendBadge(req, res, next) {
     try {
       const { id } = req.params;

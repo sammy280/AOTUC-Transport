@@ -20,6 +20,19 @@ router.post(
   BadgeController.issueBadge
 );
 
+// Confirm driver payment (Required before badge can be printed / issued)
+router.post(
+  '/drivers/:id/confirm-payment',
+  requirePermissions(PERMISSIONS.CREDENTIALS_ISSUE, PERMISSIONS.TRANSACTIONS_CREATE, PERMISSIONS.USERS_UPDATE),
+  BadgeController.confirmPayment
+);
+
+router.post(
+  '/:id/confirm-payment',
+  requirePermissions(PERMISSIONS.CREDENTIALS_ISSUE, PERMISSIONS.TRANSACTIONS_CREATE, PERMISSIONS.USERS_UPDATE),
+  BadgeController.confirmPayment
+);
+
 // Suspend badge (Director General authority)
 router.post(
   '/:id/suspend',
