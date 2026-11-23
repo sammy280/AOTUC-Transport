@@ -54,6 +54,12 @@ export const PERMISSIONS = {
   // Transport Unions / Syndicats Management
   UNIONS_MANAGE: 'unions.manage',
   UNIONS_READ: 'unions.read',
+
+  // Administrative Authorities Management
+  AUTHORITIES_READ: 'authorities.read',
+  AUTHORITIES_CREATE: 'authorities.create',
+  AUTHORITIES_UPDATE: 'authorities.update',
+  AUTHORITIES_DELETE: 'authorities.delete',
 } as const;
 
 export type PermissionKey = typeof PERMISSIONS[keyof typeof PERMISSIONS];
@@ -82,6 +88,10 @@ export const ROLE_PERMISSIONS: Record<RoleType, PermissionKey[]> = {
     PERMISSIONS.FIELD_PROGRESS_READ,
     PERMISSIONS.FIELD_RECEIPTS_READ,
     PERMISSIONS.UNIONS_READ,
+    PERMISSIONS.AUTHORITIES_READ,
+    PERMISSIONS.AUTHORITIES_CREATE,
+    PERMISSIONS.AUTHORITIES_UPDATE,
+    PERMISSIONS.AUTHORITIES_DELETE,
   ],
   SUPER_ADMIN: [
     PERMISSIONS.USERS_READ,
@@ -104,6 +114,10 @@ export const ROLE_PERMISSIONS: Record<RoleType, PermissionKey[]> = {
     PERMISSIONS.FIELD_RECEIPTS_READ,
     PERMISSIONS.UNIONS_MANAGE,
     PERMISSIONS.UNIONS_READ,
+    PERMISSIONS.AUTHORITIES_READ,
+    PERMISSIONS.AUTHORITIES_CREATE,
+    PERMISSIONS.AUTHORITIES_UPDATE,
+    PERMISSIONS.AUTHORITIES_DELETE,
   ],
   CHEF_SERVICE: [
     PERMISSIONS.APPLICATIONS_REVIEW_L2,
@@ -154,6 +168,7 @@ export const ROLE_PERMISSIONS: Record<RoleType, PermissionKey[]> = {
 export const ROLE_ALLOWED_TABS: Record<RoleType, string[]> = {
   DIRECTOR: [
     'dashboard',
+    'authorities',
     'field',
     'enrolment',
     'unions',
@@ -166,6 +181,7 @@ export const ROLE_ALLOWED_TABS: Record<RoleType, string[]> = {
   ],
   SUPER_ADMIN: [
     'dashboard',
+    'authorities',
     'field',
     'enrolment',
     'unions',

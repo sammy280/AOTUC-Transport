@@ -11,6 +11,7 @@ import {
   UserCog,
   Compass,
   Building2,
+  ShieldCheck,
   X,
   LogOut,
 } from 'lucide-react';
@@ -47,6 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     { id: 'enrolment', label: 'Registre & Enrôlement', icon: UserPlus },
     { id: 'unions', label: 'Syndicats & Organisations', icon: Building2 },
+    { id: 'authorities', label: 'Autorités Administratives', icon: ShieldCheck },
     { id: 'badges', label: 'Badges Chauffeurs (CR80)', icon: IdCard },
     { id: 'licences', label: 'Licences & Stickers', icon: FileCheck2 },
     { id: 'mapping', label: 'Réseau & Carte Conakry', icon: MapPin },

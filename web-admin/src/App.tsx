@@ -18,6 +18,7 @@ import AuditSecurityLogView from './features/audit/AuditSecurityLogView';
 import UserManagementView from './features/users/UserManagementView';
 import FieldOperationsView from './features/field/FieldOperationsView';
 import UnionManagementView from './features/unions/UnionManagementView';
+import AuthorityManagementView from './features/authorities/AuthorityManagementView';
 import ToastContainer from './components/ToastContainer';
 import LoginView from './features/auth/LoginView';
 import AccessDenied from './components/AccessDenied';
@@ -396,6 +397,10 @@ export const App: React.FC = () => {
 
               {currentTab === 'unions' && (
                 <UnionManagementView currentUser={currentUser} />
+              )}
+
+              {currentTab === 'authorities' && (
+                <AuthorityManagementView currentUser={currentUser} />
               )}
 
               {currentTab === 'mapping' && (

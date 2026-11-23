@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { UserContext } from '../../types';
 import ConakryMapWidget from '../mapping/ConakryMapWidget';
+import DirectorAuthoritiesWidget from './DirectorAuthoritiesWidget';
 
 interface DashboardOverviewProps {
   currentUser: UserContext;
@@ -732,6 +733,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Exclusive Authorities Management Section for Director General */}
+      {/* Boss Requirement: "AUTORITÉS — juste tableau de bord du directeur" */}
+      <DirectorAuthoritiesWidget
+        currentUser={currentUser}
+        onNavigateTab={navigateTo}
+      />
 
       {/* Conakry Interactive GIS Map Widget for Executive Director */}
       <ConakryMapWidget

@@ -14,6 +14,7 @@ import {
 import { UserContext } from '../../types';
 import { PERMISSIONS, hasRolePermission } from '../../utils/permissions';
 import { buildApiUrl, getStoredAuthToken } from '../../utils/api';
+import PrintCredentialModal, { PrintableCredentialData } from './PrintCredentialModal';
 
 interface BadgeRecord {
   id: string;
@@ -120,6 +121,41 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
   const [selectedLicence, setSelectedLicence] = useState<LicenceRecord>(SAMPLE_LICENCES[0]);
   const [verificationFeedback, setVerificationFeedback] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
+
+  const getPrintableData = (): PrintableCredentialData => {
+    if (activeTab === 'badges') {
+      return {
+        type: 'BADGE',
+        id: selectedBadge.id,
+        badgeNumber: selectedBadge.badgeNumber,
+        driverName: selectedBadge.driverName,
+        nin: selectedBadge.nin,
+        licenseNumber: selectedBadge.licenseNumber,
+        categories: selectedBadge.categories,
+        commune: selectedBadge.commune,
+        expiryDate: selectedBadge.expiryDate,
+        photoUrl: null,
+        signaturePreview: selectedBadge.signaturePreview,
+        status: selectedBadge.status,
+      };
+    } else {
+      return {
+        type: 'LICENCE',
+        id: selectedLicence.id,
+        licenceNumber: selectedLicence.licenceNumber,
+        plateNumber: selectedLicence.plateNumber,
+        vehicleMakeModel: selectedLicence.vehicleMakeModel,
+        ownerName: selectedLicence.ownerName,
+        commune: selectedLicence.commune,
+        seats: selectedLicence.seats,
+        validYear: selectedLicence.validYear,
+        expiryDate: `31/12/${selectedLicence.validYear}`,
+        signaturePreview: selectedLicence.signaturePreview,
+        status: selectedLicence.status,
+      };
+    }
+  };
 
   const canIssue = currentUser ? hasRolePermission(currentUser.role, PERMISSIONS.CREDENTIALS_ISSUE) : true;
 
@@ -317,16 +353,30 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
                         </span>
                       </td>
                       <td className="p-3 text-right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedBadge(b);
-                            handleVerifyOffline(b.signaturePreview);
-                          }}
-                          className="text-xs text-blue-600 hover:text-blue-800 font-bold"
-                        >
-                          Contrôler
-                        </button>
+                        <div className="flex items-center justify-end space-x-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedBadge(b);
+                              setIsPrintModalOpen(true);
+                            }}
+                            title="Imprimer le badge en couleur"
+                            className="text-xs text-slate-700 hover:text-slate-900 font-bold flex items-center space-x-1 p-1 hover:bg-slate-200 rounded"
+                          >
+                            <Printer className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Imprimer</span>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedBadge(b);
+                              handleVerifyOffline(b.signaturePreview);
+                            }}
+                            className="text-xs text-blue-600 hover:text-blue-800 font-bold"
+                          >
+                            Contrôler
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -368,16 +418,30 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
                         </span>
                       </td>
                       <td className="p-3 text-right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedLicence(lic);
-                            handleVerifyOffline(lic.signaturePreview);
-                          }}
-                          className="text-xs text-blue-600 hover:text-blue-800 font-bold"
-                        >
-                          Contrôler
-                        </button>
+                        <div className="flex items-center justify-end space-x-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedLicence(lic);
+                              setIsPrintModalOpen(true);
+                            }}
+                            title="Imprimer la vignette en couleur"
+                            className="text-xs text-slate-700 hover:text-slate-900 font-bold flex items-center space-x-1 p-1 hover:bg-slate-200 rounded"
+                          >
+                            <Printer className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Imprimer</span>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedLicence(lic);
+                              handleVerifyOffline(lic.signaturePreview);
+                            }}
+                            className="text-xs text-blue-600 hover:text-blue-800 font-bold"
+                          >
+                            Contrôler
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -572,6 +636,19 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
 
           {/* Action buttons */}
           <div className="pt-4 border-t border-slate-200 space-y-2">
+            {/* Primary High-Fidelity Color Printing Button */}
+            <button
+              onClick={() => setIsPrintModalOpen(true)}
+              className="w-full py-2.5 bg-[#0B1E36] hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition flex items-center justify-center space-x-2 shadow cursor-pointer min-h-[42px]"
+            >
+              <Printer className="w-4 h-4 text-[#FCD116]" />
+              <span>
+                {activeTab === 'badges'
+                  ? 'Aperçu & Impression Couleur (Badge CR80)'
+                  : 'Aperçu & Impression Couleur (Vignette 100×100)'}
+              </span>
+            </button>
+
             <button
               onClick={() => handleVerifyOffline(activeTab === 'badges' ? selectedBadge.signaturePreview : selectedLicence.signaturePreview)}
               className="w-full py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition flex items-center justify-center space-x-2"
@@ -597,6 +674,14 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
           </div>
         </div>
       </div>
+
+      {/* Official AOTUC Color Print Preview & Printer Dialog */}
+      <PrintCredentialModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        data={getPrintableData()}
+        onDownloadPdf={handleDownloadPdf}
+      />
     </div>
   );
 };

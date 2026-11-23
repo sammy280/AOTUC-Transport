@@ -128,6 +128,7 @@ export class DocumentStorageService {
     personId = null,
     vehicleId = null,
     unionId = null,
+    authorityId = null,
     expectedSha256 = null,
   }) {
     // 1–3. Validate Size, Magic Bytes & SHA-256 Integrity
@@ -162,6 +163,7 @@ export class DocumentStorageService {
         personId,
         vehicleId,
         unionId,
+        authorityId,
       },
     });
 
@@ -172,7 +174,7 @@ export class DocumentStorageService {
         action: 'DOCUMENT_UPLOADED',
         targetModule: 'DOCUMENTS',
         targetRecordId: document.id,
-        newValues: { category, fileSizeBytes: fileBuffer.length, originalName, unionId },
+        newValues: { category, fileSizeBytes: fileBuffer.length, originalName, unionId, authorityId },
       },
     });
 

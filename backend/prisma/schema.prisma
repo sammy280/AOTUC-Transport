@@ -28,6 +28,7 @@ model Commune {
   users              User[]
   persons            Person[]
   unions             TransportUnion[]
+  authorities        Authority[]
   validationRequests ValidationRequest[]
   stops              TransportStop[]
   fieldAssignments   FieldAssignment[]
@@ -98,6 +99,7 @@ model User {
   supervisedFieldAssignments FieldAssignment[]     @relation("SupervisedFieldAssignments")
   agentFieldReceipts         FieldReceipt[]        @relation("AgentFieldReceipts")
   ledFieldTeams              FieldTeam[]           @relation("LeaderFieldTeams")
+  registeredAuthorities      Authority[]           @relation("RegisteredAuthorities")
 
   @@index([phoneNumber])
   @@index([email])
@@ -424,6 +426,48 @@ model TransportUnion {
 }
 
 // ==============================================================================
+// 9B. ADMINISTRATIVE AUTHORITIES & INSTITUTIONS
+// ==============================================================================
+
+enum AuthorityStatus {
+  ACTIF
+  EN_ATTENTE_VALIDATION
+  SUSPENDU
+  INACTIF
+}
+
+model Authority {
+  id                 String          @id @default(uuid())
+  fullName           String          @map("full_name")
+  fonction           String          @map("fonction") // Official position (e.g. Commissaire Central, Maire, Directeur National, Commandant)
+  institution        String          @map("institution") // Institution or service (e.g. Police Nationale, Gendarmerie Routière, Mairie, Ministère des Transports)
+  service            String?         @map("service") // Specific service/department
+  phoneNumber        String?         @map("phone_number")
+  email              String?         @map("email")
+  cniNumber          String?         @map("cni_number") // National Identity Card number
+  badgeNumber        String?         @map("badge_number") // Official matricule / badge number
+  photoUrl           String?         @map("photo_url") // Profile / portrait photo
+  status             AuthorityStatus @default(ACTIF)
+  notes              String?         @map("notes")
+
+  communeId          String?         @map("commune_id")
+  commune            Commune?        @relation(fields: [communeId], references: [id], onDelete: SetNull)
+
+  registeredByUserId String?         @map("registered_by_user_id")
+  registeredByUser   User?           @relation("RegisteredAuthorities", fields: [registeredByUserId], references: [id], onDelete: SetNull)
+
+  documents          Document[]      @relation("AuthorityDocuments")
+
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([institution])
+  @@index([communeId])
+  @@map("authorities")
+}
+
+// ==============================================================================
 // 10. DOCUMENT & MEDIA SECURE STORAGE (Module 9)
 // ==============================================================================
 
@@ -466,12 +510,16 @@ model Document {
   unionId   String?         @map("union_id")
   union     TransportUnion? @relation("UnionDocuments", fields: [unionId], references: [id], onDelete: SetNull)
 
+  authorityId String?    @map("authority_id")
+  authority   Authority? @relation("AuthorityDocuments", fields: [authorityId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([uploadedByUserId])
   @@index([personId])
   @@index([vehicleId])
   @@index([unionId])
+  @@index([authorityId])
   @@index([category])
   @@map("documents")
 }
