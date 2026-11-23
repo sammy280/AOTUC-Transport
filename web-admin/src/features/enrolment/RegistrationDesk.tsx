@@ -20,10 +20,24 @@ import {
   Building2,
   FileText,
   ExternalLink,
+  Wifi,
+  WifiOff,
+  Layers,
 } from 'lucide-react';
 import { UserContext } from '../../types';
-import { buildApiUrl, getStoredAuthToken, parseApiResponse } from '../../utils/api';
+import { buildApiUrl, getStoredAuthToken, getStoredAuthUser, parseApiResponse } from '../../utils/api';
 import { CONAKRY_COMMUNES } from '../../config/communes';
+import {
+  saveOfflineDraft,
+  listAgentDrafts,
+  deleteOfflineDraft,
+  cacheReferenceData,
+  getCachedReferenceData,
+  generateUuidV4,
+  OfflineDraftRecord,
+} from '../../utils/offlineStore';
+import { syncManager, SyncManagerStats } from '../../utils/offlineSyncManager';
+import { OfflineQueueModal } from './OfflineQueueModal';
 
 interface DocumentItem {
   id: string;
@@ -148,6 +162,67 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
   const [communeFilter, setCommuneFilter] = useState<string>(isCommuneLocked ? lockedCommune : 'ALL');
   const [showSuccessBanner, setShowSuccessBanner] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Offline & Synchronization State
+  const activeUserId = currentUser?.id || getStoredAuthUser()?.id || 'agent-default';
+  const activeUserName = currentUser?.name || getStoredAuthUser()?.name || 'Agent AOTUC';
+
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [agentDrafts, setAgentDrafts] = useState<OfflineDraftRecord[]>([]);
+  const [showQueueModal, setShowQueueModal] = useState<boolean>(false);
+
+  const resetDriverFormState = () => {
+    setDriverFirstName('');
+    setDriverLastName('');
+    setDriverNin('');
+    setDriverPhone('');
+    setDriverEmergencyPhone('');
+    setDriverEmergencyName('');
+    setDriverEmergencyRelation('Famille');
+    setDriverLicense('');
+    setDriverAddress('');
+    setDriverPhotoBase64(null);
+    setLicenceRectoBase64(null);
+    setLicenceRectoName('permis_recto.jpg');
+    setLicenceVersoBase64(null);
+    setLicenceVersoName('permis_verso.jpg');
+    setCniDocBase64(null);
+    setCniDocName('');
+  };
+
+  const resetVehicleFormState = () => {
+    setVehiclePlate('');
+    setVehicleRegistrationCard('');
+    setVehicleVin('');
+    setVehicleAtrNumber('');
+    setVehicleAotucLicenseNumber('');
+    setVehicleMake('');
+    setVehicleModel('');
+    setVehicleDriverId('');
+    setCarteGriseBase64(null);
+    setPhotoVehiculeBase64(null);
+    setNewOwnerFirstName('');
+    setNewOwnerLastName('');
+    setNewOwnerNin('');
+    setNewOwnerPhone('');
+    setNewOwnerBusinessName('');
+  };
+
+  useEffect(() => {
+    syncManager.setAgentUserId(activeUserId);
+    listAgentDrafts(activeUserId).then(setAgentDrafts).catch(() => {});
+
+    const unsubscribe = syncManager.subscribe((stats: SyncManagerStats) => {
+      setIsOnline(stats.isOnline);
+      setIsSyncing(stats.isSyncing);
+      listAgentDrafts(activeUserId).then(setAgentDrafts).catch(() => {});
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [activeUserId]);
 
   // Driver Details Modal state
   const [selectedDriver, setSelectedDriver] = useState<DriverRecord | null>(null);
@@ -312,19 +387,24 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
 
       if (unionsRes.ok && unionsBody?.data?.items) {
         setAvailableUnions(unionsBody.data.items);
+        cacheReferenceData('unions', unionsBody.data.items).catch(() => {});
       } else if (unionsRes.ok && unionsBody?.items) {
         setAvailableUnions(unionsBody.items);
+        cacheReferenceData('unions', unionsBody.items).catch(() => {});
       }
 
       if (driversRes.ok && driversBody?.data?.items) {
         setDrivers(driversBody.data.items);
+        cacheReferenceData('drivers', driversBody.data.items).catch(() => {});
       }
       if (vehiclesRes.ok && vehiclesBody?.data?.items) {
         setVehicles(vehiclesBody.data.items);
+        cacheReferenceData('vehicles', vehiclesBody.data.items).catch(() => {});
       }
       if (ownersRes.ok && ownersBody?.data?.items) {
         const loadedOwners: OwnerRecord[] = ownersBody.data.items;
         setOwners(loadedOwners);
+        cacheReferenceData('owners', loadedOwners).catch(() => {});
         if (loadedOwners.length > 0) {
           setSelectedOwnerId((prev) => prev || loadedOwners[0].id);
           setOwnerMode('existing');
@@ -333,9 +413,39 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
         }
       }
     } catch (err: any) {
-      setErrorMessage(
-        err?.message || 'Impossible de charger les dossiers depuis le serveur PostgreSQL.'
-      );
+      // Offline fallback: load cached reference data from IndexedDB
+      try {
+        const [cachedUnions, cachedDrivers, cachedVehicles, cachedOwners] = await Promise.all([
+          getCachedReferenceData<any[]>('unions'),
+          getCachedReferenceData<any[]>('drivers'),
+          getCachedReferenceData<any[]>('vehicles'),
+          getCachedReferenceData<any[]>('owners'),
+        ]);
+
+        if (cachedUnions && cachedUnions.length > 0) setAvailableUnions(cachedUnions);
+        if (cachedDrivers && cachedDrivers.length > 0) setDrivers(cachedDrivers);
+        if (cachedVehicles && cachedVehicles.length > 0) setVehicles(cachedVehicles);
+        if (cachedOwners && cachedOwners.length > 0) {
+          setOwners(cachedOwners);
+          setSelectedOwnerId((prev) => prev || cachedOwners[0].id);
+          setOwnerMode('existing');
+        }
+
+        const isNetworkFailure =
+          err?.name === 'TypeError' ||
+          err?.message?.includes('Failed to fetch') ||
+          err?.message?.includes('NetworkError');
+
+        if (!isNetworkFailure) {
+          setErrorMessage(
+            err?.message || 'Impossible de charger les dossiers depuis le serveur PostgreSQL.'
+          );
+        }
+      } catch (_) {
+        setErrorMessage(
+          err?.message || 'Impossible de charger les dossiers depuis le serveur PostgreSQL.'
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -800,6 +910,55 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
       });
     }
 
+    const driverPayload = {
+      firstName: trimmedFirst,
+      lastName: trimmedLast,
+      nin: trimmedNin,
+      phoneNumber: trimmedPhone,
+      emergencyContactPhone: trimmedEmergencyPhone,
+      emergencyContactName: driverEmergencyName.trim() || null,
+      emergencyContactRelation: driverEmergencyRelation || null,
+      drivingLicenseNumber: trimmedLicense,
+      licenseCategory: driverLicenseCat,
+      licenseExpirationDate: driverLicenseExp,
+      address: driverAddress.trim() || null,
+      commune: isCommuneLocked ? lockedCommune : driverCommune,
+      unionId: driverUnionId || null,
+    };
+
+    // If browser is offline, store draft locally in IndexedDB with AES-GCM encryption
+    if (!navigator.onLine) {
+      try {
+        const draft = await saveOfflineDraft({
+          agentUserId: activeUserId,
+          agentName: activeUserName,
+          entityType: 'DRIVER',
+          payload: driverPayload,
+          documents: inlineDocuments,
+          summary: {
+            title: `Chauffeur : ${trimmedFirst} ${trimmedLast}`,
+            subtitle: `NIN: ${trimmedNin} • Permis: ${trimmedLicense}`,
+            commune: isCommuneLocked ? lockedCommune : driverCommune,
+            referenceCode: trimmedLicense,
+          },
+        });
+
+        resetDriverFormState();
+        setShowSuccessBanner(
+          `✓ Mode Hors-Ligne : Dossier du conducteur "${trimmedFirst} ${trimmedLast}" sauvegardé localement sur cet appareil (ID: ${draft.clientGeneratedId.slice(0, 8).toUpperCase()}). Il sera synchronisé dès le retour d'Internet.`
+        );
+        const updated = await listAgentDrafts(activeUserId);
+        setAgentDrafts(updated);
+      } catch (saveErr: any) {
+        setErrorMessage(
+          saveErr?.message || "Échec de l'enregistrement hors-ligne dans le stockage local."
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const response = await fetch(buildApiUrl('/api/v1/registration/drivers'), {
@@ -809,19 +968,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          firstName: trimmedFirst,
-          lastName: trimmedLast,
-          nin: trimmedNin,
-          phoneNumber: trimmedPhone,
-          emergencyContactPhone: trimmedEmergencyPhone,
-          emergencyContactName: driverEmergencyName.trim() || null,
-          emergencyContactRelation: driverEmergencyRelation || null,
-          drivingLicenseNumber: trimmedLicense,
-          licenseCategory: driverLicenseCat,
-          licenseExpirationDate: driverLicenseExp,
-          address: driverAddress.trim() || null,
-          commune: isCommuneLocked ? lockedCommune : driverCommune,
-          unionId: driverUnionId || null,
+          ...driverPayload,
           documents: inlineDocuments,
         }),
       });
@@ -840,24 +987,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
       }
 
       const persistedDriver: DriverRecord = body.data;
-
-      // Reset form fields only after confirmed DB persistence
-      setDriverFirstName('');
-      setDriverLastName('');
-      setDriverNin('');
-      setDriverPhone('');
-      setDriverEmergencyPhone('');
-      setDriverEmergencyName('');
-      setDriverEmergencyRelation('Famille');
-      setDriverLicense('');
-      setDriverAddress('');
-      setDriverPhotoBase64(null);
-      setLicenceRectoBase64(null);
-      setLicenceRectoName('permis_recto.jpg');
-      setLicenceVersoBase64(null);
-      setLicenceVersoName('permis_verso.jpg');
-      setCniDocBase64(null);
-      setCniDocName('');
+      resetDriverFormState();
 
       setShowSuccessBanner(
         `✓ Conducteur "${persistedDriver.person?.firstName || trimmedFirst} ${persistedDriver.person?.lastName || trimmedLast}" enregistré dans PostgreSQL (ID : ${persistedDriver.id.slice(0, 8).toUpperCase()})`
@@ -866,6 +996,41 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
       // Refresh live list from PostgreSQL
       await fetchAllRegistrationData();
     } catch (err: any) {
+      const isNetworkFailure =
+        err?.name === 'TypeError' ||
+        err?.message?.includes('Failed to fetch') ||
+        err?.message?.includes('NetworkError');
+
+      if (isNetworkFailure) {
+        // Network connection dropped during submission -> securely persist to IndexedDB
+        try {
+          const draft = await saveOfflineDraft({
+            agentUserId: activeUserId,
+            agentName: activeUserName,
+            entityType: 'DRIVER',
+            payload: driverPayload,
+            documents: inlineDocuments,
+            summary: {
+              title: `Chauffeur : ${trimmedFirst} ${trimmedLast}`,
+              subtitle: `NIN: ${trimmedNin} • Permis: ${trimmedLicense}`,
+              commune: isCommuneLocked ? lockedCommune : driverCommune,
+              referenceCode: trimmedLicense,
+            },
+          });
+
+          resetDriverFormState();
+          setShowSuccessBanner(
+            `✓ Mode Hors-Ligne : La connexion a été interrompue. Le dossier du conducteur "${trimmedFirst} ${trimmedLast}" a été sécurisé localement (ID: ${draft.clientGeneratedId.slice(0, 8).toUpperCase()}) pour synchronisation ultérieure.`
+          );
+          const updated = await listAgentDrafts(activeUserId);
+          setAgentDrafts(updated);
+          return;
+        } catch (saveErr: any) {
+          setErrorMessage(saveErr?.message || "Échec de l'enregistrement hors-ligne.");
+          return;
+        }
+      }
+
       setErrorMessage(
         err?.message || "Erreur lors de l'enregistrement du conducteur dans la base de données."
       );
@@ -895,6 +1060,119 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
     const token = getStoredAuthToken();
     if (!token) {
       setErrorMessage('Session expirée. Veuillez vous reconnecter.');
+      return;
+    }
+
+    const vehicleDocs: Array<{
+      category: string;
+      originalName: string;
+      mimeType: string;
+      base64Data: string;
+    }> = [];
+
+    if (carteGriseBase64) {
+      vehicleDocs.push({
+        category: 'CARTE_GRISE',
+        originalName: carteGriseName || 'carte_grise.jpg',
+        mimeType: carteGriseMime || 'image/jpeg',
+        base64Data: carteGriseBase64,
+      });
+    }
+
+    if (photoVehiculeBase64) {
+      vehicleDocs.push({
+        category: 'PHOTO_VEHICULE_AVANT',
+        originalName: photoVehiculeName || 'photo_vehicule.jpg',
+        mimeType: photoVehiculeMime || 'image/jpeg',
+        base64Data: photoVehiculeBase64,
+      });
+    }
+
+    const saveVehicleOffline = async () => {
+      let offlineOwnerId = selectedOwnerId;
+      let newOwnerClientId: string | null = null;
+
+      if (ownerMode === 'new') {
+        if (
+          !newOwnerFirstName.trim() ||
+          !newOwnerLastName.trim() ||
+          !newOwnerNin.trim() ||
+          !newOwnerPhone.trim()
+        ) {
+          throw new Error(
+            'Veuillez renseigner le prénom, le nom, le NIN et le téléphone du nouveau propriétaire.'
+          );
+        }
+
+        newOwnerClientId = generateUuidV4();
+        await saveOfflineDraft({
+          clientGeneratedId: newOwnerClientId,
+          agentUserId: activeUserId,
+          agentName: activeUserName,
+          entityType: 'OWNER',
+          payload: {
+            firstName: newOwnerFirstName.trim(),
+            lastName: newOwnerLastName.trim(),
+            nin: newOwnerNin.trim().toUpperCase(),
+            phoneNumber: newOwnerPhone.trim(),
+            ownerType: newOwnerType,
+            businessName: newOwnerBusinessName.trim() || null,
+            unionId: newOwnerUnionId || null,
+            commune: isCommuneLocked ? lockedCommune : vehicleCommune,
+          },
+          summary: {
+            title: `Propriétaire : ${newOwnerFirstName.trim()} ${newOwnerLastName.trim()}`,
+            subtitle: `NIN: ${newOwnerNin.trim().toUpperCase()} • Tél: ${newOwnerPhone.trim()}`,
+            commune: isCommuneLocked ? lockedCommune : vehicleCommune,
+          },
+        });
+      }
+
+      const vehicleDraft = await saveOfflineDraft({
+        agentUserId: activeUserId,
+        agentName: activeUserName,
+        entityType: 'VEHICLE',
+        payload: {
+          ownerId: ownerMode === 'existing' ? offlineOwnerId : null,
+          ownerClientGeneratedId: ownerMode === 'new' ? newOwnerClientId : null,
+          driverId: vehicleDriverId || null,
+          plateNumber: cleanedPlate,
+          registrationCardNumber: cleanedCard,
+          chassisVin: cleanedVin,
+          atrNumber: vehicleAtrNumber.trim() || null,
+          aotucLicenseNumber: vehicleAotucLicenseNumber.trim() || null,
+          vehicleType,
+          make: cleanedMake,
+          model: cleanedModel,
+          year: vehicleYear ? Number(vehicleYear) : null,
+          seatingCapacity: vehicleCapacity ? Number(vehicleCapacity) : null,
+          commune: isCommuneLocked ? lockedCommune : vehicleCommune,
+        },
+        documents: vehicleDocs,
+        summary: {
+          title: `Véhicule : ${cleanedPlate}`,
+          subtitle: `${cleanedMake} ${cleanedModel} • Châssis: ${cleanedVin}`,
+          commune: isCommuneLocked ? lockedCommune : vehicleCommune,
+          referenceCode: cleanedPlate,
+        },
+      });
+
+      resetVehicleFormState();
+      setShowSuccessBanner(
+        `✓ Mode Hors-Ligne : Dossier du véhicule "${cleanedPlate}" sauvegardé localement sur cet appareil (ID: ${vehicleDraft.clientGeneratedId.slice(0, 8).toUpperCase()}). Il sera synchronisé dès le retour d'Internet.`
+      );
+      const updated = await listAgentDrafts(activeUserId);
+      setAgentDrafts(updated);
+    };
+
+    if (!navigator.onLine) {
+      try {
+        await saveVehicleOffline();
+      } catch (saveErr: any) {
+        setErrorMessage(saveErr?.message || "Échec de l'enregistrement hors-ligne du véhicule.");
+      } finally {
+        setIsSubmitting(false);
+      }
       return;
     }
 
@@ -952,31 +1230,6 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
         throw new Error('Veuillez sélectionner ou créer un propriétaire légal pour ce véhicule.');
       }
 
-      const vehicleDocs: Array<{
-        category: string;
-        originalName: string;
-        mimeType: string;
-        base64Data: string;
-      }> = [];
-
-      if (carteGriseBase64) {
-        vehicleDocs.push({
-          category: 'CARTE_GRISE',
-          originalName: carteGriseName || 'carte_grise.jpg',
-          mimeType: carteGriseMime || 'image/jpeg',
-          base64Data: carteGriseBase64,
-        });
-      }
-
-      if (photoVehiculeBase64) {
-        vehicleDocs.push({
-          category: 'PHOTO_VEHICULE_AVANT',
-          originalName: photoVehiculeName || 'photo_vehicule.jpg',
-          mimeType: photoVehiculeMime || 'image/jpeg',
-          base64Data: photoVehiculeBase64,
-        });
-      }
-
       const response = await fetch(buildApiUrl('/api/v1/registration/vehicles'), {
         method: 'POST',
         headers: {
@@ -1015,22 +1268,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
       }
 
       const persistedVehicle: VehicleRecord = body.data;
-
-      setVehiclePlate('');
-      setVehicleRegistrationCard('');
-      setVehicleVin('');
-      setVehicleAtrNumber('');
-      setVehicleAotucLicenseNumber('');
-      setVehicleMake('');
-      setVehicleModel('');
-      setVehicleDriverId('');
-      setCarteGriseBase64(null);
-      setPhotoVehiculeBase64(null);
-      setNewOwnerFirstName('');
-      setNewOwnerLastName('');
-      setNewOwnerNin('');
-      setNewOwnerPhone('');
-      setNewOwnerBusinessName('');
+      resetVehicleFormState();
 
       setShowSuccessBanner(
         `✓ Véhicule "${persistedVehicle.plateNumber}" enregistré dans PostgreSQL (ID : ${persistedVehicle.id.slice(0, 8).toUpperCase()})`
@@ -1038,6 +1276,21 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
 
       await fetchAllRegistrationData();
     } catch (err: any) {
+      const isNetworkFailure =
+        err?.name === 'TypeError' ||
+        err?.message?.includes('Failed to fetch') ||
+        err?.message?.includes('NetworkError');
+
+      if (isNetworkFailure) {
+        try {
+          await saveVehicleOffline();
+          return;
+        } catch (saveErr: any) {
+          setErrorMessage(saveErr?.message || "Échec de l'enregistrement hors-ligne du véhicule.");
+          return;
+        }
+      }
+
       setErrorMessage(
         err?.message || "Erreur lors de l'enregistrement du véhicule dans la base de données."
       );
@@ -1197,6 +1450,79 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
             title="Actualiser depuis PostgreSQL"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-emerald-600' : ''}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* Offline Connectivity & Pending Queue Notification Bar */}
+      <div className="bg-slate-900 text-white rounded-xl p-4 shadow-sm border border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center space-x-3">
+          <div
+            className={`p-2 rounded-lg flex items-center justify-center ${
+              isOnline ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'
+            }`}
+          >
+            {isOnline ? <Wifi className="w-5 h-5" /> : <WifiOff className="w-5 h-5" />}
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-extrabold">
+                {isOnline ? 'Réseau Connecté' : 'Mode Hors-Ligne Actif'}
+              </span>
+              <span
+                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                  isOnline ? 'bg-emerald-400/20 text-emerald-300' : 'bg-amber-400/20 text-amber-300'
+                }`}
+              >
+                {isOnline ? 'PostgreSQL synchronisé' : 'Sauvegarde locale chiffrée'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {agentDrafts.filter((d) => d.syncStatus === 'PENDING').length > 0
+                ? `${agentDrafts.filter((d) => d.syncStatus === 'PENDING').length} dossier(s) en attente de synchronisation sur ce terminal.`
+                : 'Aucun enregistrement local en attente. Prêt pour les enrôlements.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          {agentDrafts.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowQueueModal(true)}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 flex items-center space-x-1.5 transition-colors"
+            >
+              <Layers className="w-3.5 h-3.5 text-slate-400" />
+              <span>File Locale ({agentDrafts.length})</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={async () => {
+              const res = await syncManager.syncPendingDrafts();
+              if (res.message) {
+                if (res.success && res.synced > 0) {
+                  setShowSuccessBanner(
+                    `✓ Synchronisation réussie : ${res.synced} dossier(s) enregistrés dans PostgreSQL.`
+                  );
+                  fetchAllRegistrationData();
+                } else if (!res.success && res.failed > 0) {
+                  setErrorMessage(`Attention : ${res.message}`);
+                }
+              }
+              const updated = await listAgentDrafts(activeUserId);
+              setAgentDrafts(updated);
+            }}
+            disabled={
+              isSyncing ||
+              !isOnline ||
+              agentDrafts.filter((d) => d.syncStatus === 'PENDING').length === 0
+            }
+            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:border-slate-700 text-white text-xs font-bold rounded-lg shadow-sm flex items-center space-x-1.5 transition-all"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+            <span>{isSyncing ? 'Synchronisation...' : 'Synchroniser maintenant'}</span>
           </button>
         </div>
       </div>
@@ -3234,6 +3560,40 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
           </div>
         </div>
       )}
+      {/* Offline Queue Modal */}
+      <OfflineQueueModal
+        isOpen={showQueueModal}
+        onClose={() => setShowQueueModal(false)}
+        drafts={agentDrafts}
+        isSyncing={isSyncing}
+        isOnline={isOnline}
+        onTriggerSync={async () => {
+          const res = await syncManager.syncPendingDrafts();
+          if (res.success && res.synced > 0) {
+            setShowSuccessBanner(
+              `✓ Synchronisation réussie : ${res.synced} dossier(s) enregistrés dans PostgreSQL.`
+            );
+            fetchAllRegistrationData();
+          } else if (!res.success && res.failed > 0) {
+            setErrorMessage(`Attention : ${res.message}`);
+          }
+          const updated = await listAgentDrafts(activeUserId);
+          setAgentDrafts(updated);
+        }}
+        onDeleteDraft={async (clientId) => {
+          await deleteOfflineDraft(clientId, activeUserId);
+          const updated = await listAgentDrafts(activeUserId);
+          setAgentDrafts(updated);
+        }}
+        onClearSynced={async () => {
+          const synced = agentDrafts.filter((d) => d.syncStatus === 'SYNCED');
+          for (const s of synced) {
+            await deleteOfflineDraft(s.clientGeneratedId, activeUserId);
+          }
+          const updated = await listAgentDrafts(activeUserId);
+          setAgentDrafts(updated);
+        }}
+      />
     </div>
   );
 };

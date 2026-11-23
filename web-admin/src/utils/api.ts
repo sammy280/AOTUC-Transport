@@ -60,6 +60,16 @@ export function getStoredAuthToken(): string | null {
   return token;
 }
 
+export function getStoredAuthUser(): any | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem('aotuc_user') || localStorage.getItem('aotuc_user');
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 export function storeAuthToken(token: string, persistToLocalStorage = false): void {
   if (typeof window === 'undefined') return;
   sessionStorage.setItem('aotuc_auth_token', token);

@@ -17,7 +17,7 @@ router.get(
 // PUSH batched offline captures from mobile devices
 router.post(
   '/push',
-  requireRoles('AGENT_TERRAIN', 'SUPER_ADMIN'),
+  requireRoles('AGENT_TERRAIN', 'CHEF_SERVICE', 'DIRECTOR', 'SUPER_ADMIN'),
   SyncController.pushBatchedDrafts
 );
 
