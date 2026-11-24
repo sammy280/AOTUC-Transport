@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { UserContext } from '../types';
 import { isTabAllowed } from '../utils/permissions';
+import DualBranding from './DualBranding';
 
 interface SidebarProps {
   currentTab: string;
@@ -71,6 +72,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* --------------------------------------------------------------------- */}
       <aside className="hidden lg:flex w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 min-h-[calc(100vh-4.5rem)] p-4 flex-col justify-between transition-colors duration-200 flex-shrink-0">
         <div className="space-y-1">
+          {/* Official Dual Branding (Republic of Guinea primary + AOTUC platform) */}
+          <DualBranding variant="sidebar" className="mb-3" />
+
           {isOfflineSession && (
             <div className="mb-3 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-700 dark:text-amber-400 text-xs flex items-center space-x-2">
               <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
@@ -140,20 +144,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <img
-              src="/aotuc-logo.png"
-              alt="Sceau Officiel République de Guinée"
-              className="w-5 h-5 rounded-full object-contain"
-            />
-            <div className="font-semibold text-slate-700 dark:text-slate-200 flex items-center space-x-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
-              <span>Contrôle RBAC Actif</span>
+          <div className="flex items-center justify-between pt-1.5 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex items-center space-x-1.5">
+              <img
+                src="/logo-guinee.png"
+                alt="République de Guinée"
+                className="w-5 h-5 object-contain"
+              />
+              <img
+                src="/aotuc-logo.png"
+                alt="AOTUC"
+                className="w-4 h-4 rounded-full object-contain bg-white p-0.2 border border-slate-200 dark:border-slate-700"
+              />
+              <span className="text-[10px] font-black text-slate-700 dark:text-slate-300">GUINÉE • AOTUC</span>
+            </div>
+            <div className="font-semibold text-slate-700 dark:text-slate-200 flex items-center space-x-1 text-[10px]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
+              <span>RBAC Actif</span>
             </div>
           </div>
-          <div className="text-[10px] text-slate-400 dark:text-slate-500 pt-1 border-t border-slate-200 dark:border-slate-700 leading-tight">
-            <div className="font-semibold text-slate-500 dark:text-slate-400">AOTUC Guinée</div>
-            <div className="italic text-[9.5px] text-slate-400 dark:text-slate-500 mt-0.5">« Pour une Mobilité Urbaine Participative & Durable »</div>
+          <div className="text-[9.5px] text-slate-400 dark:text-slate-500 italic leading-tight text-center">
+            « Pour une Mobilité Urbaine Participative &amp; Durable »
           </div>
         </div>
       </aside>
@@ -175,32 +186,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }`}
       >
         <div className="space-y-3">
-          {/* Mobile Drawer Header with Logo & Close Button */}
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-            <div className="flex items-center space-x-2.5">
-              <img
-                src="/aotuc-logo.png"
-                alt="AOTUC"
-                className="w-9 h-9 rounded-full object-contain p-0.5 border border-slate-200 dark:border-slate-700 bg-white shadow-xs"
-              />
-              <div>
-                <span className="font-bold text-sm text-slate-900 dark:text-white block leading-tight">
-                  AOTUC-TRANSPORT
-                </span>
-                <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                  Navigation Tactile
-                </span>
-              </div>
-            </div>
+          {/* Mobile Drawer Header with Close Button */}
+          <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Menu Principal
+            </span>
             <button
               type="button"
               onClick={onCloseMobile}
-              className="p-2 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
+              className="p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 rounded-xl min-w-[36px] min-h-[36px] flex items-center justify-center cursor-pointer"
               aria-label="Fermer le menu"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
+
+          {/* Official Dual Branding in Mobile Drawer */}
+          <DualBranding variant="sidebar" />
 
           <div className="px-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             Modules Opérationnels

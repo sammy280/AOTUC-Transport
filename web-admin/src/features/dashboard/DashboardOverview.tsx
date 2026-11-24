@@ -90,22 +90,27 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
     return (
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center space-x-3">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="flex items-center space-x-3 sm:space-x-3.5">
             <img
               src="/logo-guinee.png"
               alt="Armoiries République de Guinée"
-              className="w-12 h-12 rounded-full object-contain p-0.5 border border-slate-200 shadow-sm flex-shrink-0"
+              className="w-13 h-13 sm:w-14 sm:h-14 object-contain filter drop-shadow-xs flex-shrink-0 select-none"
+            />
+            <img
+              src="/aotuc-logo.png"
+              alt="Logo AOTUC"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-contain p-0.5 border border-slate-200 dark:border-slate-700 bg-white shadow-xs flex-shrink-0 select-none"
             />
             <div>
-              <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
-                DIRECTION DES SYSTÈMES D INFORMATION (DSI) • SUPERVISION TECHNIQUE
+              <div className="text-[10px] uppercase font-black tracking-wider text-slate-500 dark:text-slate-400">
+                RÉPUBLIQUE DE GUINÉE • DIRECTION DES SYSTÈMES D INFORMATION (DSI)
               </div>
-              <h1 className="text-xl font-black text-slate-900 tracking-tight">
-                Console d Administration Système & Sécurité
+              <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                Console d Administration Système &amp; Sécurité
               </h1>
-              <p className="text-xs text-slate-500">
-                Gestion des comptes, surveillance des signatures cryptographiques et audit de conformité.
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                AOTUC-TRANSPORT • Gestion des comptes, surveillance des signatures cryptographiques et audit de conformité.
               </p>
             </div>
           </div>
@@ -219,22 +224,27 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
     return (
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center space-x-3">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="flex items-center space-x-3 sm:space-x-3.5">
             <img
               src="/logo-guinee.png"
-              alt="Logo"
-              className="w-12 h-12 rounded-full object-contain p-0.5 border border-slate-200 shadow-sm flex-shrink-0"
+              alt="Armoiries République de Guinée"
+              className="w-13 h-13 sm:w-14 sm:h-14 object-contain filter drop-shadow-xs flex-shrink-0 select-none"
+            />
+            <img
+              src="/aotuc-logo.png"
+              alt="Logo AOTUC"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-contain p-0.5 border border-slate-200 dark:border-slate-700 bg-white shadow-xs flex-shrink-0 select-none"
             />
             <div>
-              <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
-                PÉRIMÈTRE OPÉRATIONNEL TERRITORIAL • NIVEAU 2
+              <div className="text-[10px] uppercase font-black tracking-wider text-slate-500 dark:text-slate-400">
+                RÉPUBLIQUE DE GUINÉE • PÉRIMÈTRE TERRITORIAL NIVEAU 2
               </div>
-              <h1 className="text-xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
                 Tableau de Bord — Chef de Service ({currentUser.communeName})
               </h1>
-              <p className="text-xs text-slate-500">
-                Instruction hiérarchique, contrôle anti-fraude et transmission des dossiers au Directeur Général.
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                AOTUC-TRANSPORT • Instruction hiérarchique, contrôle anti-fraude et transmission des dossiers au Directeur Général.
               </p>
             </div>
           </div>
@@ -336,22 +346,27 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
     return (
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center space-x-3">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="flex items-center space-x-3 sm:space-x-3.5">
             <img
               src="/logo-guinee.png"
-              alt="Logo"
-              className="w-12 h-12 rounded-full object-contain p-0.5 border border-slate-200 shadow-sm flex-shrink-0"
+              alt="Armoiries République de Guinée"
+              className="w-13 h-13 sm:w-14 sm:h-14 object-contain filter drop-shadow-xs flex-shrink-0 select-none"
+            />
+            <img
+              src="/aotuc-logo.png"
+              alt="Logo AOTUC"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-contain p-0.5 border border-slate-200 dark:border-slate-700 bg-white shadow-xs flex-shrink-0 select-none"
             />
             <div>
-              <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
-                GUICHET D ENRÔLEMENT TERRAIN • NIVEAU 1
+              <div className="text-[10px] uppercase font-black tracking-wider text-slate-500 dark:text-slate-400">
+                RÉPUBLIQUE DE GUINÉE • GUICHET D ENRÔLEMENT NIVEAU 1
               </div>
-              <h1 className="text-xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
                 Espace Opérationnel Agent — {currentUser.name}
               </h1>
-              <p className="text-xs text-slate-500">
-                Enregistrement des chauffeurs, téléversement des pièces justificatives avec contrôle magic-bytes et soumission.
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                AOTUC-TRANSPORT • Enregistrement des chauffeurs, téléversement des pièces justificatives avec contrôle magic-bytes et soumission.
               </p>
             </div>
           </div>
@@ -436,22 +451,27 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
     return (
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center space-x-3">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="flex items-center space-x-3 sm:space-x-3.5">
             <img
               src="/logo-guinee.png"
-              alt="Logo"
-              className="w-12 h-12 rounded-full object-contain p-0.5 border border-slate-200 shadow-sm flex-shrink-0"
+              alt="Armoiries République de Guinée"
+              className="w-13 h-13 sm:w-14 sm:h-14 object-contain filter drop-shadow-xs flex-shrink-0 select-none"
+            />
+            <img
+              src="/aotuc-logo.png"
+              alt="Logo AOTUC"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-contain p-0.5 border border-slate-200 dark:border-slate-700 bg-white shadow-xs flex-shrink-0 select-none"
             />
             <div>
-              <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
-                RÉGIE DE BILLETTERIE AGRÉÉE • GUICHET KALOUUM
+              <div className="text-[10px] uppercase font-black tracking-wider text-slate-500 dark:text-slate-400">
+                RÉPUBLIQUE DE GUINÉE • RÉGIE DE BILLETTERIE AGRÉÉE
               </div>
-              <h1 className="text-xl font-black text-slate-900 tracking-tight">
-                Espace de Vente & Encaissement POS
+              <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                Espace de Vente &amp; Encaissement POS
               </h1>
-              <p className="text-xs text-slate-500">
-                Émission des tickets de transport urbain, encaissement en GNF et génération de reçus électroniques.
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                AOTUC-TRANSPORT • Émission des tickets de transport urbain, encaissement en GNF et génération de reçus électroniques.
               </p>
             </div>
           </div>
@@ -599,18 +619,23 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   return (
     <div className="space-y-6">
       {/* Title & Actions Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="flex items-center space-x-3">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center space-x-3 sm:space-x-3.5">
           <img
             src="/logo-guinee.png"
             alt="Armoiries de la République de Guinée"
-            className="w-12 h-12 rounded-full object-contain p-0.5 border border-slate-200 shadow-sm flex-shrink-0"
+            className="w-13 h-13 sm:w-14 sm:h-14 object-contain filter drop-shadow-xs flex-shrink-0 select-none"
+          />
+          <img
+            src="/aotuc-logo.png"
+            alt="Logo AOTUC"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-contain p-0.5 border border-slate-200 dark:border-slate-700 bg-white shadow-xs flex-shrink-0 select-none"
           />
           <div>
-            <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
+            <div className="text-[10px] uppercase font-black tracking-wider text-slate-500 dark:text-slate-400">
               RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS
             </div>
-            <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center space-x-2">
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center space-x-2">
               <span>
                 {isAuthority
                   ? 'Tableau de Bord Stratégique — Hautes Autorités & Ministère'
@@ -622,7 +647,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 </span>
               )}
             </h1>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               {isAuthority
                 ? 'Supervision exécutive en lecture seule : indicateurs clés, régulation des transports et couverture territoriale.'
                 : 'Supervision exécutive de la régulation des transports, décrets d agrément et émission des titres officiels.'}

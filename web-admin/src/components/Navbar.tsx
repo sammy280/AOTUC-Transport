@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown';
 import ThemeSelector from './ThemeSelector';
+import DualBranding from './DualBranding';
 import { useTheme } from '../context/ThemeContext';
 
 interface NavbarProps {
@@ -98,24 +99,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
-            <img
-              src="/aotuc-logo.png"
-              alt="République de Guinée - Ministère des Transports"
-              className="w-9 h-9 sm:w-11 sm:h-11 object-contain rounded-full shadow-sm bg-white p-0.5 border border-slate-200 dark:border-slate-700 flex-shrink-0"
-            />
-            <div className="min-w-0">
-              <div className="flex items-center space-x-1.5 sm:space-x-2">
-                <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight truncate">
-                  AOTUC
-                </span>
-                <span className="px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-400 rounded-full border border-emerald-200 dark:border-emerald-800 flex-shrink-0">
-                  v2.0
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 hidden md:block">
-                Autorité Organisatrice des Transports Urbains de Conakry (AOTUC) • <span className="italic font-medium text-slate-600 dark:text-slate-300">« Pour une Mobilité Urbaine Participative & Durable »</span>
-              </p>
-            </div>
+            <DualBranding variant="navbar" />
           </div>
 
           {/* Right Controls: Role Badge, Theme Selector, Notifications & Profile */}

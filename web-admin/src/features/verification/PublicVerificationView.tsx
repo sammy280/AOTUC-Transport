@@ -1,17 +1,14 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
-  ShieldAlert,
-  AlertTriangle,
   FileQuestion,
   QrCode,
   Search,
   ArrowLeft,
-  CheckCircle2,
-  XCircle,
   User,
 } from 'lucide-react';
 import ThemeSelector from '../../components/ThemeSelector';
+import DualBranding from '../../components/DualBranding';
 import { buildApiUrl } from '../../utils/api';
 
 interface VerificationResult {
@@ -123,25 +120,8 @@ export const PublicVerificationView: React.FC<{
           <div className="flex-1 bg-[#009460]" />
         </div>
 
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <img
-              src="/aotuc-logo.png"
-              alt="Logo Officiel AOTUC"
-              className="w-11 h-11 rounded-full object-contain p-0.5 border border-slate-200 shadow-sm bg-white flex-shrink-0"
-            />
-            <div>
-              <div className="text-[9px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400">
-                RÉPUBLIQUE DE GUINÉE • MINISTÈRE DES TRANSPORTS
-              </div>
-              <h1 className="text-sm font-black text-slate-900 dark:text-white tracking-tight">
-                Autorité Organisatrice des Transports Urbains de Conakry (AOTUC)
-              </h1>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 italic font-medium">
-                « Pour une Mobilité Urbaine Participative &amp; Durable »
-              </div>
-            </div>
-          </div>
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+          <DualBranding variant="public-header" />
 
           <div className="flex items-center space-x-2">
             <ThemeSelector />
@@ -220,17 +200,7 @@ export const PublicVerificationView: React.FC<{
               {/* STATUS BANNER */}
               {result.status === 'VALID' && (
                 <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                    <div>
-                      <div className="text-xs uppercase font-extrabold tracking-wider text-emerald-700 dark:text-emerald-400">
-                        RÉSULTAT DU CONTRÔLE OFFICIEL
-                      </div>
-                      <div className="text-base font-black text-emerald-950 dark:text-white">
-                        {result.statusText}
-                      </div>
-                    </div>
-                  </div>
+                  <DualBranding variant="public-header" />
 
                   <p className="text-xs text-emerald-800 dark:text-emerald-300">
                     {result.message}
@@ -476,17 +446,7 @@ export const PublicVerificationView: React.FC<{
 
               {(result.status === 'REVOKED' || result.status === 'SUSPENDED') && (
                 <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200 space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <XCircle className="w-8 h-8 text-rose-600 dark:text-rose-400 flex-shrink-0" />
-                    <div>
-                      <div className="text-xs uppercase font-extrabold tracking-wider text-rose-700 dark:text-rose-400">
-                        ALERTE DE CONTRÔLE ROUTIER
-                      </div>
-                      <div className="text-base font-black text-rose-950 dark:text-white">
-                        {result.statusText}
-                      </div>
-                    </div>
-                  </div>
+                  <DualBranding variant="public-header" />
 
                   <p className="text-xs text-rose-800 dark:text-rose-300 font-medium">
                     {result.message}
@@ -507,17 +467,7 @@ export const PublicVerificationView: React.FC<{
 
               {result.status === 'EXPIRED' && (
                 <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <AlertTriangle className="w-8 h-8 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-                    <div>
-                      <div className="text-xs uppercase font-extrabold tracking-wider text-amber-700 dark:text-amber-400">
-                        DATE DE VALIDITÉ ÉCHUE
-                      </div>
-                      <div className="text-base font-black text-amber-950 dark:text-white">
-                        {result.statusText}
-                      </div>
-                    </div>
-                  </div>
+                  <DualBranding variant="public-header" />
 
                   <p className="text-xs text-amber-800 dark:text-amber-300">
                     {result.message}
@@ -527,17 +477,7 @@ export const PublicVerificationView: React.FC<{
 
               {result.status === 'INVALID_SIGNATURE' && (
                 <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 text-red-900 dark:text-red-200 space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <ShieldAlert className="w-8 h-8 text-red-600 dark:text-red-400 flex-shrink-0" />
-                    <div>
-                      <div className="text-xs uppercase font-extrabold tracking-wider text-red-700 dark:text-red-400">
-                        ALERTE DE CONTREFAÇON SÉVÈRE
-                      </div>
-                      <div className="text-base font-black text-red-950 dark:text-white">
-                        SIGNATURE CRYPTOGRAPHIQUE NON AUTHENTIQUE
-                      </div>
-                    </div>
-                  </div>
+                  <DualBranding variant="public-header" />
 
                   <p className="text-xs text-red-800 dark:text-red-300 font-medium">
                     {result.message}

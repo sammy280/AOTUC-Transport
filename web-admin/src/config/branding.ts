@@ -11,7 +11,10 @@ export const AOTUC_BRANDING = {
   motto: 'Pour une Mobilité Urbaine Participative & Durable',
   mottoQuote: '« Pour une Mobilité Urbaine Participative & Durable »',
   country: 'République de Guinée',
+  countryOfficial: 'RÉPUBLIQUE DE GUINÉE',
+  countryMotto: 'Travail — Justice — Solidarité',
   ministry: 'Ministère des Transports',
+  ministryOfficial: 'MINISTÈRE DES TRANSPORTS',
   systemVersion: 'Système officiel AOTUC v2.0',
   description:
     'Plateforme Numérique Intégrée d Organisation, d Immatriculation et de Régulation des Transports Urbains de Conakry.',
@@ -33,7 +36,7 @@ export const AOTUC_BRANDING = {
     seal: '/aotuc-logo.png',
     officialLogo: '/aotuc-logo.png',
     headerBrand: '/aotuc-header-brand.png',
-    nationalCoatOfArms: '/aotuc-logo.png',
+    nationalCoatOfArms: '/logo-guinee.png',
   },
 } as const;
 
