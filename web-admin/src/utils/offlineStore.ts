@@ -1,6 +1,13 @@
 import { encryptOfflineData, decryptOfflineData, EncryptedPayload } from './offlineCrypto';
 
-export type OfflineEntityType = 'DRIVER' | 'VEHICLE' | 'OWNER' | 'UNION' | 'DOCUMENT';
+export type OfflineEntityType =
+  | 'DRIVER'
+  | 'VEHICLE'
+  | 'OWNER'
+  | 'UNION'
+  | 'DOCUMENT'
+  | 'FIELD_INSPECTION'
+  | 'MISSION_REPORT';
 export type OfflineSyncStatus = 'PENDING' | 'SYNCING' | 'SYNCED' | 'FAILED' | 'CONFLICT' | 'DUPLICATE';
 
 export interface StoredDocument {
@@ -42,9 +49,11 @@ export interface DecryptedDraft {
 }
 
 const DB_NAME = 'aotuc_web_offline_db';
-const DB_VERSION = 1;
-const STORE_DRAFTS = 'offline_drafts';
-const STORE_CACHE = 'reference_cache';
+const DB_VERSION = 2;
+export const STORE_DRAFTS = 'offline_drafts';
+export const STORE_CACHE = 'reference_cache';
+export const STORE_ENROLLED_USERS = 'enrolled_users';
+export const STORE_DEVICE_BINDING = 'device_binding';
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
@@ -81,6 +90,18 @@ export function openOfflineDatabase(): Promise<IDBDatabase> {
         // 2. Reference data cache (Communes, Unions, Owners)
         if (!db.objectStoreNames.contains(STORE_CACHE)) {
           db.createObjectStore(STORE_CACHE, { keyPath: 'key' });
+        }
+
+        // 3. Enrolled users for offline login (Phase 2 & 3)
+        if (!db.objectStoreNames.contains(STORE_ENROLLED_USERS)) {
+          const userStore = db.createObjectStore(STORE_ENROLLED_USERS, { keyPath: 'userId' });
+          userStore.createIndex('identifierHash', 'identifierHash', { unique: true });
+          userStore.createIndex('identifier', 'identifier', { unique: false });
+        }
+
+        // 4. Device cryptographic binding (Phase 2)
+        if (!db.objectStoreNames.contains(STORE_DEVICE_BINDING)) {
+          db.createObjectStore(STORE_DEVICE_BINDING, { keyPath: 'key' });
         }
       };
 

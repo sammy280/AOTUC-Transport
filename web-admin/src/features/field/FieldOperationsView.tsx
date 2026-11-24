@@ -18,6 +18,9 @@ import {
   Navigation,
   X,
   Compass,
+  ShieldCheck,
+  FileText,
+  Ban,
 } from 'lucide-react';
 import {
   UserContext,
@@ -28,6 +31,9 @@ import {
 } from '../../types';
 import { buildApiUrl, getStoredAuthToken } from '../../utils/api';
 import { OFFICIAL_COMMUNES } from '../../config/communes';
+import { InspectionsTab } from './InspectionsTab';
+import { MissionReportsTab } from './MissionReportsTab';
+import { AgentsManagementTab } from './AgentsManagementTab';
 
 interface FieldOperationsViewProps {
   currentUser: UserContext;
@@ -56,6 +62,9 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
   const [selectedAssignment, setSelectedAssignment] = useState<FieldAssignmentItem | null>(null);
   const [selectedReceipt, setSelectedReceipt] = useState<FieldReceiptItem | null>(null);
+  const [activeTab, setActiveTab] = useState<'missions' | 'inspections' | 'reports' | 'agents'>('missions');
+  const [showCancelModal, setShowCancelModal] = useState<boolean>(false);
+  const [cancelReason, setCancelReason] = useState<string>('');
 
   // Form states
   const [createForm, setCreateForm] = useState({
@@ -286,6 +295,42 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
     }
   };
 
+  // Supervisor Cancel Mission
+  const handleCancelAssignment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAssignment || !cancelReason.trim()) {
+      alert("Veuillez renseigner un motif obligatoire d'annulation.");
+      return;
+    }
+    try {
+      const token = getStoredAuthToken();
+      const res = await fetch(
+        buildApiUrl(`/api/v1/field/assignments/${selectedAssignment.id}/cancel`),
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: token ? `Bearer ${token}` : '',
+          },
+          body: JSON.stringify({ reason: cancelReason.trim() }),
+        }
+      );
+
+      if (!res.ok) {
+        const errJson = await res.json();
+        throw new Error(errJson.message || "Échec de l'annulation de la mission.");
+      }
+
+      setShowCancelModal(false);
+      setSelectedAssignment(null);
+      setCancelReason('');
+      fetchDashboardData();
+    } catch (err: unknown) {
+      const e = err as Error;
+      alert(`Erreur : ${e.message}`);
+    }
+  };
+
   const getStatusBadge = (status: FieldAssignmentStatus) => {
     switch (status) {
       case 'PLANNED':
@@ -369,6 +414,72 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
         </div>
       </div>
 
+      {/* 1.1 Navigation Tab Bar */}
+      <div className="flex items-center space-x-1 border-b border-slate-200 dark:border-slate-800 pb-px">
+        <button
+          onClick={() => setActiveTab('missions')}
+          className={`inline-flex items-center px-4 py-2 text-xs font-bold rounded-t-lg border-b-2 transition-colors ${
+            activeTab === 'missions'
+              ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-900'
+              : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+          }`}
+        >
+          <Navigation className="w-4 h-4 mr-1.5" />
+          Missions & Déploiements
+        </button>
+        <button
+          onClick={() => setActiveTab('inspections')}
+          className={`inline-flex items-center px-4 py-2 text-xs font-bold rounded-t-lg border-b-2 transition-colors ${
+            activeTab === 'inspections'
+              ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-900'
+              : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4 mr-1.5" />
+          Contrôles Routiers
+        </button>
+        <button
+          onClick={() => setActiveTab('reports')}
+          className={`inline-flex items-center px-4 py-2 text-xs font-bold rounded-t-lg border-b-2 transition-colors ${
+            activeTab === 'reports'
+              ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-900'
+              : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+          }`}
+        >
+          <FileText className="w-4 h-4 mr-1.5" />
+          Rapports de Mission
+        </button>
+        {canManage && (
+          <button
+            onClick={() => setActiveTab('agents')}
+            className={`inline-flex items-center px-4 py-2 text-xs font-bold rounded-t-lg border-b-2 transition-colors ${
+              activeTab === 'agents'
+                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-900'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+            }`}
+          >
+            <Users className="w-4 h-4 mr-1.5" />
+            Gestion des Agents
+          </button>
+        )}
+      </div>
+
+      {activeTab === 'inspections' && (
+        <InspectionsTab currentUser={currentUser} assignments={assignments} />
+      )}
+
+      {activeTab === 'reports' && (
+        <MissionReportsTab
+          currentUser={currentUser}
+          assignments={assignments}
+          onMissionUpdated={fetchDashboardData}
+        />
+      )}
+
+      {activeTab === 'agents' && <AgentsManagementTab currentUser={currentUser} />}
+
+      {activeTab === 'missions' && (
+        <>
       {error && (
         <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-lg text-xs text-rose-700 dark:text-rose-300 flex items-center space-x-2">
           <AlertTriangle className="w-4 h-4 flex-shrink-0" />
@@ -740,6 +851,21 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
                               Statut
                             </button>
                           )}
+
+                          {/* Cancel Mission button (Supervisors only) */}
+                          {canManage && assignment.status !== 'CANCELLED' && assignment.status !== 'COMPLETED' && (
+                            <button
+                              onClick={() => {
+                                setSelectedAssignment(assignment);
+                                setCancelReason('');
+                                setShowCancelModal(true);
+                              }}
+                              className="px-2 py-1 text-[11px] font-medium rounded bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 transition"
+                              title="Annuler la mission avec motif obligatoire"
+                            >
+                              Annuler
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -813,6 +939,8 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
           ))}
         </div>
       </div>
+      </>
+      )}
 
       {/* ===================================================================== */}
       {/* MODAL: CREATE MISSION */}
@@ -1378,6 +1506,66 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
                 Fermer
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* MODAL: CANCEL MISSION (SUPERVISOR WITH MANDATORY REASON) */}
+      {/* ===================================================================== */}
+      {showCancelModal && selectedAssignment && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-xl p-5 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="text-base font-bold text-rose-600 dark:text-rose-400 flex items-center space-x-2">
+                <Ban className="w-4 h-4" />
+                <span>Annuler la Mission de Terrain</span>
+              </h3>
+              <button
+                onClick={() => setShowCancelModal(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500">
+              Mission : <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedAssignment.title}</span> ({selectedAssignment.reference}).
+              Une fois annulée, aucune inspection ou rapport ne pourra plus être soumis.
+            </p>
+
+            <form onSubmit={handleCancelAssignment} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Motif d'annulation obligatoire *
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Précisez la raison de l'annulation (intempéries, réaffectation urgente, etc.)..."
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowCancelModal(false)}
+                  className="px-3.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50"
+                >
+                  Fermer
+                </button>
+                <button
+                  type="submit"
+                  disabled={!cancelReason.trim()}
+                  className="px-4 py-1.5 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700 transition disabled:opacity-50"
+                >
+                  Confirmer l'annulation
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

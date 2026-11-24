@@ -26,6 +26,7 @@ interface SidebarProps {
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
   onLogout?: () => void;
+  isOfflineSession?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -36,6 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpenMobile = false,
   onCloseMobile,
   onLogout,
+  isOfflineSession = false,
 }) => {
   const allMenuItems = [
     { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
@@ -57,9 +59,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'audit', label: 'Journal d Audit & Sécurité', icon: ShieldAlert },
   ];
 
-  // Least-Privilege Filtering: Only display navigation tabs authorized for user's role
+  // Least-Privilege Filtering: Only display navigation tabs authorized for user's role and offline state
   const visibleMenuItems = allMenuItems.filter((item) =>
-    isTabAllowed(currentUser.role, item.id)
+    isTabAllowed(currentUser.role, item.id, isOfflineSession)
   );
 
   return (
@@ -69,6 +71,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* --------------------------------------------------------------------- */}
       <aside className="hidden lg:flex w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 min-h-[calc(100vh-4.5rem)] p-4 flex-col justify-between transition-colors duration-200 flex-shrink-0">
         <div className="space-y-1">
+          {isOfflineSession && (
+            <div className="mb-3 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-700 dark:text-amber-400 text-xs flex items-center space-x-2">
+              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+              <div>
+                <span className="font-bold block">Session Hors Ligne</span>
+                <span className="text-[10px] text-amber-600 dark:text-amber-500">Enrôlement local uniquement</span>
+              </div>
+            </div>
+          )}
           <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             Modules Opérationnels Habilités
           </div>

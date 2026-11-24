@@ -26,6 +26,7 @@ import PublicVerificationView from './features/verification/PublicVerificationVi
 import { isTabAllowed, getDefaultTab } from './utils/permissions';
 import { buildApiUrl, getStoredAuthToken, storeAuthToken } from './utils/api';
 import { useTheme } from './context/ThemeContext';
+import { isCurrentSessionOffline, clearActiveOfflineSession } from './utils/offlineAuthService';
 
 const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
@@ -79,6 +80,10 @@ export const App: React.FC = () => {
       sessionStorage.getItem('aotuc_session_active') === 'true' ||
       Boolean(localStorage.getItem('aotuc_user'));
     return hasSession && hasToken;
+  });
+
+  const [isOfflineSession, setIsOfflineSession] = useState<boolean>(() => {
+    return isCurrentSessionOffline();
   });
 
   // Public QR Code Verification Portal check (no login required for roadside checks)
@@ -190,25 +195,43 @@ export const App: React.FC = () => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const handleLoginSuccess = (user: UserContext, token?: string) => {
+  const handleLoginSuccess = (user: UserContext, token?: string, isOffline?: boolean) => {
+    const offlineMode = isOffline !== undefined ? isOffline : isCurrentSessionOffline();
+    setIsOfflineSession(offlineMode);
     sessionStorage.setItem('aotuc_session_active', 'true');
     sessionStorage.setItem('aotuc_user', JSON.stringify(user));
+    if (offlineMode) {
+      sessionStorage.setItem('aotuc_is_offline_session', 'true');
+    } else {
+      sessionStorage.removeItem('aotuc_is_offline_session');
+    }
     if (token) {
       storeAuthToken(token);
     }
     setCurrentUser(user);
     setUser(user.id);
     setIsAuthenticated(true);
-    setCurrentTab(getDefaultTab(user.role));
-    showToast('success', 'Authentification Réussie', `Bienvenue ${user.name} (${user.roleLabel}).`);
+    setCurrentTab(getDefaultTab(user.role, offlineMode));
+    if (offlineMode) {
+      showToast(
+        'warning',
+        'Session Hors Ligne Active',
+        `Authentification locale validée pour ${user.name}. Accès restreint à l'enrôlement et aux opérations de terrain.`
+      );
+    } else {
+      showToast('success', 'Authentification Réussie', `Bienvenue ${user.name} (${user.roleLabel}).`);
+    }
   };
 
   const handleLogout = () => {
+    clearActiveOfflineSession();
     sessionStorage.removeItem('aotuc_session_active');
     sessionStorage.removeItem('aotuc_user');
     sessionStorage.removeItem('aotuc_auth_token');
+    sessionStorage.removeItem('aotuc_is_offline_session');
     localStorage.removeItem('aotuc_auth_token');
     localStorage.removeItem('aotuc_user');
+    setIsOfflineSession(false);
     setUser(null);
     setIsAuthenticated(false);
     showToast('info', 'Session Clôturée', 'Vous avez été déconnecté avec succès du système AOTUC.');
@@ -327,8 +350,8 @@ export const App: React.FC = () => {
     );
   }
 
-  // Check if current tab is permitted for the authenticated user's role
-  const isCurrentTabPermitted = isTabAllowed(currentUser.role, currentTab);
+  // Check if current tab is permitted for the authenticated user's role and offline status
+  const isCurrentTabPermitted = isTabAllowed(currentUser.role, currentTab, isOfflineSession);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
@@ -343,12 +366,17 @@ export const App: React.FC = () => {
         onLogout={handleLogout}
         isMobileMenuOpen={isMobileMenuOpen}
         onToggleMobileMenu={() => setIsMobileMenuOpen((prev) => !prev)}
+        isOfflineSession={isOfflineSession}
       />
 
       <div className="flex-1 flex max-w-7xl w-full mx-auto min-w-0 overflow-x-hidden">
         <Sidebar
           currentTab={currentTab}
           onSelectTab={(tab) => {
+            if (!isTabAllowed(currentUser.role, tab, isOfflineSession)) {
+              showToast('error', 'Module Indisponible Hors Ligne', 'Ce module requiert une connexion active au serveur AOTUC.');
+              return;
+            }
             setCurrentTab(tab);
             setIsMobileMenuOpen(false);
           }}
@@ -357,6 +385,7 @@ export const App: React.FC = () => {
           isOpenMobile={isMobileMenuOpen}
           onCloseMobile={() => setIsMobileMenuOpen(false)}
           onLogout={handleLogout}
+          isOfflineSession={isOfflineSession}
         />
 
         <main className="flex-1 p-3 sm:p-5 md:p-6 overflow-y-auto overflow-x-hidden min-w-0">
@@ -364,7 +393,7 @@ export const App: React.FC = () => {
             <AccessDenied
               currentUser={currentUser}
               attemptedTab={currentTab}
-              onNavigateHome={() => setCurrentTab(getDefaultTab(currentUser.role))}
+              onNavigateHome={() => setCurrentTab(getDefaultTab(currentUser.role, isOfflineSession))}
             />
           ) : (
             <>

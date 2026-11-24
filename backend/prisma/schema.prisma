@@ -34,6 +34,7 @@ model Commune {
   fieldAssignments   FieldAssignment[]
   fieldTeams         FieldTeam[]
   fieldReceipts      FieldReceipt[]
+  fieldInspections   FieldInspection[]     @relation("CommuneFieldInspections")
 
   @@map("communes")
 }
@@ -62,6 +63,13 @@ model Role {
   userRoles UserRole[]
 
   @@map("roles")
+}
+
+
+enum UserAccountStatus {
+  ACTIVE
+  SUSPENDED
+  INACTIVE
 }
 
 model User {
@@ -101,6 +109,22 @@ model User {
   agentFieldReceipts         FieldReceipt[]        @relation("AgentFieldReceipts")
   ledFieldTeams              FieldTeam[]           @relation("LeaderFieldTeams")
   registeredAuthorities      Authority[]           @relation("RegisteredAuthorities")
+  // Professional Agent Identity & Granular Account Status
+  employeeNumber String?           @unique @map("employee_number")
+  address        String?
+  accountStatus  UserAccountStatus @default(ACTIVE) @map("account_status")
+
+  assignedTeamId String?           @map("assigned_team_id")
+  assignedTeam   FieldTeam?        @relation("TeamMembers", fields: [assignedTeamId], references: [id], onDelete: SetNull)
+
+  cancelledFieldAssignments   FieldAssignment[]      @relation("CancelledFieldAssignments")
+  assignedMissionAgents       FieldAssignmentAgent[] @relation("AssignedMissionAgents")
+  agentFieldInspections       FieldInspection[]      @relation("AgentFieldInspections")
+  leadAuthorMissionReports    MissionReport[]        @relation("LeadAuthorMissionReports")
+  reviewedMissionReports      MissionReport[]        @relation("ReviewedMissionReports")
+  submittedReportVersions     MissionReportVersion[] @relation("SubmittedReportVersions")
+  reviewedReportVersions      MissionReportVersion[] @relation("ReviewedReportVersions")
+
 
   @@index([phoneNumber])
   @@index([email])
@@ -199,6 +223,7 @@ model Person {
   owner         Owner?
   documents     Document[]
   fieldReceipts FieldReceipt[]
+  fieldInspections FieldInspection[] @relation("PersonFieldInspections")
 
   @@index([nin])
   @@index([phoneNumber])
@@ -241,6 +266,7 @@ model Driver {
   person      Person              @relation(fields: [personId], references: [id], onDelete: Restrict)
   assignments VehicleAssignment[]
   badges      DriverBadge[]
+  fieldInspections FieldInspection[] @relation("DriverFieldInspections")
 
   @@index([drivingLicenseNumber])
   @@index([status])
@@ -329,6 +355,7 @@ model Vehicle {
   documents     Document[]
   licences      TransportLicence[]
   fieldReceipts FieldReceipt[]
+  fieldInspections FieldInspection[] @relation("VehicleFieldInspections")
 
   @@index([plateNumber])
   @@index([chassisVin])
@@ -916,9 +943,15 @@ model FinancialLedgerEntry {
 // ==============================================================================
 
 enum FieldAssignmentStatus {
+  DRAFT
   PLANNED
   ASSIGNED
   IN_PROGRESS
+  AWAITING_REPORT
+  SUBMITTED
+  CHANGES_REQUESTED
+  APPROVED
+  REJECTED
   COMPLETED
   CANCELLED
 }
@@ -936,6 +969,7 @@ model FieldTeam {
   commune     Commune?          @relation(fields: [communeId], references: [id], onDelete: SetNull)
   leader      User?             @relation("LeaderFieldTeams", fields: [leaderId], references: [id], onDelete: SetNull)
   assignments FieldAssignment[]
+  members     User[]            @relation("TeamMembers")
 
   @@index([communeId])
   @@index([leaderId])
@@ -968,6 +1002,16 @@ model FieldAssignment {
   team         FieldTeam?     @relation(fields: [teamId], references: [id], onDelete: SetNull)
   supervisor   User           @relation("SupervisedFieldAssignments", fields: [supervisorId], references: [id], onDelete: Restrict)
   receipts     FieldReceipt[]
+  objectives          String?
+  inspectionTargets   Json?                 @map("inspection_targets")
+  cancellationReason  String?               @map("cancellation_reason")
+  cancelledAt         DateTime?             @map("cancelled_at")
+  cancelledByUserId   String?               @map("cancelled_by_user_id")
+
+  cancelledByUser     User?                 @relation("CancelledFieldAssignments", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+  assignedAgents      FieldAssignmentAgent[]
+  inspections         FieldInspection[]
+  missionReport       MissionReport?
 
   @@index([communeId])
   @@index([assignedUserId])
@@ -1006,4 +1050,202 @@ model FieldReceipt {
   @@index([receiptNumber])
   @@index([issuedAt])
   @@map("field_receipts")
+}
+
+// ==============================================================================
+// 16. FIELD INSPECTIONS, MULTI-AGENT MISSIONS & MISSION REPORTS
+// ==============================================================================
+
+enum CheckpointStatus {
+  YES
+  NO
+  NOT_CHECKED
+}
+
+enum InspectionOutcome {
+  NOT_ASSESSED
+  CONFORME
+  NON_CONFORME
+  AVERTISSEMENT
+  INFRACTION
+}
+
+enum MissionReportStatus {
+  DRAFT
+  SUBMITTED
+  CHANGES_REQUESTED
+  APPROVED
+  REJECTED
+}
+
+enum MissionReportDecision {
+  APPROVED
+  REJECTED
+  CHANGES_REQUESTED
+}
+
+model FieldAssignmentAgent {
+  id            String          @id @default(uuid())
+  assignmentId  String          @map("assignment_id")
+  agentUserId   String          @map("agent_user_id")
+  roleInMission String          @default("MEMBER") @map("role_in_mission") // "LEAD" | "MEMBER"
+  assignedAt    DateTime        @default(now()) @map("assigned_at")
+
+  assignment    FieldAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  agentUser     User            @relation("AssignedMissionAgents", fields: [agentUserId], references: [id], onDelete: Restrict)
+
+  @@unique([assignmentId, agentUserId])
+  @@index([assignmentId])
+  @@index([agentUserId])
+  @@map("field_assignment_agents")
+}
+
+model FieldInspection {
+  id                  String            @id @default(uuid())
+  reference           String            @unique // e.g. "INS-2026-00001-A1B2"
+  assignmentId        String            @map("assignment_id")
+  agentUserId         String            @map("agent_user_id")
+  communeId           String            @map("commune_id")
+
+  // Optional References to Registered Entities
+  driverId            String?           @map("driver_id")
+  vehicleId           String?           @map("vehicle_id")
+  personId            String?           @map("person_id")
+
+  // Historical Snapshot Information (Preserved across subsequent entity modifications)
+  targetType          String            @map("target_type") // "DRIVER", "VEHICLE", "COMMERCIAL_TRANSPORT"
+  driverName          String?           @map("driver_name")
+  driverPhone         String?           @map("driver_phone")
+  licenseNumber       String?           @map("license_number")
+  plateNumber         String?           @map("plate_number")
+  vehicleType         String?           @map("vehicle_type")
+
+  // Explicit Three-State Checkpoints (Defaults strictly to NOT_CHECKED)
+  hasValidLicense     CheckpointStatus  @default(NOT_CHECKED) @map("has_valid_license")
+  hasMunicipalSticker CheckpointStatus  @default(NOT_CHECKED) @map("has_municipal_sticker")
+  hasTechnicalControl CheckpointStatus  @default(NOT_CHECKED) @map("has_technical_control")
+  isAuthorizedRoute   CheckpointStatus  @default(NOT_CHECKED) @map("is_authorized_route")
+  hasSafetyEquipment  CheckpointStatus  @default(NOT_CHECKED) @map("has_safety_equipment")
+
+  // Outcome & Infractions (Defaults strictly to NOT_ASSESSED)
+  outcome             InspectionOutcome @default(NOT_ASSESSED)
+  violations          Json?             // Array of infraction strings/codes
+  observations        String?
+
+  // Geographical & Temporal Traceability
+  latitude            Float?
+  longitude           Float?
+  locationName        String?           @map("location_name")
+  inspectedAt         DateTime          @default(now()) @map("inspected_at")
+  createdAt           DateTime          @default(now()) @map("created_at")
+
+  // Strict Physical Isolation from Administrative Validation
+  assignment          FieldAssignment   @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
+  agentUser           User              @relation("AgentFieldInspections", fields: [agentUserId], references: [id], onDelete: Restrict)
+  commune             Commune           @relation("CommuneFieldInspections", fields: [communeId], references: [id], onDelete: Restrict)
+  driver              Driver?           @relation("DriverFieldInspections", fields: [driverId], references: [id], onDelete: SetNull)
+  vehicle             Vehicle?          @relation("VehicleFieldInspections", fields: [vehicleId], references: [id], onDelete: SetNull)
+  person              Person?           @relation("PersonFieldInspections", fields: [personId], references: [id], onDelete: SetNull)
+  documents           InspectionDocument[]
+
+  @@index([assignmentId])
+  @@index([agentUserId])
+  @@index([communeId])
+  @@index([driverId])
+  @@index([vehicleId])
+  @@index([personId])
+  @@index([plateNumber])
+  @@index([licenseNumber])
+  @@index([outcome])
+  @@map("field_inspections")
+}
+
+model InspectionDocument {
+  id           String          @id @default(uuid())
+  inspectionId String          @map("inspection_id")
+  category     String          // "VEHICLE_PHOTO", "VIOLATION_EVIDENCE", "DOCUMENT_SCAN"
+  fileUrl      String          @map("file_url")
+  fileHash     String?         @map("file_hash")
+  mimeType     String          @map("mime_type")
+  createdAt    DateTime        @default(now()) @map("created_at")
+
+  inspection   FieldInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+
+  @@index([inspectionId])
+  @@map("inspection_documents")
+}
+
+model MissionReport {
+  id                  String              @id @default(uuid())
+  reference           String              @unique // e.g. "RAP-2026-00001"
+  assignmentId        String              @unique @map("assignment_id") // One shared report per mission
+  leadAuthorId        String              @map("lead_author_id")
+  currentVersion      Int                 @default(1) @map("current_version")
+  status              MissionReportStatus @default(DRAFT)
+
+  // Current Active Content
+  objectivesAssessed  String?             @map("objectives_assessed")
+  summary             String              // Executive summary of operations
+  inspectionsCount    Int                 @default(0) @map("inspections_count")
+  violationsCount     Int                 @default(0) @map("violations_count")
+  observations        String?
+  recommendations     String?
+  conclusions         String?
+  contributors        Json?               // Structured list of contributing agents
+  evidencePhotos      Json?               @map("evidence_photos") // Array of evidence photo URLs/hashes
+
+  // Review & Approval Lifecycle
+  supervisorNotes     String?             @map("supervisor_notes")
+  reviewedByUserId    String?             @map("reviewed_by_user_id")
+  reviewedAt          DateTime?           @map("reviewed_at")
+  submittedAt         DateTime?           @map("submitted_at")
+
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+
+  assignment          FieldAssignment     @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
+  leadAuthor          User                @relation("LeadAuthorMissionReports", fields: [leadAuthorId], references: [id], onDelete: Restrict)
+  reviewedByUser      User?               @relation("ReviewedMissionReports", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  versions            MissionReportVersion[]
+
+  @@index([assignmentId])
+  @@index([leadAuthorId])
+  @@index([status])
+  @@map("mission_reports")
+}
+
+model MissionReportVersion {
+  id                 String                 @id @default(uuid())
+  reportId           String                 @map("report_id")
+  versionNumber      Int                    @map("version_number")
+
+  // Immutable Historical Snapshot of Content at Submission
+  summary            String
+  objectivesAssessed String?                @map("objectives_assessed")
+  inspectionsCount   Int                    @map("inspections_count")
+  violationsCount    Int                    @map("violations_count")
+  observations       String?
+  recommendations    String?
+  conclusions        String?
+  contributors       Json?
+  evidencePhotos     Json?                  @map("evidence_photos")
+
+  // Submission Traceability
+  submittedByUserId  String                 @map("submitted_by_user_id")
+  submittedAt        DateTime               @default(now()) @map("submitted_at")
+
+  // Review & Decision Snapshot (Dedicated Enum: APPROVED | REJECTED | CHANGES_REQUESTED)
+  reviewedByUserId   String?                @map("reviewed_by_user_id")
+  decision           MissionReportDecision?
+  supervisorComments String?                @map("supervisor_comments")
+  decisionAt         DateTime?              @map("decision_at")
+
+  report             MissionReport          @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  submittedByUser    User                   @relation("SubmittedReportVersions", fields: [submittedByUserId], references: [id], onDelete: Restrict)
+  reviewedByUser     User?                  @relation("ReviewedReportVersions", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([reportId, versionNumber])
+  @@index([reportId])
+  @@index([submittedByUserId])
+  @@map("mission_report_versions")
 }

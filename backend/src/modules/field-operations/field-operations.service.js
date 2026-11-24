@@ -141,12 +141,15 @@ export class FieldOperationsService {
   static async listAssignments(user, query = {}) {
     const where = {};
 
-    // 1. Territorial scoping
+    // 1. Territorial and multi-agent scoping
     const isAgent = user.roles?.includes('AGENT_TERRAIN') && !user.roles?.includes('CHEF_SERVICE') && !user.roles?.includes('SUPER_ADMIN') && !user.roles?.includes('DIRECTOR');
     const isChef = user.roles?.includes('CHEF_SERVICE') && !user.roles?.includes('SUPER_ADMIN') && !user.roles?.includes('DIRECTOR');
 
     if (isAgent) {
-      where.assignedUserId = user.id;
+      where.OR = [
+        { assignedUserId: user.id },
+        { assignedAgents: { some: { agentUserId: user.id } } },
+      ];
     } else if (isChef) {
       where.communeId = user.communeId;
     } else if (query.communeId) {
@@ -159,15 +162,27 @@ export class FieldOperationsService {
     }
 
     if (query.assignedUserId && !isAgent) {
-      where.assignedUserId = query.assignedUserId;
+      where.OR = [
+        { assignedUserId: query.assignedUserId },
+        { assignedAgents: { some: { agentUserId: query.assignedUserId } } },
+      ];
     }
 
     if (query.search) {
-      where.OR = [
+      const searchCondition = [
         { reference: { contains: query.search, mode: 'insensitive' } },
         { title: { contains: query.search, mode: 'insensitive' } },
         { locationName: { contains: query.search, mode: 'insensitive' } },
       ];
+      if (where.OR) {
+        where.AND = [
+          { OR: where.OR },
+          { OR: searchCondition },
+        ];
+        delete where.OR;
+      } else {
+        where.OR = searchCondition;
+      }
     }
 
     const assignments = await prisma.fieldAssignment.findMany({
@@ -182,6 +197,24 @@ export class FieldOperationsService {
             email: true,
             phoneNumber: true,
             avatarUrl: true,
+            employeeNumber: true,
+            jobTitle: true,
+          },
+        },
+        assignedAgents: {
+          include: {
+            agentUser: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                phoneNumber: true,
+                avatarUrl: true,
+                employeeNumber: true,
+                jobTitle: true,
+              },
+            },
           },
         },
         supervisor: {
@@ -194,6 +227,12 @@ export class FieldOperationsService {
           },
         },
         team: { select: { id: true, code: true, name: true } },
+        _count: {
+          select: {
+            inspections: true,
+            receipts: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
       take: query.limit || 50,
@@ -237,6 +276,24 @@ export class FieldOperationsService {
             email: true,
             phoneNumber: true,
             avatarUrl: true,
+            employeeNumber: true,
+            jobTitle: true,
+          },
+        },
+        assignedAgents: {
+          include: {
+            agentUser: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                phoneNumber: true,
+                avatarUrl: true,
+                employeeNumber: true,
+                jobTitle: true,
+              },
+            },
           },
         },
         supervisor: {
@@ -248,7 +305,60 @@ export class FieldOperationsService {
             phoneNumber: true,
           },
         },
+        cancelledByUser: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
         team: { select: { id: true, code: true, name: true } },
+        inspections: {
+          include: {
+            agent: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                employeeNumber: true,
+              },
+            },
+            documents: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+        missionReport: {
+          include: {
+            leadAuthor: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                employeeNumber: true,
+              },
+            },
+            reviewedBy: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+            versions: {
+              include: {
+                submittedBy: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                  },
+                },
+              },
+              orderBy: { versionNumber: 'desc' },
+            },
+          },
+        },
         receipts: {
           take: 20,
           orderBy: { issuedAt: 'desc' },
@@ -262,8 +372,12 @@ export class FieldOperationsService {
 
     // Role checks
     const isAgent = user.roles?.includes('AGENT_TERRAIN') && !user.roles?.includes('CHEF_SERVICE') && !user.roles?.includes('SUPER_ADMIN') && !user.roles?.includes('DIRECTOR');
-    if (isAgent && assignment.assignedUserId !== user.id) {
-      throw new AppError('Accès refusé : vous ne pouvez consulter que vos propres missions.', 403, 'FORBIDDEN');
+    if (isAgent) {
+      const isAssigned = assignment.assignedUserId === user.id ||
+        assignment.assignedAgents?.some((a) => a.agentUserId === user.id);
+      if (!isAssigned) {
+        throw new AppError('Accès refusé : vous ne pouvez consulter que vos propres missions.', 403, 'FORBIDDEN');
+      }
     }
 
     this.enforceTerritoryScope(user, assignment.communeId);
@@ -276,7 +390,28 @@ export class FieldOperationsService {
   }
 
   /**
-   * Create a new field assignment.
+   * Complete Mission Lifecycle State Machine Transitions
+   * DRAFT → ASSIGNED → IN_PROGRESS → AWAITING_REPORT → SUBMITTED → (APPROVED | REJECTED | CHANGES_REQUESTED)
+   * CHANGES_REQUESTED → SUBMITTED
+   * APPROVED → COMPLETED
+   * CANCELLED (Supervisor only, mandatory reason)
+   */
+  static VALID_MISSION_TRANSITIONS = {
+    DRAFT: ['ASSIGNED', 'CANCELLED'],
+    PLANNED: ['DRAFT', 'ASSIGNED', 'CANCELLED'], // Backward compatibility
+    ASSIGNED: ['IN_PROGRESS', 'DRAFT', 'CANCELLED'],
+    IN_PROGRESS: ['AWAITING_REPORT', 'COMPLETED', 'CANCELLED'],
+    AWAITING_REPORT: ['SUBMITTED', 'IN_PROGRESS', 'CANCELLED'],
+    SUBMITTED: ['APPROVED', 'REJECTED', 'CHANGES_REQUESTED', 'CANCELLED'],
+    CHANGES_REQUESTED: ['SUBMITTED', 'CANCELLED'],
+    APPROVED: ['COMPLETED', 'CANCELLED'],
+    REJECTED: ['CHANGES_REQUESTED', 'CANCELLED'],
+    COMPLETED: [], // Terminal
+    CANCELLED: [], // Terminal
+  };
+
+  /**
+   * Create a new field assignment (Multi-Agent enabled).
    */
   static async createAssignment(user, data) {
     const resolvedCommune = await this.resolveCommune(data.communeId);
@@ -287,7 +422,29 @@ export class FieldOperationsService {
     this.enforceTerritoryScope(user, resolvedCommune.id);
 
     const reference = await this.generateAssignmentReference();
-    const initialStatus = data.status || (data.assignedUserId ? 'ASSIGNED' : 'PLANNED');
+
+    // Prepare multi-agent list
+    const agentsList = [];
+    if (Array.isArray(data.assignedAgents) && data.assignedAgents.length > 0) {
+      for (const ag of data.assignedAgents) {
+        agentsList.push({
+          userId: ag.userId,
+          role: ag.role || 'CONTRIBUTOR',
+        });
+      }
+    } else if (data.assignedUserId || data.leadAgentId) {
+      const leadId = data.assignedUserId || data.leadAgentId;
+      agentsList.push({
+        userId: leadId,
+        role: 'LEAD',
+      });
+    }
+
+    // Default status: if agents are attached, ASSIGNED; otherwise DRAFT
+    let initialStatus = data.status || (agentsList.length > 0 ? 'ASSIGNED' : 'DRAFT');
+
+    const leadAgent = agentsList.find((a) => a.role === 'LEAD') || agentsList[0];
+    const primaryAssignedUserId = leadAgent ? leadAgent.userId : (data.assignedUserId || null);
 
     const assignment = await prisma.fieldAssignment.create({
       data: {
@@ -297,7 +454,7 @@ export class FieldOperationsService {
         locationName: data.locationName,
         latitude: data.latitude || null,
         longitude: data.longitude || null,
-        assignedUserId: data.assignedUserId || null,
+        assignedUserId: primaryAssignedUserId,
         teamId: data.teamId || null,
         supervisorId: user.id,
         startDate: new Date(data.startDate),
@@ -306,6 +463,14 @@ export class FieldOperationsService {
         targetVehicles: data.targetVehicles || 0,
         instructions: data.instructions || null,
         status: initialStatus,
+        assignedAgents: agentsList.length > 0
+          ? {
+              create: agentsList.map((ag) => ({
+                agentUserId: ag.userId,
+                roleInMission: ag.role || 'MEMBER',
+              })),
+            }
+          : undefined,
       },
       include: {
         commune: { select: { id: true, code: true, name: true } },
@@ -317,6 +482,23 @@ export class FieldOperationsService {
             email: true,
             phoneNumber: true,
             avatarUrl: true,
+            employeeNumber: true,
+          },
+        },
+        assignedAgents: {
+          include: {
+            agentUser: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                phoneNumber: true,
+                avatarUrl: true,
+                employeeNumber: true,
+                jobTitle: true,
+              },
+            },
           },
         },
         supervisor: {
@@ -331,9 +513,30 @@ export class FieldOperationsService {
       },
     });
 
-    // Notify assigned agent or commune
+    try {
+      await prisma.auditLog.create({
+        data: {
+          actor: user?.id ? { connect: { id: user.id } } : undefined,
+          action: 'FIELD_ASSIGNMENT_CREATED',
+          targetModule: 'FIELD_OPERATIONS',
+          targetRecordId: assignment.id,
+          newValues: {
+            reference: assignment.reference,
+            title: assignment.title,
+            communeId: resolvedCommune.id,
+            assignedUserId: assignment.assignedUserId,
+            assignedAgentsCount: agentsList.length,
+            status: assignment.status,
+          },
+        },
+      });
+    } catch (auditErr) {
+      logger.warn('Non-fatal: failed to write audit log for assignment creation', { error: auditErr.message });
+    }
+
+    // Notify assigned agents or commune
     SocketService.emitNotification(
-      data.assignedUserId ? `user:${data.assignedUserId}` : `commune:${resolvedCommune.id}`,
+      assignment.assignedUserId ? `user:${assignment.assignedUserId}` : `commune:${resolvedCommune.id}`,
       'field:assignment_created',
       {
         id: assignment.id,
@@ -346,28 +549,12 @@ export class FieldOperationsService {
       }
     );
 
-    await prisma.auditLog.create({
-      data: {
-        actorId: user.id,
-        action: 'FIELD_ASSIGNMENT_CREATED',
-        targetModule: 'FIELD_OPERATIONS',
-        targetRecordId: assignment.id,
-        newValues: {
-          reference: assignment.reference,
-          title: assignment.title,
-          communeId: resolvedCommune.id,
-          assignedUserId: assignment.assignedUserId,
-          status: assignment.status,
-        },
-      },
-    });
-
     const progress = await this.calculateProgress(assignment);
     return { ...assignment, progress };
   }
 
   /**
-   * Update an existing field assignment.
+   * Update an existing field assignment (Multi-Agent enabled).
    */
   static async updateAssignment(user, id, data) {
     const existing = await prisma.fieldAssignment.findUnique({
@@ -379,6 +566,10 @@ export class FieldOperationsService {
       throw new AppError('Mission introuvable.', 404, 'NOT_FOUND');
     }
 
+    if (['COMPLETED', 'CANCELLED'].includes(existing.status)) {
+      throw new AppError('Une mission terminée ou annulée ne peut plus être modifiée.', 400, 'MISSION_TERMINATED');
+    }
+
     this.enforceTerritoryScope(user, existing.communeId);
 
     const updateData = {};
@@ -386,7 +577,6 @@ export class FieldOperationsService {
     if (data.locationName !== undefined) updateData.locationName = data.locationName;
     if (data.latitude !== undefined) updateData.latitude = data.latitude;
     if (data.longitude !== undefined) updateData.longitude = data.longitude;
-    if (data.assignedUserId !== undefined) updateData.assignedUserId = data.assignedUserId;
     if (data.teamId !== undefined) updateData.teamId = data.teamId;
     if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate);
     if (data.endDate !== undefined) updateData.endDate = data.endDate ? new Date(data.endDate) : null;
@@ -403,42 +593,86 @@ export class FieldOperationsService {
       updateData.communeId = resolvedCommune.id;
     }
 
-    const updated = await prisma.fieldAssignment.update({
-      where: { id },
-      data: updateData,
-      include: {
-        commune: { select: { id: true, code: true, name: true } },
-        assignedUser: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phoneNumber: true,
-            avatarUrl: true,
-          },
-        },
-        supervisor: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phoneNumber: true,
-          },
-        },
-      },
-    });
+    const updated = await prisma.$transaction(async (tx) => {
+      // Handle multi-agent sync if assignedAgents passed
+      if (Array.isArray(data.assignedAgents)) {
+        await tx.fieldAssignmentAgent.deleteMany({ where: { assignmentId: id } });
+        if (data.assignedAgents.length > 0) {
+          await tx.fieldAssignmentAgent.createMany({
+            data: data.assignedAgents.map((ag) => ({
+              assignmentId: id,
+              agentUserId: ag.userId,
+              roleInMission: ag.role || 'MEMBER',
+            })),
+          });
+          const lead = data.assignedAgents.find((ag) => ag.role === 'LEAD') || data.assignedAgents[0];
+          updateData.assignedUserId = lead.userId;
+          if (existing.status === 'DRAFT') {
+            updateData.status = 'ASSIGNED';
+          }
+        } else {
+          updateData.assignedUserId = null;
+        }
+      } else if (data.assignedUserId !== undefined) {
+        updateData.assignedUserId = data.assignedUserId;
+      }
 
-    await prisma.auditLog.create({
-      data: {
-        actorId: user.id,
-        action: 'FIELD_ASSIGNMENT_UPDATED',
-        targetModule: 'FIELD_OPERATIONS',
-        targetRecordId: updated.id,
-        previousValues: existing,
-        newValues: updated,
-      },
+      const res = await tx.fieldAssignment.update({
+        where: { id },
+        data: updateData,
+        include: {
+          commune: { select: { id: true, code: true, name: true } },
+          assignedUser: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phoneNumber: true,
+              avatarUrl: true,
+              employeeNumber: true,
+            },
+          },
+          assignedAgents: {
+            include: {
+              agentUser: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  phoneNumber: true,
+                  avatarUrl: true,
+                  employeeNumber: true,
+                  jobTitle: true,
+                },
+              },
+            },
+          },
+          supervisor: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phoneNumber: true,
+            },
+          },
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actor: user?.id ? { connect: { id: user.id } } : undefined,
+          action: 'FIELD_ASSIGNMENT_UPDATED',
+          targetModule: 'FIELD_OPERATIONS',
+          targetRecordId: res.id,
+          previousValues: { status: existing.status, title: existing.title, assignedUserId: existing.assignedUserId },
+          newValues: { status: res.status, title: res.title, assignedUserId: res.assignedUserId },
+        },
+      });
+
+      return res;
     });
 
     if (updated.assignedUserId) {
@@ -473,6 +707,10 @@ export class FieldOperationsService {
       throw new AppError('Mission introuvable.', 404, 'NOT_FOUND');
     }
 
+    if (['COMPLETED', 'CANCELLED'].includes(existing.status)) {
+      throw new AppError('Impossible de réassigner une mission terminée ou annulée.', 400, 'MISSION_TERMINATED');
+    }
+
     this.enforceTerritoryScope(user, existing.communeId);
 
     const newAgent = await prisma.user.findUnique({
@@ -494,38 +732,84 @@ export class FieldOperationsService {
       ? `${existing.supervisorNotes}\n${noteEntry}`
       : noteEntry;
 
-    const updated = await prisma.fieldAssignment.update({
-      where: { id },
-      data: {
-        assignedUserId: data.assignedUserId,
-        status: 'ASSIGNED',
-        supervisorNotes: mergedNotes,
-      },
-      include: {
-        commune: { select: { id: true, code: true, name: true } },
-        assignedUser: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phoneNumber: true,
-            avatarUrl: true,
+    const updated = await prisma.$transaction(async (tx) => {
+      // Upsert lead in assignedAgents
+      await tx.fieldAssignmentAgent.upsert({
+        where: {
+          assignmentId_agentUserId: {
+            assignmentId: id,
+            agentUserId: data.assignedUserId,
           },
         },
-        supervisor: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phoneNumber: true,
+        update: { roleInMission: 'LEAD' },
+        create: {
+          assignmentId: id,
+          agentUserId: data.assignedUserId,
+          roleInMission: 'LEAD',
+        },
+      });
+
+      const res = await tx.fieldAssignment.update({
+        where: { id },
+        data: {
+          assignedUserId: data.assignedUserId,
+          status: existing.status === 'DRAFT' ? 'ASSIGNED' : existing.status,
+          supervisorNotes: mergedNotes,
+        },
+        include: {
+          commune: { select: { id: true, code: true, name: true } },
+          assignedUser: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phoneNumber: true,
+              avatarUrl: true,
+              employeeNumber: true,
+            },
+          },
+          assignedAgents: {
+            include: {
+              agentUser: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  phoneNumber: true,
+                  employeeNumber: true,
+                },
+              },
+            },
+          },
+          supervisor: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phoneNumber: true,
+            },
           },
         },
-      },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actor: user?.id ? { connect: { id: user.id } } : undefined,
+          action: 'FIELD_ASSIGNMENT_REASSIGNED',
+          targetModule: 'FIELD_OPERATIONS',
+          targetRecordId: updated ? updated.id : id,
+          reason: data.reason,
+          previousValues: { assignedUserId: existing.assignedUserId },
+          newValues: { assignedUserId: newAgent.id, supervisorNotes: mergedNotes },
+        },
+      });
+
+      return res;
     });
 
-    // Notify previous and new agents
     SocketService.emitNotification(
       `user:${newAgent.id}`,
       'field:assignment_reassigned',
@@ -537,24 +821,14 @@ export class FieldOperationsService {
       }
     );
 
-    await prisma.auditLog.create({
-      data: {
-        actorId: user.id,
-        action: 'FIELD_ASSIGNMENT_REASSIGNED',
-        targetModule: 'FIELD_OPERATIONS',
-        targetRecordId: updated.id,
-        reason: data.reason,
-        previousValues: { assignedUserId: existing.assignedUserId },
-        newValues: { assignedUserId: newAgent.id, supervisorNotes: mergedNotes },
-      },
-    });
-
     const progress = await this.calculateProgress(updated);
     return { ...updated, progress };
   }
 
   /**
-   * Update assignment status (PLANNED, ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED).
+   * Update assignment status strictly enforcing lifecycle transitions.
+   * DRAFT → ASSIGNED → IN_PROGRESS → AWAITING_REPORT → SUBMITTED → (APPROVED | REJECTED | CHANGES_REQUESTED)
+   * APPROVED → COMPLETED
    */
   static async updateStatus(user, id, data) {
     const existing = await prisma.fieldAssignment.findUnique({
@@ -566,14 +840,32 @@ export class FieldOperationsService {
       throw new AppError('Mission introuvable.', 404, 'NOT_FOUND');
     }
 
+    if (['COMPLETED', 'CANCELLED'].includes(existing.status)) {
+      throw new AppError('Cette mission est terminée ou annulée. Aucune modification de statut n est autorisée.', 400, 'MISSION_TERMINATED');
+    }
+
+    // Validate lifecycle transitions
+    const allowedNext = this.VALID_MISSION_TRANSITIONS[existing.status] || [];
+    if (!allowedNext.includes(data.status)) {
+      throw new AppError(
+        `Transition de statut invalide : Impossible de passer de ${existing.status} à ${data.status}.`,
+        400,
+        'INVALID_STATUS_TRANSITION'
+      );
+    }
+
     const isAgent = user.roles?.includes('AGENT_TERRAIN') && !user.roles?.includes('CHEF_SERVICE') && !user.roles?.includes('SUPER_ADMIN') && !user.roles?.includes('DIRECTOR');
     if (isAgent) {
-      if (existing.assignedUserId !== user.id) {
+      const isAssigned = existing.assignedUserId === user.id ||
+        (await prisma.fieldAssignmentAgent.findFirst({ where: { assignmentId: id, agentUserId: user.id } }));
+      if (!isAssigned) {
         throw new AppError('Accès refusé : vous ne pouvez modifier que le statut de votre propre mission.', 403, 'FORBIDDEN');
       }
-      // Agents can only switch to IN_PROGRESS or COMPLETED
-      if (!['IN_PROGRESS', 'COMPLETED'].includes(data.status)) {
-        throw new AppError('Les agents de terrain ne peuvent marquer une mission qu en cours ou terminée.', 400, 'INVALID_STATUS_TRANSITION');
+
+      // Agents can only switch to IN_PROGRESS, AWAITING_REPORT, or COMPLETED
+      const agentPermitted = ['IN_PROGRESS', 'AWAITING_REPORT', 'COMPLETED'];
+      if (!agentPermitted.includes(data.status)) {
+        throw new AppError('Les agents de terrain ne peuvent pas effectuer cette transition de statut.', 403, 'FORBIDDEN_STATUS_TRANSITION');
       }
     } else {
       this.enforceTerritoryScope(user, existing.communeId);
@@ -585,45 +877,64 @@ export class FieldOperationsService {
       mergedNotes = mergedNotes ? `${mergedNotes}\n${noteEntry}` : noteEntry;
     }
 
-    const updated = await prisma.fieldAssignment.update({
-      where: { id },
-      data: {
-        status: data.status,
-        supervisorNotes: mergedNotes,
-      },
-      include: {
-        commune: { select: { id: true, code: true, name: true } },
-        assignedUser: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phoneNumber: true,
-            avatarUrl: true,
+    const updated = await prisma.$transaction(async (tx) => {
+      const res = await tx.fieldAssignment.update({
+        where: { id },
+        data: {
+          status: data.status,
+          supervisorNotes: mergedNotes,
+        },
+        include: {
+          commune: { select: { id: true, code: true, name: true } },
+          assignedUser: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phoneNumber: true,
+              avatarUrl: true,
+              employeeNumber: true,
+            },
+          },
+          assignedAgents: {
+            include: {
+              agentUser: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  phoneNumber: true,
+                  employeeNumber: true,
+                },
+              },
+            },
+          },
+          supervisor: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phoneNumber: true,
+            },
           },
         },
-        supervisor: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phoneNumber: true,
-          },
-        },
-      },
-    });
+      });
 
-    await prisma.auditLog.create({
-      data: {
-        actorId: user.id,
-        action: 'FIELD_ASSIGNMENT_STATUS_CHANGED',
-        targetModule: 'FIELD_OPERATIONS',
-        targetRecordId: updated.id,
-        previousValues: { status: existing.status },
-        newValues: { status: updated.status },
-      },
+      await tx.auditLog.create({
+        data: {
+          actor: user?.id ? { connect: { id: user.id } } : undefined,
+          action: 'FIELD_ASSIGNMENT_STATUS_CHANGED',
+          targetModule: 'FIELD_OPERATIONS',
+          targetRecordId: res.id,
+          previousValues: { status: existing.status },
+          newValues: { status: res.status, supervisorNotes: mergedNotes },
+        },
+      });
+
+      return res;
     });
 
     SocketService.emitNotification(
@@ -635,6 +946,90 @@ export class FieldOperationsService {
         title: updated.title,
         status: updated.status,
         supervisorNotes: data.supervisorNotes || null,
+      }
+    );
+
+    const progress = await this.calculateProgress(updated);
+    return { ...updated, progress };
+  }
+
+  /**
+   * Cancel an assignment (Supervisors only, requires mandatory written reason).
+   */
+  static async cancelAssignment(user, id, data) {
+    const isSuperOrDirector = user.roles?.includes('SUPER_ADMIN') || user.roles?.includes('DIRECTOR');
+    const isChef = user.roles?.includes('CHEF_SERVICE');
+    if (!isSuperOrDirector && !isChef) {
+      throw new AppError('Seuls les superviseurs et administrateurs peuvent annuler une mission.', 403, 'FORBIDDEN');
+    }
+
+    const existing = await prisma.fieldAssignment.findUnique({
+      where: { id },
+      include: { commune: true },
+    });
+
+    if (!existing) {
+      throw new AppError('Mission introuvable.', 404, 'NOT_FOUND');
+    }
+
+    this.enforceTerritoryScope(user, existing.communeId);
+
+    if (existing.status === 'COMPLETED') {
+      throw new AppError('Impossible d annuler une mission déjà terminée.', 400, 'MISSION_ALREADY_COMPLETED');
+    }
+    if (existing.status === 'CANCELLED') {
+      throw new AppError('Cette mission est déjà annulée.', 400, 'MISSION_ALREADY_CANCELLED');
+    }
+
+    if (!data.reason || data.reason.trim().length < 3) {
+      throw new AppError('Le motif d annulation écrit est obligatoire (au moins 3 caractères).', 400, 'REASON_REQUIRED');
+    }
+
+    const reason = data.reason.trim();
+    const noteEntry = `[${new Date().toISOString()}] Mission ANNULÉE par ${user.name || user.email}. Motif: ${reason}. ${data.supervisorNotes || ''}`.trim();
+    const mergedNotes = existing.supervisorNotes ? `${existing.supervisorNotes}\n${noteEntry}` : noteEntry;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const assignment = await tx.fieldAssignment.update({
+        where: { id },
+        data: {
+          status: 'CANCELLED',
+          cancelledByUser: { connect: { id: user.id } },
+          cancellationReason: reason,
+          cancelledAt: new Date(),
+          supervisorNotes: mergedNotes,
+        },
+        include: {
+          commune: { select: { id: true, code: true, name: true } },
+          assignedUser: { select: { id: true, firstName: true, lastName: true, email: true, phoneNumber: true } },
+          supervisor: { select: { id: true, firstName: true, lastName: true, email: true } },
+          cancelledByUser: { select: { id: true, firstName: true, lastName: true, email: true } },
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actor: user?.id ? { connect: { id: user.id } } : undefined,
+          action: 'FIELD_ASSIGNMENT_CANCELLED',
+          targetModule: 'FIELD_OPERATIONS',
+          targetRecordId: id,
+          reason,
+          previousValues: { status: existing.status },
+          newValues: { status: 'CANCELLED', cancellationReason: reason, cancelledAt: assignment.cancelledAt },
+        },
+      });
+
+      return assignment;
+    });
+
+    SocketService.emitNotification(
+      updated.assignedUserId ? `user:${updated.assignedUserId}` : `commune:${updated.communeId}`,
+      'field:assignment_cancelled',
+      {
+        id: updated.id,
+        reference: updated.reference,
+        title: updated.title,
+        reason,
       }
     );
 
@@ -861,7 +1256,7 @@ export class FieldOperationsService {
 
     await prisma.auditLog.create({
       data: {
-        actorId: user.id,
+        actor: user?.id ? { connect: { id: user.id } } : undefined,
         action: 'FIELD_RECEIPT_ISSUED',
         targetModule: 'FIELD_OPERATIONS',
         targetRecordId: receipt.id,

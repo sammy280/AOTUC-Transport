@@ -37,6 +37,9 @@ pnpm-debug.log*
 backend/uploads/
 uploads/
 storage/
+backend/prisma/backups/
+*.backup
+*_proposed.prisma
 
 # Testing & Coverage
 coverage/

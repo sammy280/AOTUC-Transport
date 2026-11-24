@@ -240,10 +240,13 @@ class OfflineSyncManager {
 
         itemsPayload.push({
           clientGeneratedId: item.draft.clientGeneratedId,
+          agentUserId: item.draft.agentUserId,
           entityType: item.draft.entityType,
           createdOfflineAt: item.draft.createdAt,
           payload: {
             ...item.payload,
+            agentUserId: item.draft.agentUserId,
+            agentName: item.draft.agentName,
             documents: formattedDocs,
           },
         });

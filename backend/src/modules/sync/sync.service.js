@@ -4,6 +4,8 @@ import logger from '../../utils/logger.js';
 import CryptoSignatureService from '../../services/cryptoSignatureService.js';
 import DocumentStorageService from '../../services/documentStorageService.js';
 import { normalizeGuineanPhone } from '../registration/registration.schemas.js';
+import InspectionsService from '../field-operations/inspections.service.js';
+import MissionReportsService from '../field-operations/mission-reports.service.js';
 
 /**
  * Helper to resolve communeId from either a UUID, a commune code (e.g. 'MTT'), or commune name (e.g. 'Matoto').
@@ -39,6 +41,8 @@ const ENTITY_SYNC_PRIORITY = {
   DRIVER: 2,
   VEHICLE: 3,
   DOCUMENT: 4,
+  FIELD_INSPECTION: 5,
+  MISSION_REPORT: 6,
 };
 
 /**
@@ -277,6 +281,26 @@ export class SyncService {
           duplicates++;
           continue;
         }
+
+        // 2. Creator Attribution Verification:
+        // Ensure that a draft captured offline by Agent A cannot be claimed or modified by Agent B.
+        // SUPER_ADMIN can sync on behalf of field agents, but for all other users, original creator must match actorUser.
+        const originalCreatorId = payload.agentUserId || item.agentUserId || null;
+        const isSuperAdmin = actorUser.roles && actorUser.roles.includes('SUPER_ADMIN');
+
+        if (originalCreatorId && originalCreatorId !== actorUser.id && !isSuperAdmin) {
+          pushResult({
+            clientGeneratedId,
+            entityType,
+            status: 'ERROR',
+            errorCode: 'ATTRIBUTION_MISMATCH',
+            error: `Conflit d attribution : ce dossier a été créé par l agent "${originalCreatorId}", mais la synchronisation est soumise par "${actorUser.id}".`,
+          });
+          failed++;
+          continue;
+        }
+
+        const effectiveSubmitterId = originalCreatorId || actorUser.id;
 
         // Resolve communeId from payload.communeId, payload.commune, or actorUser.communeId
         const resolvedCommuneId = await resolveCommuneId(
@@ -591,7 +615,7 @@ export class SyncService {
                   requestNumber,
                   entityType: 'DRIVER_ENROLMENT',
                   targetEntityId: driver.id,
-                  submitterId: actorUser.id,
+                  submitterId: effectiveSubmitterId,
                   currentLevel: 2,
                   currentStatus: 'SOUMIS_NIVEAU2',
                   communeId: resolvedCommuneId,
@@ -755,7 +779,7 @@ export class SyncService {
                   requestNumber,
                   entityType: 'OWNER_ENROLMENT',
                   targetEntityId: owner.id,
-                  submitterId: actorUser.id,
+                  submitterId: effectiveSubmitterId,
                   currentLevel: 2,
                   currentStatus: 'SOUMIS_NIVEAU2',
                   communeId: resolvedCommuneId,
@@ -992,7 +1016,7 @@ export class SyncService {
                   requestNumber,
                   entityType: 'VEHICLE_ENROLMENT',
                   targetEntityId: vehicle.id,
-                  submitterId: actorUser.id,
+                  submitterId: effectiveSubmitterId,
                   currentLevel: 2,
                   currentStatus: 'SOUMIS_NIVEAU2',
                   communeId: resolvedCommuneId,
@@ -1148,6 +1172,101 @@ export class SyncService {
             personId: resolvedPersonId,
             vehicleId: resolvedVehicleId,
             unionId: resolvedUnionId,
+          });
+          accepted++;
+          continue;
+        }
+
+        // =====================================================================
+        // ENTITY: FIELD_INSPECTION (Stage 5 / Stage 8)
+        // =====================================================================
+        if (entityType === 'FIELD_INSPECTION') {
+          // Resolve assignmentId if mapped from client generated id
+          let targetAssignmentId = payload.assignmentId || payload.missionId;
+          if (targetAssignmentId && clientToServerIdMap.has(targetAssignmentId)) {
+            targetAssignmentId = clientToServerIdMap.get(targetAssignmentId);
+          }
+
+          const inspectionData = {
+            ...payload,
+            assignmentId: targetAssignmentId,
+          };
+
+          const inspection = await InspectionsService.createInspection(actorUser, inspectionData);
+
+          await prisma.auditLog.create({
+            data: {
+              actor: { connect: { id: actorUser.id } },
+              action: 'OFFLINE_SYNC_ACCEPTED',
+              targetModule: 'FIELD_INSPECTION',
+              targetRecordId: clientGeneratedId,
+              newValues: {
+                deviceId,
+                entityType: 'FIELD_INSPECTION',
+                serverRecordId: inspection.id,
+                reference: inspection.reference,
+                outcome: inspection.outcome,
+                createdOfflineAt,
+              },
+            },
+          });
+
+          clientToServerIdMap.set(clientGeneratedId, inspection.id);
+          pushResult({
+            clientGeneratedId,
+            entityType: 'FIELD_INSPECTION',
+            status: 'SUCCESS',
+            serverRecordId: inspection.id,
+            reference: inspection.reference,
+            outcome: inspection.outcome,
+            message: 'Inspection terrain synchronisée avec succès.',
+          });
+          accepted++;
+          continue;
+        }
+
+        // =====================================================================
+        // ENTITY: MISSION_REPORT (Stage 6 / Stage 8)
+        // =====================================================================
+        if (entityType === 'MISSION_REPORT') {
+          let targetAssignmentId = payload.assignmentId || payload.missionId;
+          if (targetAssignmentId && clientToServerIdMap.has(targetAssignmentId)) {
+            targetAssignmentId = clientToServerIdMap.get(targetAssignmentId);
+          }
+
+          const reportData = {
+            ...payload,
+            assignmentId: targetAssignmentId,
+          };
+
+          const report = await MissionReportsService.saveOrSubmitReport(actorUser, reportData, true);
+
+          await prisma.auditLog.create({
+            data: {
+              actor: { connect: { id: actorUser.id } },
+              action: 'OFFLINE_SYNC_ACCEPTED',
+              targetModule: 'MISSION_REPORT',
+              targetRecordId: clientGeneratedId,
+              newValues: {
+                deviceId,
+                entityType: 'MISSION_REPORT',
+                serverRecordId: report.id,
+                reference: report.reference,
+                version: report.currentVersion,
+                createdOfflineAt,
+              },
+            },
+          });
+
+          clientToServerIdMap.set(clientGeneratedId, report.id);
+          pushResult({
+            clientGeneratedId,
+            entityType: 'MISSION_REPORT',
+            status: 'SUCCESS',
+            serverRecordId: report.id,
+            reference: report.reference,
+            version: report.currentVersion,
+            message: 'Rapport de mission synchronisé avec succès.',
           });
           accepted++;
           continue;

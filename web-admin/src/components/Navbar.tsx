@@ -31,6 +31,7 @@ interface NavbarProps {
   onLogout: () => void;
   isMobileMenuOpen?: boolean;
   onToggleMobileMenu?: () => void;
+  isOfflineSession?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -44,6 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
   isMobileMenuOpen,
   onToggleMobileMenu,
+  isOfflineSession = false,
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -118,6 +120,15 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Right Controls: Role Badge, Theme Selector, Notifications & Profile */}
           <div className="flex items-center space-x-3 sm:space-x-4">
+            {/* Offline Session Indicator */}
+            {isOfflineSession && (
+              <div className="flex items-center space-x-1.5 bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-400 rounded-full px-2.5 py-1 text-xs font-bold shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="hidden sm:inline">Session Hors Ligne</span>
+                <span className="sm:hidden">Hors Ligne</span>
+              </div>
+            )}
+
             {/* Active Accredited Role Badge */}
             <div className="hidden sm:flex items-center space-x-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200">
               <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />

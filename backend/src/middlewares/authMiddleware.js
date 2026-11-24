@@ -161,10 +161,10 @@ export async function authenticateToken(req, res, next) {
     if (prisma && prisma.user) {
       const dbUser = await prisma.user.findUnique({
         where: { id: decoded.sub },
-        select: { id: true, isActive: true },
+        select: { id: true, isActive: true, accountStatus: true },
       });
 
-      if (dbUser && dbUser.isActive === false) {
+      if (dbUser && (dbUser.isActive === false || dbUser.accountStatus === 'INACTIVE')) {
         RevocationRegistry.deactivateUser(dbUser.id);
         logger.warn('Access attempt by deactivated account (database gate)', { userId: dbUser.id });
         return next(
@@ -172,6 +172,18 @@ export async function authenticateToken(req, res, next) {
             'Ce compte utilisateur a été désactivé par un administrateur.',
             401,
             'ACCOUNT_DEACTIVATED'
+          )
+        );
+      }
+
+      if (dbUser && dbUser.accountStatus === 'SUSPENDED') {
+        RevocationRegistry.deactivateUser(dbUser.id);
+        logger.warn('Access attempt by suspended account (database gate)', { userId: dbUser.id });
+        return next(
+          new AppError(
+            'Ce compte utilisateur est suspendu par un superviseur.',
+            401,
+            'ACCOUNT_SUSPENDED'
           )
         );
       }

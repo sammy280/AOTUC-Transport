@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Lock,
   Mail,
@@ -9,13 +9,21 @@ import {
   Building2,
   ArrowRight,
   QrCode,
+  WifiOff,
+  User,
 } from 'lucide-react';
 import { UserContext, RoleType } from '../../types';
 import ThemeSelector from '../../components/ThemeSelector';
 import { buildApiUrl, storeAuthToken } from '../../utils/api';
+import {
+  enrollUserForOfflineAuth,
+  authenticateOfflineWithPassword,
+  getEnrolledOfflineUsers,
+  EnrolledUserSummary,
+} from '../../utils/offlineAuthService';
 
 interface LoginViewProps {
-  onLoginSuccess: (user: UserContext, token?: string) => void;
+  onLoginSuccess: (user: UserContext, token?: string, isOffline?: boolean) => void;
   onOpenPublicVerification?: () => void;
 }
 
@@ -50,6 +58,31 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isNetworkOnline, setIsNetworkOnline] = useState<boolean>(() =>
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
+  const [enrolledUsers, setEnrolledUsers] = useState<EnrolledUserSummary[]>([]);
+  // Connectivity and Enrolled Accounts Discovery
+  useEffect(() => {
+    const handleOnline = () => setIsNetworkOnline(true);
+    const handleOffline = () => setIsNetworkOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Load locally enrolled accounts
+    getEnrolledOfflineUsers().then((users) => {
+      setEnrolledUsers(users);
+      if (users.length > 0 && !identifier) {
+        setIdentifier(users[0].identifier);
+      }
+    });
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +101,18 @@ export const LoginView: React.FC<LoginViewProps> = ({
     setIsLoading(true);
 
     try {
+      // 1. If currently offline, directly trigger offline authentication
+      if (!isNetworkOnline) {
+        const offlineResult = await authenticateOfflineWithPassword(cleanIdentifier, cleanPassword);
+        if (offlineResult.success && offlineResult.user) {
+          onLoginSuccess(offlineResult.user, undefined, true);
+          return;
+        }
+        setErrorMessage(offlineResult.error || 'Identifiant ou mot de passe hors ligne invalide.');
+        return;
+      }
+
+      // 2. Online Authentication Attempt
       const response = await fetch(buildApiUrl('/api/v1/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -112,7 +157,14 @@ export const LoginView: React.FC<LoginViewProps> = ({
             localStorage.setItem('aotuc_user', JSON.stringify(loggedUser));
           }
 
-          onLoginSuccess(loggedUser, accessToken);
+          // Phase 3: Seamlessly enroll this device for offline authentication
+          try {
+            await enrollUserForOfflineAuth(loggedUser, cleanPassword);
+          } catch (enrollErr) {
+            console.warn('[AOTUC] Offline enrollment warning:', enrollErr);
+          }
+
+          onLoginSuccess(loggedUser, accessToken, false);
           return;
         }
 
@@ -122,8 +174,18 @@ export const LoginView: React.FC<LoginViewProps> = ({
         return;
       }
 
+      // 3. Fallback: Network unreachable during request -> Attempt offline login
+      const fallbackOffline = await authenticateOfflineWithPassword(cleanIdentifier, cleanPassword);
+      if (fallbackOffline.success && fallbackOffline.user) {
+        onLoginSuccess(fallbackOffline.user, undefined, true);
+        return;
+      } else if (fallbackOffline.error) {
+        setErrorMessage(fallbackOffline.error);
+        return;
+      }
+
       setErrorMessage(
-        'Impossible de joindre le serveur d authentification AOTUC. Vérifiez votre connexion réseau.'
+        'Impossible de joindre le serveur d authentification AOTUC et aucun compte enrôlé ne correspond à ces identifiants.'
       );
     } catch {
       setErrorMessage(
@@ -226,6 +288,63 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 </p>
               </div>
             </div>
+
+            {/* Offline Detection Banner */}
+            {!isNetworkOnline && (
+              <div className="mx-6 sm:mx-8 mt-6 p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 rounded-xl flex items-start space-x-3 text-amber-900 dark:text-amber-200 text-xs shadow-sm">
+                <WifiOff className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold block">Mode Hors Ligne Détecté</span>
+                  <span className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">
+                    Connexion réseau indisponible. L authentification s effectue localement via vos accréditations chiffrées sur ce terminal (PBKDF2-SHA512 600k itérations / WebAuthn).
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Enrolled Offline Accounts Quick Select */}
+            {enrolledUsers.length > 0 && (
+              <div className="mx-6 sm:mx-8 mt-4 p-3 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-xl">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-2 flex items-center justify-between">
+                  <span className="flex items-center space-x-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Profils Enrôlés Hors Ligne</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-normal">
+                    {enrolledUsers.length} compte(s)
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {enrolledUsers.map((u) => {
+                    const isSelected = identifier.toLowerCase() === u.identifier.toLowerCase();
+                    return (
+                      <button
+                        key={u.userId}
+                        type="button"
+                        onClick={() => setIdentifier(u.identifier)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium flex items-center space-x-1.5 transition cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#CE1126] text-white shadow-sm'
+                            : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:border-[#CE1126]'
+                        }`}
+                      >
+                        <User className="w-3 h-3" />
+                        <span>{u.displayName}</span>
+                        <span
+                          className={`text-[10px] px-1 py-0.2 rounded font-mono ${
+                            isSelected
+                              ? 'bg-white/20 text-white'
+                              : 'bg-slate-100 dark:bg-slate-600 text-slate-600 dark:text-slate-300'
+                          }`}
+                        >
+                          {u.role}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Error Alert */}
             {errorMessage && (

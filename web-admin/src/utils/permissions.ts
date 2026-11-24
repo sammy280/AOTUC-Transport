@@ -44,12 +44,19 @@ export const PERMISSIONS = {
   TRANSACTIONS_REVERSE: 'transactions.reverse',
   FINANCIAL_REPORTS_READ: 'financial_reports.read',
 
-  // Field Operations & Missions (Phase 6)
+  // Field Operations, Inspections & Mission Reports
   FIELD_ASSIGNMENTS_MANAGE: 'field_assignments.manage',
   FIELD_ASSIGNMENTS_READ: 'field_assignments.read',
   FIELD_PROGRESS_READ: 'field_progress.read',
   FIELD_RECEIPTS_CREATE: 'field_receipts.create',
   FIELD_RECEIPTS_READ: 'field_receipts.read',
+  AGENTS_MANAGE: 'agents.manage',
+  AGENTS_READ: 'agents.read',
+  INSPECTIONS_CREATE: 'inspections.create',
+  INSPECTIONS_READ: 'inspections.read',
+  MISSION_REPORTS_SUBMIT: 'mission_reports.submit',
+  MISSION_REPORTS_REVIEW: 'mission_reports.review',
+  MISSION_REPORTS_READ: 'mission_reports.read',
 
   // Transport Unions / Syndicats Management
   UNIONS_MANAGE: 'unions.manage',
@@ -87,6 +94,10 @@ export const ROLE_PERMISSIONS: Record<RoleType, PermissionKey[]> = {
     PERMISSIONS.FIELD_ASSIGNMENTS_READ,
     PERMISSIONS.FIELD_PROGRESS_READ,
     PERMISSIONS.FIELD_RECEIPTS_READ,
+    PERMISSIONS.AGENTS_READ,
+    PERMISSIONS.INSPECTIONS_READ,
+    PERMISSIONS.MISSION_REPORTS_READ,
+    PERMISSIONS.MISSION_REPORTS_REVIEW,
     PERMISSIONS.UNIONS_READ,
     PERMISSIONS.AUTHORITIES_READ,
     PERMISSIONS.AUTHORITIES_CREATE,
@@ -112,6 +123,11 @@ export const ROLE_PERMISSIONS: Record<RoleType, PermissionKey[]> = {
     PERMISSIONS.FIELD_ASSIGNMENTS_READ,
     PERMISSIONS.FIELD_PROGRESS_READ,
     PERMISSIONS.FIELD_RECEIPTS_READ,
+    PERMISSIONS.AGENTS_MANAGE,
+    PERMISSIONS.AGENTS_READ,
+    PERMISSIONS.INSPECTIONS_READ,
+    PERMISSIONS.MISSION_REPORTS_READ,
+    PERMISSIONS.MISSION_REPORTS_REVIEW,
     PERMISSIONS.UNIONS_MANAGE,
     PERMISSIONS.UNIONS_READ,
     PERMISSIONS.AUTHORITIES_READ,
@@ -135,6 +151,11 @@ export const ROLE_PERMISSIONS: Record<RoleType, PermissionKey[]> = {
     PERMISSIONS.FIELD_ASSIGNMENTS_READ,
     PERMISSIONS.FIELD_PROGRESS_READ,
     PERMISSIONS.FIELD_RECEIPTS_READ,
+    PERMISSIONS.AGENTS_MANAGE,
+    PERMISSIONS.AGENTS_READ,
+    PERMISSIONS.INSPECTIONS_READ,
+    PERMISSIONS.MISSION_REPORTS_READ,
+    PERMISSIONS.MISSION_REPORTS_REVIEW,
     PERMISSIONS.UNIONS_READ,
   ],
   AGENT_TERRAIN: [
@@ -147,6 +168,10 @@ export const ROLE_PERMISSIONS: Record<RoleType, PermissionKey[]> = {
     PERMISSIONS.FIELD_ASSIGNMENTS_READ,
     PERMISSIONS.FIELD_RECEIPTS_CREATE,
     PERMISSIONS.FIELD_RECEIPTS_READ,
+    PERMISSIONS.INSPECTIONS_CREATE,
+    PERMISSIONS.INSPECTIONS_READ,
+    PERMISSIONS.MISSION_REPORTS_SUBMIT,
+    PERMISSIONS.MISSION_REPORTS_READ,
     PERMISSIONS.UNIONS_READ,
   ],
   DISTRIBUTEUR: [
@@ -238,16 +263,48 @@ export const ROLE_DEFAULT_TAB: Record<RoleType, string> = {
   AUTHORITY: 'dashboard',
 };
 
-export function hasRolePermission(role: RoleType, permission: PermissionKey): boolean {
+export const OFFLINE_ALLOWED_TABS: string[] = ['enrolment', 'dashboard', 'field'];
+
+export function hasRolePermission(
+  role: RoleType,
+  permission: PermissionKey,
+  isOfflineSession: boolean = false
+): boolean {
+  if (isOfflineSession) {
+    // Strictly restrict offline permissions to non-authoritative data collection only
+    const offlinePermittedPermissions: PermissionKey[] = [
+      PERMISSIONS.DRIVERS_CREATE,
+      PERMISSIONS.DRIVERS_READ,
+      PERMISSIONS.DOCUMENTS_UPLOAD,
+      PERMISSIONS.FIELD_RECEIPTS_CREATE,
+      PERMISSIONS.FIELD_RECEIPTS_READ,
+      PERMISSIONS.INSPECTIONS_CREATE,
+      PERMISSIONS.INSPECTIONS_READ,
+      PERMISSIONS.MISSION_REPORTS_SUBMIT,
+      PERMISSIONS.MISSION_REPORTS_READ,
+    ];
+    return offlinePermittedPermissions.includes(permission);
+  }
   const perms = ROLE_PERMISSIONS[role] || [];
   return perms.includes(permission);
 }
 
-export function isTabAllowed(role: RoleType, tabId: string): boolean {
+export function isTabAllowed(
+  role: RoleType,
+  tabId: string,
+  isOfflineSession: boolean = false
+): boolean {
+  if (isOfflineSession) {
+    // Strict containment: offline sessions cannot perform administrative, financial, badge or validation operations
+    return OFFLINE_ALLOWED_TABS.includes(tabId);
+  }
   const allowed = ROLE_ALLOWED_TABS[role] || [];
   return allowed.includes(tabId);
 }
 
-export function getDefaultTab(role: RoleType): string {
+export function getDefaultTab(role: RoleType, isOfflineSession: boolean = false): string {
+  if (isOfflineSession) {
+    return 'enrolment'; // Default directly to enrolment desk when operating offline
+  }
   return ROLE_DEFAULT_TAB[role] || 'dashboard';
 }

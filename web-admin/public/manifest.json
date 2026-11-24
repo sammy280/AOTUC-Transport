@@ -1,0 +1,19 @@
+{
+  "name": "AOTUC — Autorité Organisatrice des Transports Urbains de Conakry",
+  "short_name": "AOTUC Admin",
+  "description": "Portail d'Administration, Enrôlement et Titres de Transport — République de Guinée",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/aotuc-logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

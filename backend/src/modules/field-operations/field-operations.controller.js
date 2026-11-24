@@ -4,6 +4,7 @@ import {
   updateAssignmentSchema,
   reassignAgentSchema,
   updateStatusSchema,
+  cancelMissionSchema,
   createReceiptSchema,
   createTeamSchema,
   queryAssignmentsSchema,
@@ -78,6 +79,20 @@ export class FieldOperationsController {
       return res.status(200).json({
         success: true,
         message: `Statut de mission mis à jour : ${assignment.status}.`,
+        data: assignment,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async cancelAssignment(req, res, next) {
+    try {
+      const validatedBody = cancelMissionSchema.parse(req.body);
+      const assignment = await FieldOperationsService.cancelAssignment(req.user, req.params.id, validatedBody);
+      return res.status(200).json({
+        success: true,
+        message: 'Mission de terrain annulée avec succès.',
         data: assignment,
       });
     } catch (err) {

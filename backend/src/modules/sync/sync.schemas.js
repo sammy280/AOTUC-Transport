@@ -8,9 +8,16 @@ export const syncPullSchema = z.object({
 
 export const syncPushItemSchema = z.object({
   clientGeneratedId: z.string().uuid('Identifiant client UUID obligatoire.'),
-  entityType: z.enum(['DRIVER', 'VEHICLE', 'OWNER', 'DOCUMENT', 'UNION', 'TRANSPORT_UNION'], {
-    errorMap: () => ({ message: 'Type d entité non valide (DRIVER, VEHICLE, OWNER, DOCUMENT, UNION, TRANSPORT_UNION).' }),
-  }),
+  agentUserId: z.string().optional(),
+  entityType: z.enum(
+    ['DRIVER', 'VEHICLE', 'OWNER', 'DOCUMENT', 'UNION', 'TRANSPORT_UNION', 'FIELD_INSPECTION', 'MISSION_REPORT'],
+    {
+      errorMap: () => ({
+        message:
+          'Type d entité non valide (DRIVER, VEHICLE, OWNER, DOCUMENT, UNION, TRANSPORT_UNION, FIELD_INSPECTION, MISSION_REPORT).',
+      }),
+    }
+  ),
   payload: z.record(z.any()),
   createdOfflineAt: z.string().datetime(),
 });

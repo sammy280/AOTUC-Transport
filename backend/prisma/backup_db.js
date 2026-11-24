@@ -41,6 +41,10 @@ async function backupDatabase() {
     financialAccounts,
     financialLedgerEntries,
     auditLogs,
+    fieldAssignments,
+    fieldTeams,
+    fieldReceipts,
+    authorities,
   ] = await Promise.all([
     prisma.commune.findMany(),
     prisma.role.findMany(),
@@ -68,6 +72,10 @@ async function backupDatabase() {
     prisma.financialAccount.findMany(),
     prisma.financialLedgerEntry.findMany(),
     prisma.auditLog.findMany(),
+    prisma.fieldAssignment.findMany(),
+    prisma.fieldTeam.findMany(),
+    prisma.fieldReceipt.findMany(),
+    prisma.authority.findMany(),
   ]);
 
   const payload = {
@@ -83,6 +91,10 @@ async function backupDatabase() {
       transportLines: transportLines.length,
       transportStops: transportStops.length,
       auditLogs: auditLogs.length,
+      fieldAssignments: fieldAssignments.length,
+      fieldTeams: fieldTeams.length,
+      fieldReceipts: fieldReceipts.length,
+      authorities: authorities.length,
     },
     data: {
       communes,
@@ -111,6 +123,10 @@ async function backupDatabase() {
       financialAccounts,
       financialLedgerEntries,
       auditLogs,
+      fieldAssignments,
+      fieldTeams,
+      fieldReceipts,
+      authorities,
     },
   };
 

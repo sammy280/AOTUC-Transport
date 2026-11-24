@@ -192,9 +192,14 @@ export class AuthService {
       throw new AppError('Identifiants de connexion invalides.', 401, 'INVALID_CREDENTIALS');
     }
 
-    if (!user.isActive || RevocationRegistry.isDeactivated(user.id)) {
+    if (!user.isActive || user.accountStatus === 'INACTIVE' || RevocationRegistry.isDeactivated(user.id)) {
       logger.warn('Failed login attempt: account inactive', { userId: user.id });
       throw new AppError('Ce compte utilisateur a été désactivé par un administrateur.', 403, 'ACCOUNT_INACTIVE');
+    }
+
+    if (user.accountStatus === 'SUSPENDED') {
+      logger.warn('Failed login attempt: account suspended', { userId: user.id });
+      throw new AppError('Ce compte utilisateur est suspendu par un superviseur.', 403, 'ACCOUNT_SUSPENDED');
     }
 
     // 2. Verify password with Argon2 (or verify dev fallback)

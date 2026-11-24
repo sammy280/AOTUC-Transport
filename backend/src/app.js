@@ -127,6 +127,7 @@ app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/audit', auditRoutes);
 app.use('/api/v1/verification', verificationRoutes);
 app.use('/api/v1/field-operations', fieldOperationsRoutes);
+app.use('/api/v1/field', fieldOperationsRoutes);
 app.use('/api/v1/unions', unionRoutes);
 app.use('/api/v1/authorities', authorityRoutes);
 

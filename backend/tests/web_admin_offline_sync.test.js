@@ -208,6 +208,37 @@ describe('AOTUC Web-Admin Offline Enrollment & Synchronization Suite', () => {
 
       expect(res.status).toBe(403);
     });
+
+    it('rejects sync drafts when agentUserId does not match authenticated user (ATTRIBUTION_MISMATCH)', async () => {
+      const res = await request(app)
+        .post('/api/v1/sync/push')
+        .set('Authorization', `Bearer ${agentToken}`)
+        .send({
+          deviceId: `web-test-${testSuffix}`,
+          items: [
+            {
+              clientGeneratedId: crypto.randomUUID(),
+              agentUserId: 'different-agent-user-id-999',
+              entityType: 'DRIVER',
+              createdOfflineAt: new Date().toISOString(),
+              payload: {
+                agentUserId: 'different-agent-user-id-999',
+                firstName: 'Spoofed',
+                lastName: `Attribution-${testSuffix}`,
+                nin: `NIN-ATT-${testSuffix}`,
+                phoneNumber: `+224625${testSuffix}`,
+                drivingLicenseNumber: `PC-ATT-${testSuffix}`,
+                commune: testCommune?.name || 'Matoto',
+              },
+            },
+          ],
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.failed).toBe(1);
+      expect(res.body.data.results[0].status).toBe('ERROR');
+      expect(res.body.data.results[0].errorCode).toBe('ATTRIBUTION_MISMATCH');
+    });
   });
 
   describe('2. End-to-End Web-Admin Driver & Vehicle Sync with Documents', () => {
