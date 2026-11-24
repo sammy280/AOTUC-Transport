@@ -61,7 +61,7 @@ export const AotucBrandLogo: React.FC<AotucBrandLogoProps> = ({
           <img
             src={AOTUC_BRANDING.assets.seal}
             alt={AOTUC_BRANDING.fullName}
-            className="w-8 h-8 object-contain rounded-full shadow-xs bg-white p-0.5 border border-slate-200 dark:border-slate-700 flex-shrink-0 select-none"
+            className="w-8 h-8 object-contain rounded-full shadow-xs bg-white border border-slate-200 dark:border-slate-700 flex-shrink-0 select-none"
           />
           <div className="leading-tight">
             <div className="flex items-center space-x-1.5">
@@ -98,7 +98,7 @@ export const AotucBrandLogo: React.FC<AotucBrandLogoProps> = ({
         <img
           src={AOTUC_BRANDING.assets.seal}
           alt={AOTUC_BRANDING.fullName}
-          className="w-5 h-5 object-contain rounded-full shadow-2xs bg-white p-0.2 border border-slate-200 dark:border-slate-700 flex-shrink-0 select-none"
+          className="w-5 h-5 object-contain rounded-full shadow-2xs bg-white border border-slate-200 dark:border-slate-700 flex-shrink-0 select-none"
         />
         <span className="font-black text-xs text-slate-900 dark:text-white tracking-tight">
           {AOTUC_BRANDING.acronym}
@@ -112,7 +112,7 @@ export const AotucBrandLogo: React.FC<AotucBrandLogoProps> = ({
     <img
       src={AOTUC_BRANDING.assets.seal}
       alt={AOTUC_BRANDING.fullName}
-      className={`${sealSizes[size]} object-contain rounded-full shadow-sm bg-white p-0.5 border border-slate-200 dark:border-slate-700 select-none ${className}`}
+      className={`${sealSizes[size]} object-contain rounded-full shadow-sm bg-white border border-slate-200 dark:border-slate-700 select-none ${className}`}
     />
   );
 };

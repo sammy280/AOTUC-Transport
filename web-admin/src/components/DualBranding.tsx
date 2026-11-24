@@ -38,7 +38,7 @@ export const DualBranding: React.FC<DualBrandingProps> = ({
           <img
             src={AOTUC_BRANDING.assets.nationalCoatOfArms}
             alt="Armoiries Officielles de la République de Guinée"
-            className="w-10 h-10 sm:w-12 sm:h-12 object-contain filter drop-shadow-xs select-none"
+            className="w-9 h-9 sm:w-10 sm:h-10 object-contain filter drop-shadow-xs select-none"
           />
           <div className="leading-tight select-none">
             <span className="block text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
@@ -58,7 +58,7 @@ export const DualBranding: React.FC<DualBrandingProps> = ({
           <img
             src={AOTUC_BRANDING.assets.logo}
             alt="Logo Officiel AOTUC"
-            className="w-8 h-8 sm:w-9 sm:h-9 object-contain rounded-full shadow-xs bg-white p-0.5 border border-slate-200 dark:border-slate-700 flex-shrink-0 select-none"
+            className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-full shadow-xs bg-white border border-slate-200 dark:border-slate-700 flex-shrink-0 select-none"
           />
           <div className="min-w-0 leading-tight">
             <div className="flex items-center space-x-1.5">
@@ -96,7 +96,7 @@ export const DualBranding: React.FC<DualBrandingProps> = ({
           <img
             src={AOTUC_BRANDING.assets.nationalCoatOfArms}
             alt="Armoiries République de Guinée"
-            className="w-11 h-11 object-contain filter drop-shadow-xs flex-shrink-0 select-none"
+            className="w-9 h-9 sm:w-10 sm:h-10 object-contain filter drop-shadow-xs flex-shrink-0 select-none"
           />
           <div className="leading-tight min-w-0">
             <span className="block text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider truncate">
@@ -113,7 +113,7 @@ export const DualBranding: React.FC<DualBrandingProps> = ({
           <img
             src={AOTUC_BRANDING.assets.logo}
             alt="Logo AOTUC"
-            className="w-7 h-7 object-contain rounded-full bg-white p-0.5 border border-slate-200 dark:border-slate-700 shadow-2xs flex-shrink-0"
+            className="w-6 h-6 sm:w-7 sm:h-7 object-contain rounded-full bg-white border border-slate-200 dark:border-slate-700 shadow-2xs flex-shrink-0"
           />
           <div className="min-w-0">
             <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block truncate leading-tight">
@@ -133,33 +133,33 @@ export const DualBranding: React.FC<DualBrandingProps> = ({
   // ---------------------------------------------------------------------------
   if (variant === 'hero') {
     return (
-      <div className={`space-y-6 text-center lg:text-left ${className}`}>
+      <div className={`space-y-5 text-center lg:text-left ${className}`}>
         {/* Primary Emblem & Institutional Title */}
-        <div className="flex flex-col items-center lg:items-start space-y-3">
+        <div className="flex flex-col items-center lg:items-start space-y-2.5">
           <img
             src={AOTUC_BRANDING.assets.nationalCoatOfArms}
             alt="Armoiries Officielles de la République de Guinée"
-            className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 object-contain filter drop-shadow-lg select-none"
+            className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 object-contain filter drop-shadow-md select-none"
           />
-          <div className="space-y-1">
-            <span className="text-[11px] sm:text-xs font-black uppercase tracking-widest text-[#FCD116] block">
+          <div className="space-y-0.5">
+            <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-[#FCD116] block">
               {AOTUC_BRANDING.countryMotto}
             </span>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white uppercase">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-white uppercase">
               {AOTUC_BRANDING.countryOfficial}
             </h1>
-            <div className="text-xs sm:text-sm font-bold text-slate-300 uppercase tracking-wider">
+            <div className="text-xs sm:text-sm font-semibold text-slate-300 uppercase tracking-wider">
               {AOTUC_BRANDING.ministry}
             </div>
           </div>
         </div>
 
         {/* Secondary Platform Identity Lockup */}
-        <div className="inline-flex items-center space-x-3 bg-slate-800/90 dark:bg-slate-800/90 border border-slate-700 px-4 py-2.5 rounded-2xl shadow-md">
+        <div className="inline-flex items-center space-x-3 bg-slate-800/90 dark:bg-slate-800/90 border border-slate-700 px-3.5 py-2 rounded-2xl shadow-md">
           <img
             src={AOTUC_BRANDING.assets.logo}
             alt="Logo AOTUC"
-            className="w-9 h-9 sm:w-10 sm:h-10 object-contain rounded-full bg-white p-0.5 border border-slate-600 shadow-xs flex-shrink-0"
+            className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-full bg-white border border-slate-600 shadow-xs flex-shrink-0"
           />
           <div className="text-left">
             <span className="text-xs sm:text-sm font-black text-white block tracking-tight">
@@ -173,10 +173,10 @@ export const DualBranding: React.FC<DualBrandingProps> = ({
 
         {/* Official Platform Slogan */}
         <div>
-          <div className="inline-flex items-center px-3 py-1.5 rounded-lg bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-semibold italic">
+          <div className="inline-flex items-center px-3 py-1 rounded-lg bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-semibold italic">
             {AOTUC_BRANDING.mottoQuote}
           </div>
-          <p className="text-xs text-slate-400 mt-2.5 leading-relaxed max-w-md mx-auto lg:mx-0">
+          <p className="text-xs text-slate-400 mt-2 leading-relaxed max-w-md mx-auto lg:mx-0">
             {AOTUC_BRANDING.description}
           </p>
         </div>
@@ -189,34 +189,34 @@ export const DualBranding: React.FC<DualBrandingProps> = ({
   // ---------------------------------------------------------------------------
   if (variant === 'card') {
     return (
-      <div className={`p-5 sm:p-7 bg-slate-50/80 dark:bg-slate-800/70 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4 ${className}`}>
-        <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
-          {/* Primary Guinea Emblem (Larger) */}
+      <div className={`p-4 sm:p-5 bg-slate-50/80 dark:bg-slate-800/70 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4 ${className}`}>
+        <div className="flex items-center space-x-3 sm:space-x-3.5 min-w-0">
+          {/* Primary Guinea Emblem (Compact & Visible) */}
           <img
             src={AOTUC_BRANDING.assets.nationalCoatOfArms}
             alt="Armoiries République de Guinée"
-            className="w-13 h-13 sm:w-15 sm:h-15 object-contain filter drop-shadow-xs flex-shrink-0 select-none"
+            className="w-9 h-9 sm:w-10 sm:h-10 object-contain filter drop-shadow-xs flex-shrink-0 select-none"
           />
 
           {/* Institutional Divider */}
-          <div className="h-10 w-px bg-slate-200 dark:bg-slate-700 flex-shrink-0" />
+          <div className="h-7 w-px bg-slate-200 dark:bg-slate-700 flex-shrink-0" />
 
-          {/* Secondary AOTUC Logo */}
+          {/* Secondary AOTUC Logo (Perfect edge-to-edge fit) */}
           <img
             src={AOTUC_BRANDING.assets.logo}
             alt="Logo AOTUC"
-            className="w-10 h-10 sm:w-11 sm:h-11 object-contain rounded-full bg-white dark:bg-slate-800 p-0.5 border border-slate-200 dark:border-slate-700 shadow-xs flex-shrink-0"
+            className="w-8 h-8 sm:w-9 sm:h-9 object-contain rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs flex-shrink-0"
           />
 
           {/* Typography */}
           <div className="min-w-0">
-            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
               {AOTUC_BRANDING.countryOfficial}
             </span>
-            <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight leading-tight truncate">
+            <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight leading-tight truncate">
               Portail d Accès Sécurisé
             </h2>
-            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+            <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
               AOTUC-TRANSPORT • Console de Gestion
             </p>
           </div>
@@ -235,17 +235,17 @@ export const DualBranding: React.FC<DualBrandingProps> = ({
         <img
           src={AOTUC_BRANDING.assets.nationalCoatOfArms}
           alt="Armoiries Officielles de la République de Guinée"
-          className="w-12 h-12 sm:w-14 sm:h-14 object-contain filter drop-shadow-xs flex-shrink-0 select-none"
+          className="w-10 h-10 sm:w-11 sm:h-11 object-contain filter drop-shadow-xs flex-shrink-0 select-none"
         />
 
         {/* Divider */}
-        <div className="h-9 w-px bg-slate-200 dark:bg-slate-700 flex-shrink-0" />
+        <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 flex-shrink-0" />
 
         {/* Secondary Identity: AOTUC */}
         <img
           src={AOTUC_BRANDING.assets.logo}
           alt="Logo Officiel AOTUC"
-          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-contain p-0.5 border border-slate-200 dark:border-slate-700 shadow-xs bg-white flex-shrink-0"
+          className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-contain border border-slate-200 dark:border-slate-700 shadow-xs bg-white flex-shrink-0"
         />
 
         {/* Header Titles */}
@@ -274,7 +274,7 @@ export const DualBranding: React.FC<DualBrandingProps> = ({
       <img
         src={AOTUC_BRANDING.assets.nationalCoatOfArms}
         alt="République de Guinée"
-        className="w-7 h-7 object-contain flex-shrink-0"
+        className="w-6 h-6 object-contain flex-shrink-0"
       />
       <span className="text-xs font-black text-slate-900 dark:text-white tracking-wider uppercase">
         {AOTUC_BRANDING.countryOfficial}
@@ -283,7 +283,7 @@ export const DualBranding: React.FC<DualBrandingProps> = ({
       <img
         src={AOTUC_BRANDING.assets.logo}
         alt="AOTUC"
-        className="w-5 h-5 rounded-full object-contain bg-white p-0.2 border border-slate-200 dark:border-slate-700"
+        className="w-5 h-5 rounded-full object-contain bg-white border border-slate-200 dark:border-slate-700"
       />
       <span className="text-xs font-bold text-slate-700 dark:text-slate-300 tracking-tight">
         AOTUC

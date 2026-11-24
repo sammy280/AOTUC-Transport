@@ -154,7 +154,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <img
                 src="/aotuc-logo.png"
                 alt="AOTUC"
-                className="w-4 h-4 rounded-full object-contain bg-white p-0.2 border border-slate-200 dark:border-slate-700"
+                className="w-4 h-4 rounded-full object-contain bg-white border border-slate-200 dark:border-slate-700"
               />
               <span className="text-[10px] font-black text-slate-700 dark:text-slate-300">GUINÉE • AOTUC</span>
             </div>
