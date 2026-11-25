@@ -67,17 +67,28 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [enrolledUsers, setEnrolledUsers] = useState<EnrolledUserSummary[]>([]);
   // Connectivity and Enrolled Accounts Discovery
   useEffect(() => {
-    const handleOnline = () => setIsNetworkOnline(true);
-    const handleOffline = () => setIsNetworkOnline(false);
+    const handleOnline = () => {
+      setIsNetworkOnline(true);
+    };
+    const handleOffline = () => {
+      setIsNetworkOnline(false);
+      getEnrolledOfflineUsers().then((users) => {
+        setEnrolledUsers(users);
+        if (users.length > 0) {
+          setIdentifier((prev) => prev || users[0].identifier);
+        }
+      });
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Load locally enrolled accounts
+    // Pre-load locally enrolled accounts (ready for offline transitions)
     getEnrolledOfflineUsers().then((users) => {
       setEnrolledUsers(users);
-      if (users.length > 0 && !identifier) {
-        setIdentifier(users[0].identifier);
+      // Only auto-fill if device is genuinely offline upon arrival
+      if (typeof navigator !== 'undefined' && !navigator.onLine && users.length > 0) {
+        setIdentifier((prev) => prev || users[0].identifier);
       }
     });
 
@@ -267,8 +278,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </div>
             )}
 
-            {/* Enrolled Offline Accounts Quick Select */}
-            {enrolledUsers.length > 0 && (
+            {/* Enrolled Offline Accounts Quick Select (Strictly shown only when device is offline) */}
+            {!isNetworkOnline && enrolledUsers.length > 0 && (
               <div className="mx-6 sm:mx-8 mt-4 p-3 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-xl">
                 <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-2 flex items-center justify-between">
                   <span className="flex items-center space-x-1.5">
