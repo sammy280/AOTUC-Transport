@@ -5,7 +5,8 @@ export type RoleType =
   | 'AGENT_TERRAIN' 
   | 'SYNDICAT' 
   | 'DISTRIBUTEUR'
-  | 'AUTHORITY';
+  | 'AUTHORITY'
+  | 'IT';
 
 export type ValidationStatus = 
   | 'BROUILLON' 

@@ -22,6 +22,7 @@ import verificationRoutes from './modules/verification/verification.routes.js';
 import fieldOperationsRoutes from './modules/field-operations/field-operations.routes.js';
 import unionRoutes from './modules/unions/union.routes.js';
 import authorityRoutes from './modules/authorities/authority.routes.js';
+import itRoutes from './modules/it/it.routes.js';
 
 const app = express();
 
@@ -130,6 +131,8 @@ app.use('/api/v1/field-operations', fieldOperationsRoutes);
 app.use('/api/v1/field', fieldOperationsRoutes);
 app.use('/api/v1/unions', unionRoutes);
 app.use('/api/v1/authorities', authorityRoutes);
+app.use('/api/v1/it', itRoutes);
+app.use('/api/it', itRoutes);
 
 // 7. 404 Route Not Found Handler
 app.use((req, res, next) => {

@@ -15,7 +15,7 @@ router.get('/communes', UsersController.listCommunes);
 router.get(
   '/',
   (req, res, next) => {
-    if (req.user?.roles?.includes('SUPER_ADMIN') || req.user?.roles?.includes('DIRECTOR') || req.user?.permissions?.includes(PERMISSIONS.USERS_READ)) {
+    if (req.user?.roles?.includes('SUPER_ADMIN') || req.user?.roles?.includes('DIRECTOR') || req.user?.roles?.includes('IT') || req.user?.permissions?.includes(PERMISSIONS.USERS_READ)) {
       return next();
     }
     return requirePermissions(PERMISSIONS.USERS_READ)(req, res, next);
@@ -27,7 +27,7 @@ router.get(
 router.post(
   '/',
   (req, res, next) => {
-    if (req.user?.roles?.includes('SUPER_ADMIN') || req.user?.roles?.includes('DIRECTOR') || req.user?.permissions?.includes(PERMISSIONS.USERS_CREATE)) {
+    if (req.user?.roles?.includes('SUPER_ADMIN') || req.user?.roles?.includes('DIRECTOR') || req.user?.roles?.includes('IT') || req.user?.permissions?.includes(PERMISSIONS.USERS_CREATE)) {
       return next();
     }
     return requirePermissions(PERMISSIONS.USERS_CREATE)(req, res, next);

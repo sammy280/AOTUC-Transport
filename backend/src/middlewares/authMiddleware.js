@@ -295,26 +295,12 @@ export function requireCommuneScope(sourceLocation = 'params', fieldName = 'comm
       return next(new AppError('Authentification requise.', 401, 'UNAUTHORIZED'));
     }
 
-    // Director has national scope across all communes
-    if (req.user.roles.includes('DIRECTOR')) {
-      return next();
-    }
-
-    // Extract target communeId from request
-    const targetCommuneId = req[sourceLocation]?.[fieldName];
-
-    if (!targetCommuneId) {
-      return next(
-        new AppError(
-          `Paramètre de commune manquant (${fieldName}).`,
-          400,
-          'MISSING_COMMUNE_PARAM'
-        )
-      );
-    }
-
-    // Super Admin has system scope, but if accessing a commune-specific endpoint, check
-    if (req.user.roles.includes('SUPER_ADMIN')) {
+    // Director, Super Admin, and IT have national/global scope across all communes
+    if (
+      req.user.roles.includes('DIRECTOR') ||
+      req.user.roles.includes('SUPER_ADMIN') ||
+      req.user.roles.includes('IT')
+    ) {
       return next();
     }
 

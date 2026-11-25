@@ -12,6 +12,7 @@ import {
   Compass,
   Building2,
   ShieldCheck,
+  Database,
   X,
   LogOut,
 } from 'lucide-react';
@@ -42,6 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const allMenuItems = [
     { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
+    { id: 'it-console', label: 'IT — Contrôle Informatique', icon: Database },
     { id: 'field', label: 'Opérations de Terrain', icon: Compass },
     {
       id: 'validation',

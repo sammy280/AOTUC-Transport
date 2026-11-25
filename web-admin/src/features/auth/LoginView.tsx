@@ -32,6 +32,8 @@ const getRoleLabel = (role: RoleType): string => {
   switch (role) {
     case 'SUPER_ADMIN':
       return 'Super Administrateur DSI';
+    case 'IT':
+      return 'IT — Contrôle Informatique';
     case 'DIRECTOR':
       return 'Directeur Général AOTUC';
     case 'CHEF_SERVICE':
@@ -142,8 +144,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
             communeName:
               apiUser?.commune?.name ||
               apiUser?.communeName ||
-              (primaryRole === 'SUPER_ADMIN'
-                ? 'Toutes Communes'
+              (primaryRole === 'SUPER_ADMIN' || primaryRole === 'IT'
+                ? 'Toutes Communes (Global)'
                 : 'Direction Générale'),
             communeId: apiUser?.communeId || apiUser?.commune?.id || null,
             email: apiUser?.email || cleanIdentifier,

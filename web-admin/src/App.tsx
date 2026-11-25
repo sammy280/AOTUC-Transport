@@ -19,6 +19,7 @@ import UserManagementView from './features/users/UserManagementView';
 import FieldOperationsView from './features/field/FieldOperationsView';
 import UnionManagementView from './features/unions/UnionManagementView';
 import AuthorityManagementView from './features/authorities/AuthorityManagementView';
+import ITManagementView from './features/it/ITManagementView';
 import ToastContainer from './components/ToastContainer';
 import LoginView from './features/auth/LoginView';
 import AccessDenied from './components/AccessDenied';
@@ -403,6 +404,10 @@ export const App: React.FC = () => {
                   onOpenValidationQueue={() => setCurrentTab('validation')}
                   onNavigateTab={setCurrentTab}
                 />
+              )}
+
+              {currentTab === 'it-console' && (
+                <ITManagementView currentUser={currentUser} />
               )}
 
               {currentTab === 'field' && (

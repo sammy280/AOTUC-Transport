@@ -51,6 +51,7 @@ enum RoleType {
   SYNDICAT
   DISTRIBUTEUR
   AUTHORITY
+  IT
 }
 
 model Role {
