@@ -14,9 +14,10 @@ export class AgentManagementService {
   static enforceCommuneScope(actorUser, targetCommuneId = null) {
     const isSuperAdmin = actorUser?.roles?.includes('SUPER_ADMIN');
     const isDirector = actorUser?.roles?.includes('DIRECTOR');
+    const isIT = actorUser?.roles?.includes('IT');
     const isChefService = actorUser?.roles?.includes('CHEF_SERVICE');
 
-    if (isSuperAdmin || isDirector) {
+    if (isSuperAdmin || isDirector || isIT) {
       return targetCommuneId || null;
     }
 
@@ -81,28 +82,38 @@ export class AgentManagementService {
       communeId: queryCommuneId,
       teamId,
       status,
+      role,
     } = query;
 
     // Enforce territorial restriction
     const effectiveCommuneId = this.enforceCommuneScope(actorUser, queryCommuneId);
     const skip = (page - 1) * limit;
 
-    const isChefService = actorUser?.roles?.includes('CHEF_SERVICE') && !actorUser?.roles?.includes('SUPER_ADMIN');
+    const isChefService =
+      actorUser?.roles?.includes('CHEF_SERVICE') &&
+      !actorUser?.roles?.includes('SUPER_ADMIN') &&
+      !actorUser?.roles?.includes('DIRECTOR') &&
+      !actorUser?.roles?.includes('IT');
+
+    const targetRole = role || (isChefService ? 'AGENT_TERRAIN' : null);
 
     const where = {
-      // If Chef de Service, strictly restrict to AGENT_TERRAIN role only
-      ...(isChefService
+      ...(targetRole
         ? {
             roles: {
               some: {
-                role: { name: 'AGENT_TERRAIN' },
+                role: { name: targetRole },
               },
             },
           }
         : {}),
       ...(effectiveCommuneId ? { communeId: effectiveCommuneId } : {}),
       ...(teamId ? { assignedTeamId: teamId } : {}),
-      ...(status ? { accountStatus: status } : {}),
+      ...(status
+        ? status === 'ACTIVE'
+          ? { accountStatus: 'ACTIVE', isActive: true }
+          : { accountStatus: status }
+        : {}),
       ...(search
         ? {
             OR: [
@@ -153,13 +164,16 @@ export class AgentManagementService {
       prisma.user.count({ where }),
     ]);
 
+    const formattedItems = agents.map((a) => ({
+      ...a,
+      roles: a.roles.map((r) => r.role.name),
+      missionsCount: a._count.assignedMissionAgents,
+      inspectionsCount: a._count.agentFieldInspections,
+    }));
+
     return {
-      items: agents.map((a) => ({
-        ...a,
-        roles: a.roles.map((r) => r.role.name),
-        missionsCount: a._count.assignedMissionAgents,
-        inspectionsCount: a._count.agentFieldInspections,
-      })),
+      data: formattedItems,
+      items: formattedItems,
       pagination: {
         page: Number(page),
         limit: Number(limit),

@@ -154,6 +154,7 @@ export const queryAgentsSchema = z.object({
   communeId: z.string().optional(),
   teamId: z.string().optional(),
   status: z.enum(['ACTIVE', 'SUSPENDED', 'INACTIVE']).optional(),
+  role: z.string().optional(),
   search: z.string().optional(),
   page: z.string().optional().transform((v) => (v ? parseInt(v, 10) : 1)),
   limit: z.string().optional().transform((v) => (v ? parseInt(v, 10) : 50)),

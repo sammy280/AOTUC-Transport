@@ -28,12 +28,14 @@ import {
   FieldDashboardSummary,
   FieldReceiptItem,
   FieldAssignmentStatus,
+  AgentItem,
 } from '../../types';
 import { buildApiUrl, getStoredAuthToken } from '../../utils/api';
 import { OFFICIAL_COMMUNES } from '../../config/communes';
 import { InspectionsTab } from './InspectionsTab';
 import { MissionReportsTab } from './MissionReportsTab';
 import { AgentsManagementTab } from './AgentsManagementTab';
+import { AgentSearchSelect } from './AgentSearchSelect';
 
 interface FieldOperationsViewProps {
   currentUser: UserContext;
@@ -45,7 +47,9 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
   const [summary, setSummary] = useState<FieldDashboardSummary | null>(null);
   const [assignments, setAssignments] = useState<FieldAssignmentItem[]>([]);
   const [receipts, setReceipts] = useState<FieldReceiptItem[]>([]);
-  const [fieldAgents, setFieldAgents] = useState<Array<{ id: string; firstName: string; lastName: string; phoneNumber?: string }>>([]);
+  const [fieldAgents, setFieldAgents] = useState<AgentItem[]>([]);
+  const [isAgentsLoading, setIsAgentsLoading] = useState<boolean>(false);
+  const [agentsError, setAgentsError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,7 +98,37 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
 
   const isChef = currentUser.role === 'CHEF_SERVICE';
   const isAgent = currentUser.role === 'AGENT_TERRAIN';
-  const canManage = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'DIRECTOR' || isChef;
+  const canManage =
+    currentUser.role === 'SUPER_ADMIN' ||
+    currentUser.role === 'DIRECTOR' ||
+    currentUser.role === 'IT' ||
+    isChef;
+
+  const fetchFieldAgents = useCallback(async () => {
+    setIsAgentsLoading(true);
+    setAgentsError(null);
+    try {
+      const token = getStoredAuthToken();
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      // Use dedicated field agents endpoint:
+      // Scoped automatically for CHEF_SERVICE (by commune) and global for SUPER_ADMIN / DIRECTOR / IT
+      const agentsUrl = buildApiUrl('/api/v1/field/agents?role=AGENT_TERRAIN&status=ACTIVE&limit=100');
+      const agentsRes = await fetch(agentsUrl, { headers });
+      if (!agentsRes.ok) {
+        const errJson = await agentsRes.json().catch(() => ({}));
+        throw new Error(errJson.message || 'Impossible de charger la liste des agents de terrain.');
+      }
+      const json = await agentsRes.json();
+      setFieldAgents(json.data || []);
+    } catch (err: unknown) {
+      const e = err as Error;
+      setAgentsError(e.message || 'Erreur lors du chargement des agents de terrain.');
+    } finally {
+      setIsAgentsLoading(false);
+    }
+  }, []);
 
   const fetchDashboardData = useCallback(async () => {
     setIsLoading(true);
@@ -140,23 +174,19 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
       }
 
       // 4. Field Agents list for assignments dropdown
-      const usersUrl = buildApiUrl('/api/v1/users?role=AGENT_TERRAIN&limit=100');
-      const usersRes = await fetch(usersUrl, { headers });
-      if (usersRes.ok) {
-        const usersJson = await usersRes.json();
-        setFieldAgents(usersJson.data || []);
-      }
+      await fetchFieldAgents();
     } catch (err: unknown) {
       const e = err as Error;
       setError(e.message || 'Erreur lors du chargement des opérations de terrain.');
     } finally {
       setIsLoading(false);
     }
-  }, [communeFilter, statusFilter, searchTerm, isChef, currentUser.communeId]);
+  }, [communeFilter, statusFilter, searchTerm, isChef, currentUser.communeId, fetchFieldAgents]);
 
   useEffect(() => {
     fetchDashboardData();
-  }, [fetchDashboardData]);
+    fetchFieldAgents();
+  }, [fetchDashboardData, fetchFieldAgents]);
 
   // Capture GPS from browser/device
   const handleCaptureGps = () => {
@@ -403,7 +433,10 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
 
             {canManage && (
               <button
-                onClick={() => setShowCreateModal(true)}
+                onClick={() => {
+                  fetchFieldAgents();
+                  setShowCreateModal(true);
+                }}
                 className="min-h-[40px] flex items-center space-x-1.5 px-4 py-2 text-xs font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition"
               >
                 <Plus className="w-4 h-4" />
@@ -761,8 +794,13 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
                               </div>
                             )}
                             <div>
-                              <div className="font-medium text-slate-900 dark:text-slate-100">
-                                {assignment.assignedUser.firstName} {assignment.assignedUser.lastName}
+                              <div className="font-medium text-slate-900 dark:text-slate-100 flex items-center space-x-1.5">
+                                <span>{assignment.assignedUser.firstName} {assignment.assignedUser.lastName}</span>
+                                {assignment.assignedUser.employeeNumber && (
+                                  <span className="px-1 py-0.2 text-[9px] font-mono font-bold rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                                    {assignment.assignedUser.employeeNumber}
+                                  </span>
+                                )}
                               </div>
                               <div className="text-[10px] text-slate-400">
                                 {assignment.assignedUser.phoneNumber || assignment.assignedUser.email}
@@ -819,6 +857,7 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
                           {canManage && (
                             <button
                               onClick={() => {
+                                fetchFieldAgents();
                                 setSelectedAssignment(assignment);
                                 setReassignForm({
                                   assignedUserId: assignment.assignedUserId || '',
@@ -1047,23 +1086,22 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
                 </div>
               </div>
 
-              {/* Agent Selection */}
+              {/* Searchable Field Agent Selection */}
               <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Agent de terrain désigné
-                </label>
-                <select
+                <AgentSearchSelect
+                  label="Agent de terrain désigné"
                   value={createForm.assignedUserId}
-                  onChange={(e) => setCreateForm({ ...createForm, assignedUserId: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                >
-                  <option value="">Assigner plus tard (Mission Planifiée)</option>
-                  {fieldAgents.map((ag) => (
-                    <option key={ag.id} value={ag.id}>
-                      {ag.firstName} {ag.lastName} ({ag.phoneNumber || 'Agent'})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(agentId) => setCreateForm({ ...createForm, assignedUserId: agentId })}
+                  agents={fieldAgents}
+                  isLoading={isAgentsLoading}
+                  error={agentsError}
+                  onRetry={fetchFieldAgents}
+                  targetCommuneId={createForm.communeId}
+                  allowEmpty={true}
+                  emptyLabel="Assigner plus tard (Mission Planifiée)"
+                  placeholder="Rechercher par nom, matricule, commune..."
+                  helperText="Sélectionnez l'agent de terrain accrédité parmi les comptes AGENT_TERRAIN actifs."
+                />
               </div>
 
               {/* Dates */}
@@ -1181,23 +1219,37 @@ export const FieldOperationsView: React.FC<FieldOperationsViewProps> = ({ curren
             </div>
 
             <form onSubmit={handleReassignAgent} className="space-y-3">
+              {/* Current Agent Info */}
+              {selectedAssignment.assignedUser && (
+                <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs">
+                  <span className="text-slate-500">Agent actuel :</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {selectedAssignment.assignedUser.firstName} {selectedAssignment.assignedUser.lastName}
+                    {selectedAssignment.assignedUser.employeeNumber && (
+                      <span className="ml-1 font-mono text-[10px] text-emerald-600 dark:text-emerald-400">
+                        ({selectedAssignment.assignedUser.employeeNumber})
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
+
+              {/* Searchable New Agent Selection */}
               <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Nouvel Agent de Terrain *
-                </label>
-                <select
-                  required
+                <AgentSearchSelect
+                  label="Nouvel Agent de Terrain"
                   value={reassignForm.assignedUserId}
-                  onChange={(e) => setReassignForm({ ...reassignForm, assignedUserId: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                >
-                  <option value="">Sélectionner l agent</option>
-                  {fieldAgents.map((ag) => (
-                    <option key={ag.id} value={ag.id}>
-                      {ag.firstName} {ag.lastName}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(agentId) => setReassignForm({ ...reassignForm, assignedUserId: agentId })}
+                  agents={fieldAgents}
+                  isLoading={isAgentsLoading}
+                  error={agentsError}
+                  onRetry={fetchFieldAgents}
+                  targetCommuneId={selectedAssignment.communeId}
+                  allowEmpty={false}
+                  required={true}
+                  placeholder="Rechercher par nom, matricule..."
+                  helperText="Sélectionnez le nouvel agent accrédité auquel transférer la mission."
+                />
               </div>
 
               <div>

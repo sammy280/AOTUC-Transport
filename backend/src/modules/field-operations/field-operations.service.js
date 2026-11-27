@@ -120,7 +120,10 @@ export class FieldOperationsService {
    * Enforces role & territory restrictions.
    */
   static enforceTerritoryScope(user, targetCommuneId) {
-    const isSuperOrDirector = user.roles?.includes('SUPER_ADMIN') || user.roles?.includes('DIRECTOR');
+    const isSuperOrDirector =
+      user.roles?.includes('SUPER_ADMIN') ||
+      user.roles?.includes('DIRECTOR') ||
+      user.roles?.includes('IT');
     if (isSuperOrDirector) return; // National scope
 
     const isChefService = user.roles?.includes('CHEF_SERVICE');
@@ -133,6 +136,77 @@ export class FieldOperationsService {
         );
       }
     }
+  }
+
+  /**
+   * Independently validates that an agent is eligible for field mission assignment:
+   * 1. Agent must exist in the database.
+   * 2. Agent must possess the AGENT_TERRAIN role.
+   * 3. Agent must have an active account (accountStatus === 'ACTIVE' and isActive === true).
+   * 4. For CHEF_SERVICE (scoped supervisor), the agent must belong to the supervisor's commune.
+   */
+  static async validateEligibleAgent(actorUser, agentUserId, missionCommuneId = null) {
+    if (!agentUserId) return null;
+
+    const agent = await prisma.user.findUnique({
+      where: { id: agentUserId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phoneNumber: true,
+        employeeNumber: true,
+        accountStatus: true,
+        isActive: true,
+        communeId: true,
+        roles: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    });
+
+    if (!agent) {
+      throw new AppError('Agent désigné introuvable dans le système.', 404, 'AGENT_NOT_FOUND');
+    }
+
+    const roleNames = agent.roles?.map((r) => r.role?.name || r.roleName) || [];
+    if (!roleNames.includes('AGENT_TERRAIN')) {
+      throw new AppError(
+        `L'utilisateur ${agent.firstName} ${agent.lastName} n'est pas accrédité en tant qu'Agent de Terrain (rôle: ${roleNames.join(', ') || 'aucun'}).`,
+        400,
+        'INVALID_AGENT_ROLE'
+      );
+    }
+
+    if (!agent.isActive || agent.accountStatus !== 'ACTIVE') {
+      throw new AppError(
+        `Le compte de l'agent ${agent.firstName} ${agent.lastName} n'est pas actif (statut: ${agent.accountStatus || 'INACTIF'}). Seuls les agents actifs peuvent être affectés à une mission.`,
+        400,
+        'INACTIVE_AGENT'
+      );
+    }
+
+    const isGlobal =
+      actorUser?.roles?.includes('SUPER_ADMIN') ||
+      actorUser?.roles?.includes('DIRECTOR') ||
+      actorUser?.roles?.includes('IT');
+
+    const isChefService = actorUser?.roles?.includes('CHEF_SERVICE') && !isGlobal;
+
+    if (isChefService) {
+      if (agent.communeId && actorUser.communeId && agent.communeId !== actorUser.communeId) {
+        throw new AppError(
+          `Accès refusé : En tant que Chef de Service, vous ne pouvez assigner que des agents affectés à votre propre commune.`,
+          403,
+          'AGENT_COMMUNE_MISMATCH'
+        );
+      }
+    }
+
+    return agent;
   }
 
   /**
@@ -316,7 +390,7 @@ export class FieldOperationsService {
         team: { select: { id: true, code: true, name: true } },
         inspections: {
           include: {
-            agent: {
+            agentUser: {
               select: {
                 id: true,
                 firstName: true,
@@ -338,7 +412,7 @@ export class FieldOperationsService {
                 employeeNumber: true,
               },
             },
-            reviewedBy: {
+            reviewedByUser: {
               select: {
                 id: true,
                 firstName: true,
@@ -347,7 +421,7 @@ export class FieldOperationsService {
             },
             versions: {
               include: {
-                submittedBy: {
+                submittedByUser: {
                   select: {
                     id: true,
                     firstName: true,
@@ -423,10 +497,11 @@ export class FieldOperationsService {
 
     const reference = await this.generateAssignmentReference();
 
-    // Prepare multi-agent list
+    // Prepare multi-agent list and validate agent eligibility
     const agentsList = [];
     if (Array.isArray(data.assignedAgents) && data.assignedAgents.length > 0) {
       for (const ag of data.assignedAgents) {
+        await this.validateEligibleAgent(user, ag.userId, resolvedCommune.id);
         agentsList.push({
           userId: ag.userId,
           role: ag.role || 'CONTRIBUTOR',
@@ -434,6 +509,7 @@ export class FieldOperationsService {
       }
     } else if (data.assignedUserId || data.leadAgentId) {
       const leadId = data.assignedUserId || data.leadAgentId;
+      await this.validateEligibleAgent(user, leadId, resolvedCommune.id);
       agentsList.push({
         userId: leadId,
         role: 'LEAD',
@@ -593,6 +669,15 @@ export class FieldOperationsService {
       updateData.communeId = resolvedCommune.id;
     }
 
+    const targetCommuneId = updateData.communeId || existing.communeId;
+    if (Array.isArray(data.assignedAgents)) {
+      for (const ag of data.assignedAgents) {
+        await this.validateEligibleAgent(user, ag.userId, targetCommuneId);
+      }
+    } else if (data.assignedUserId) {
+      await this.validateEligibleAgent(user, data.assignedUserId, targetCommuneId);
+    }
+
     const updated = await prisma.$transaction(async (tx) => {
       // Handle multi-agent sync if assignedAgents passed
       if (Array.isArray(data.assignedAgents)) {
@@ -713,14 +798,7 @@ export class FieldOperationsService {
 
     this.enforceTerritoryScope(user, existing.communeId);
 
-    const newAgent = await prisma.user.findUnique({
-      where: { id: data.assignedUserId },
-      select: { id: true, firstName: true, lastName: true, email: true },
-    });
-
-    if (!newAgent) {
-      throw new AppError('Le nouvel agent assigné est introuvable.', 404, 'USER_NOT_FOUND');
-    }
+    const newAgent = await this.validateEligibleAgent(user, data.assignedUserId, existing.communeId);
 
     const previousAgentName = existing.assignedUser
       ? `${existing.assignedUser.firstName} ${existing.assignedUser.lastName}`
@@ -800,7 +878,7 @@ export class FieldOperationsService {
           actor: user?.id ? { connect: { id: user.id } } : undefined,
           action: 'FIELD_ASSIGNMENT_REASSIGNED',
           targetModule: 'FIELD_OPERATIONS',
-          targetRecordId: updated ? updated.id : id,
+          targetRecordId: id,
           reason: data.reason,
           previousValues: { assignedUserId: existing.assignedUserId },
           newValues: { assignedUserId: newAgent.id, supervisorNotes: mergedNotes },

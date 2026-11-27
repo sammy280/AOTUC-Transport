@@ -38,18 +38,69 @@ describe('Phase 6 — Field Operations, Assignments, Progress Tracking & Proof o
     }) || await prisma.user.findFirst();
 
     chefMatotoUser = await prisma.user.findFirst({
-      where: { email: 'chef.matoto@aotuc.test' },
+      where: {
+        communeId: matotoCommune?.id,
+        roles: { some: { role: { name: 'CHEF_SERVICE' } } },
+      },
     }) || await prisma.user.findFirst({
-      where: { communeId: matotoCommune?.id },
-    }) || superAdminUser;
+      where: { email: 'chef.matoto@aotuc.test' },
+    });
 
     agentMatotoUser = await prisma.user.findFirst({
+      where: {
+        communeId: matotoCommune?.id,
+        roles: { some: { role: { name: 'AGENT_TERRAIN' } } },
+        accountStatus: 'ACTIVE',
+        isActive: true,
+      },
+    }) || await prisma.user.findFirst({
       where: { email: 'agent.matoto@aotuc.test' },
-    }) || superAdminUser;
+    });
 
     agentKaloumUser = await prisma.user.findFirst({
+      where: {
+        communeId: kaloumCommune?.id,
+        roles: { some: { role: { name: 'AGENT_TERRAIN' } } },
+        accountStatus: 'ACTIVE',
+        isActive: true,
+      },
+    }) || await prisma.user.findFirst({
       where: { email: 'agent.kaloum@aotuc.test' },
-    }) || superAdminUser;
+    });
+
+    const agentTerrainRole = await prisma.role.findFirst({ where: { name: 'AGENT_TERRAIN' } });
+
+    if (!agentKaloumUser) {
+      agentKaloumUser = await prisma.user.create({
+        data: {
+          email: `test.agent.kaloum.${testSuffix}@aotuc.test`,
+          passwordHash: 'dummy',
+          firstName: 'Kaloum',
+          lastName: 'Agent',
+          phoneNumber: `+224611${testSuffix}`,
+          communeId: kaloumCommune.id,
+          accountStatus: 'ACTIVE',
+          isActive: true,
+          roles: agentTerrainRole ? { create: { roleId: agentTerrainRole.id } } : undefined,
+        },
+      });
+    }
+
+    if (!agentMatotoUser) {
+      agentMatotoUser = await prisma.user.create({
+        data: {
+          email: `test.agent.matoto.${testSuffix}@aotuc.test`,
+          passwordHash: 'dummy',
+          firstName: 'Matoto',
+          lastName: 'Agent',
+          phoneNumber: `+224622${testSuffix}`,
+          communeId: matotoCommune.id,
+          accountStatus: 'ACTIVE',
+          isActive: true,
+          roles: agentTerrainRole ? { create: { roleId: agentTerrainRole.id } } : undefined,
+        },
+      });
+    }
 
     superAdminToken = jwt.sign(
       {
@@ -115,6 +166,14 @@ describe('Phase 6 — Field Operations, Assignments, Progress Tracking & Proof o
       if (matotoAssignmentId) {
         await prisma.fieldReceipt.deleteMany({ where: { assignmentId: matotoAssignmentId } });
         await prisma.fieldAssignment.deleteMany({ where: { id: matotoAssignmentId } });
+      }
+      if (agentKaloumUser?.email?.startsWith('test.agent.')) {
+        await prisma.userRole.deleteMany({ where: { userId: agentKaloumUser.id } });
+        await prisma.user.deleteMany({ where: { id: agentKaloumUser.id } });
+      }
+      if (agentMatotoUser?.email?.startsWith('test.agent.')) {
+        await prisma.userRole.deleteMany({ where: { userId: agentMatotoUser.id } });
+        await prisma.user.deleteMany({ where: { id: agentMatotoUser.id } });
       }
     } catch (_) {}
   });
@@ -403,5 +462,125 @@ describe('Phase 6 — Field Operations, Assignments, Progress Tracking & Proof o
 
     // Cleanup team
     await prisma.fieldTeam.deleteMany({ where: { code: teamCode } });
+  });
+
+  // ============================================================================
+  // 9. FIELD AGENT SELECTION & ELIGIBILITY VALIDATION
+  // ============================================================================
+  test('Scenario 15: Cannot assign non-existent user as field agent (404 AGENT_NOT_FOUND)', async () => {
+    const res = await request(app)
+      .post('/api/v1/field-operations/assignments')
+      .set('Authorization', `Bearer ${superAdminToken}`)
+      .send({
+        title: `Mission Invalide ${testSuffix}`,
+        communeId: kaloumCommune.id,
+        locationName: 'Port de Kaloum',
+        assignedUserId: '00000000-0000-4000-8000-000000000000',
+        startDate: new Date().toISOString(),
+      });
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe('AGENT_NOT_FOUND');
+  });
+
+  test('Scenario 16: Cannot assign user with non-AGENT_TERRAIN role (400 INVALID_AGENT_ROLE)', async () => {
+    const res = await request(app)
+      .post('/api/v1/field-operations/assignments')
+      .set('Authorization', `Bearer ${superAdminToken}`)
+      .send({
+        title: `Mission Rôle Invalide ${testSuffix}`,
+        communeId: kaloumCommune.id,
+        locationName: 'Gare Routière',
+        assignedUserId: superAdminUser.id,
+        startDate: new Date().toISOString(),
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_AGENT_ROLE');
+  });
+
+  test('Scenario 17: Cannot assign an inactive/suspended agent (400 INACTIVE_AGENT)', async () => {
+    const agentRole = await prisma.role.findFirst({ where: { name: 'AGENT_TERRAIN' } });
+    const inactiveUser = await prisma.user.create({
+      data: {
+        email: `inactive.agent.${testSuffix}@aotuc.test`,
+        passwordHash: 'dummy-hash',
+        firstName: 'Test',
+        lastName: 'InactiveAgent',
+        phoneNumber: `+224601${testSuffix}`,
+        communeId: kaloumCommune.id,
+        accountStatus: 'INACTIVE',
+        isActive: false,
+        roles: agentRole ? { create: { roleId: agentRole.id } } : undefined,
+      },
+    });
+
+    try {
+      const res = await request(app)
+        .post('/api/v1/field-operations/assignments')
+        .set('Authorization', `Bearer ${superAdminToken}`)
+        .send({
+          title: `Mission Agent Inactif ${testSuffix}`,
+          communeId: kaloumCommune.id,
+          locationName: 'Marché Niger',
+          assignedUserId: inactiveUser.id,
+          startDate: new Date().toISOString(),
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('INACTIVE_AGENT');
+    } finally {
+      await prisma.userRole.deleteMany({ where: { userId: inactiveUser.id } });
+      await prisma.user.deleteMany({ where: { id: inactiveUser.id } });
+    }
+  });
+
+  test('Scenario 18: Chef de Service Matoto CANNOT assign an agent from Kaloum (403 AGENT_COMMUNE_MISMATCH)', async () => {
+    const res = await request(app)
+      .post('/api/v1/field-operations/assignments')
+      .set('Authorization', `Bearer ${chefMatotoToken}`)
+      .send({
+        title: `Mission Commune Mismatch ${testSuffix}`,
+        communeId: matotoCommune.id,
+        locationName: 'Rond-point Matoto',
+        assignedUserId: agentKaloumUser.id,
+        startDate: new Date().toISOString(),
+      });
+
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('AGENT_COMMUNE_MISMATCH');
+  });
+
+  test('Scenario 19: Dedicated field agents list returns only active AGENT_TERRAIN accounts', async () => {
+    const res = await request(app)
+      .get('/api/v1/field/agents?role=AGENT_TERRAIN&status=ACTIVE&limit=50')
+      .set('Authorization', `Bearer ${superAdminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+
+    for (const agent of res.body.data) {
+      expect(agent.accountStatus).toBe('ACTIVE');
+      const roleNames = Array.isArray(agent.roles)
+        ? agent.roles.map((r) => (typeof r === 'string' ? r : r.role?.name || r.name))
+        : [];
+      expect(roleNames).toContain('AGENT_TERRAIN');
+    }
+  });
+
+  test('Scenario 20: Chef de Service only sees field agents from their own commune in agent list', async () => {
+    const res = await request(app)
+      .get('/api/v1/field/agents?role=AGENT_TERRAIN&status=ACTIVE')
+      .set('Authorization', `Bearer ${chefMatotoToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
+
+    for (const agent of res.body.data) {
+      expect(agent.communeId).toBe(matotoCommune.id);
+    }
   });
 });
