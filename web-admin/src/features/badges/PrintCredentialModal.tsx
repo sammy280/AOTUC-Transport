@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Printer,
   Download,
@@ -68,6 +69,16 @@ export const PrintCredentialModal: React.FC<PrintCredentialModalProps> = ({
   const [colorMode, setColorMode] = useState<'color' | 'grayscale'>('color');
   const [isPrinting, setIsPrinting] = useState<boolean>(false);
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('aotuc-credential-modal-open');
+      return () => {
+        document.body.classList.remove('aotuc-credential-modal-open');
+        document.body.classList.remove('aotuc-printing-credential');
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const isBadge = data.type === 'BADGE';
@@ -81,13 +92,46 @@ export const PrintCredentialModal: React.FC<PrintCredentialModalProps> = ({
     ? (badgeData?.isPaymentConfirmed !== false)
     : (licenceData?.isPaymentConfirmed !== false && licenceData?.superAdminConfirmed !== false);
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!isPaymentConfirmed) return;
     setIsPrinting(true);
+    document.body.classList.add('aotuc-printing-credential');
+
+    try {
+      const sheet = document.getElementById('aotuc-print-sheet');
+      if (sheet) {
+        const images = Array.from(sheet.querySelectorAll('img'));
+        await Promise.all(
+          images.map((img) => {
+            if (img.complete) {
+              return typeof img.decode === 'function'
+                ? img.decode().catch(() => {})
+                : Promise.resolve();
+            }
+            return new Promise((resolve) => {
+              img.onload = () => resolve(true);
+              img.onerror = () => resolve(false);
+            });
+          })
+        );
+      }
+    } catch {
+      // Continue even if decode fails
+    }
+
+    const cleanup = () => {
+      setIsPrinting(false);
+      document.body.classList.remove('aotuc-printing-credential');
+      window.removeEventListener('afterprint', cleanup);
+    };
+
+    window.addEventListener('afterprint', cleanup);
+
     // Give browser frame to apply exact print styles
     setTimeout(() => {
       window.print();
-      setIsPrinting(false);
+      // Fallback cleanup if afterprint does not fire in some environments
+      setTimeout(cleanup, 1500);
     }, 150);
   };
 
@@ -329,32 +373,36 @@ export const PrintCredentialModal: React.FC<PrintCredentialModalProps> = ({
       </div>
 
       {/* ------------------------------------------------------------------- */}
-      {/* 2. DEDICATED PRINT CONTAINER (Rendered ONLY when window.print() runs) */}
+      {/* 2. DEDICATED PRINT CONTAINER (Portal-mounted directly to document.body) */}
       {/* ------------------------------------------------------------------- */}
-      <div id="aotuc-print-sheet" className="aotuc-print-only">
-        {isBadge && badgeData && (
-          <div className="aotuc-print-badge-container">
-            {(badgeSide === 'recto' || badgeSide === 'both') && (
-              <div className="aotuc-print-card-wrapper">
-                {renderBadgeRecto(badgeData, true)}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <div id="aotuc-print-sheet" className="aotuc-print-only">
+            {isBadge && badgeData && (
+              <div className="aotuc-print-badge-container">
+                {(badgeSide === 'recto' || badgeSide === 'both') && (
+                  <div className="aotuc-print-card-wrapper">
+                    {renderBadgeRecto(badgeData, true)}
+                  </div>
+                )}
+                {(badgeSide === 'verso' || badgeSide === 'both') && (
+                  <div className="aotuc-print-card-wrapper">
+                    {renderBadgeVerso(badgeData, true)}
+                  </div>
+                )}
               </div>
             )}
-            {(badgeSide === 'verso' || badgeSide === 'both') && (
-              <div className="aotuc-print-card-wrapper">
-                {renderBadgeVerso(badgeData, true)}
-              </div>
-            )}
-          </div>
-        )}
 
-        {!isBadge && licenceData && (
-          <div className="aotuc-print-sticker-container">
-            <div className="aotuc-print-sticker-wrapper">
-              {renderLicenceSticker(licenceData, true)}
-            </div>
-          </div>
+            {!isBadge && licenceData && (
+              <div className="aotuc-print-sticker-container">
+                <div className="aotuc-print-sticker-wrapper">
+                  {renderLicenceSticker(licenceData, true)}
+                </div>
+              </div>
+            )}
+          </div>,
+          document.body
         )}
-      </div>
     </>
   );
 };

@@ -453,7 +453,14 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     width: 100% !important;
-    height: 100% !important;
+  }
+
+  /* When printing credentials, hide the entire #root app interface */
+  body.aotuc-credential-modal-open #root,
+  body.aotuc-printing-credential #root,
+  body:has(#aotuc-print-sheet) #root {
+    display: none !important;
+    visibility: hidden !important;
   }
 
   /* Completely hide all app navigation, sidebars, dashboard, dialog backdrop, buttons, and toasts */
@@ -463,8 +470,7 @@
   header,
   footer,
   button,
-  .toast-container,
-  #root > :not(#aotuc-print-sheet) {
+  .toast-container {
     display: none !important;
     visibility: hidden !important;
   }
@@ -474,17 +480,26 @@
   #aotuc-print-sheet {
     display: flex !important;
     visibility: visible !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    min-height: 100vh !important;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    min-height: auto !important;
     background: #ffffff !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: 10mm !important;
+    padding: 10mm 0 !important;
+    margin: 0 auto !important;
     box-sizing: border-box !important;
     z-index: 9999999 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Ensure exact color rendering across all children in the print sheet */
+  #aotuc-print-sheet * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .aotuc-print-badge-container {
@@ -494,6 +509,8 @@
     gap: 15mm !important;
     align-items: center !important;
     justify-content: center !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .aotuc-print-card-wrapper {
@@ -513,12 +530,16 @@
     print-color-adjust: exact !important;
     box-shadow: none !important;
     overflow: hidden !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .aotuc-print-sticker-container {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   /* Standard Windshield Vehicle Sticker (Vignette) dimensions: 100mm x 100mm */
@@ -532,5 +553,7 @@
     print-color-adjust: exact !important;
     box-shadow: none !important;
     overflow: hidden !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }
