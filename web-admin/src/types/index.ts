@@ -54,6 +54,10 @@ export interface ValidationItem {
   communeName: string;
   currentLevel: 1 | 2 | 3;
   status: ValidationStatus;
+  currentStatus?: ValidationStatus;
+  communeId?: string | null;
+  submitterId?: string;
+  targetEntityId?: string;
   submittedAt: string;
   submitterName: string;
   documents: { category: string; label: string; url: string }[];
@@ -64,6 +68,10 @@ export interface ValidationItem {
     comment: string | null;
     timestamp: string;
   }[];
+  latestComment?: string | null;
+  latestReviewerName?: string | null;
+  latestAction?: ValidationAction | null;
+  targetEntity?: any;
 }
 
 export type NotificationCategory = 'VALIDATION' | 'SECURITY' | 'TICKETING' | 'SMS' | 'SYSTEM';

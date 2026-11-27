@@ -162,7 +162,7 @@ describe('Chef des Agents Validation Workflow & Rejection Remarks Suite', () => 
           requestCommuneId: 'test-matoto-commune-id', // Matoto != Kaloum
           entityType: 'DRIVER_ENROLMENT',
         });
-      }).toThrow('Accès refusé. Vous ne pouvez valider que les dossiers rattachés aux agents de votre commune');
+      }).toThrow('Accès refusé. Vous ne pouvez valider que les dossiers rattachés à votre commune');
     });
   });
 
@@ -275,6 +275,9 @@ describe('Chef des Agents Validation Workflow & Rejection Remarks Suite', () => 
         expect(first.applicantName).toBeDefined();
         expect(first.targetDetails).toBeDefined();
         expect(first.communeName).toBeDefined();
+        expect(first.status).toBeDefined();
+        expect(first.currentStatus).toBeDefined();
+        expect(first.status).toBe(first.currentStatus);
         expect(Array.isArray(first.documents)).toBe(true);
         expect(Array.isArray(first.history)).toBe(true);
       }

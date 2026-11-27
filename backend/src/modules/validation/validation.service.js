@@ -157,6 +157,8 @@ export class ValidationService {
 
     return {
       ...request,
+      status: request.currentStatus || 'SOUMIS_NIVEAU2',
+      currentStatus: request.currentStatus || 'SOUMIS_NIVEAU2',
       applicantName,
       applicantPhone,
       targetDetails,

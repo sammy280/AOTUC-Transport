@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { UserContext, ValidationItem, ValidationAction } from '../../types';
+import { UserContext, ValidationItem, ValidationAction, ValidationStatus } from '../../types';
 import {
   CheckCircle,
   XCircle,
@@ -40,9 +40,19 @@ export const ValidationQueue: React.FC<ValidationQueueProps> = ({ currentUser })
   const [returnComment, setReturnComment] = useState<string>('');
   const [returnError, setReturnError] = useState<string | null>(null);
 
-  // Role Checks
-  const isChefAgents = currentUser.role === 'CHEF_SERVICE';
+  // Helper to reliably extract status regardless of status vs currentStatus property
+  const getItemStatus = (item: ValidationItem | null | undefined): ValidationStatus => {
+    if (!item) return 'SOUMIS_NIVEAU2';
+    return item.status || (item as any).currentStatus || 'SOUMIS_NIVEAU2';
+  };
+
+  // Role Checks: Chef des Agents vs Director
   const isDirector = currentUser.role === 'DIRECTOR';
+  const isChefAgents =
+    !isDirector &&
+    (currentUser.role === 'CHEF_SERVICE' ||
+      (currentUser as any).roles?.includes('CHEF_SERVICE') ||
+      Boolean(currentUser.jobTitle && currentUser.jobTitle.toLowerCase().includes('chef')));
   const isAgentTerrain = currentUser.role === 'AGENT_TERRAIN';
 
   // Fetch validation requests from the backend
@@ -74,7 +84,15 @@ export const ValidationQueue: React.FC<ValidationQueueProps> = ({ currentUser })
       }
 
       const payload = await res.json();
-      const fetchedItems: ValidationItem[] = payload.data?.items || [];
+      const rawItems: any[] = payload.data?.items || [];
+      const fetchedItems: ValidationItem[] = rawItems.map((raw: any) => {
+        const resolvedStatus = raw.status || raw.currentStatus || 'SOUMIS_NIVEAU2';
+        return {
+          ...raw,
+          status: resolvedStatus,
+          currentStatus: resolvedStatus,
+        };
+      });
       setItems(fetchedItems);
 
       // Keep current selection fresh if already selected
@@ -131,7 +149,13 @@ export const ValidationQueue: React.FC<ValidationQueueProps> = ({ currentUser })
         throw new Error(payload.message || 'La transition de validation a été refusée par le serveur.');
       }
 
-      const updatedRequest: ValidationItem = payload.data;
+      const rawData: any = payload.data;
+      const resolvedStatus = rawData?.status || rawData?.currentStatus || 'VALIDE';
+      const updatedRequest: ValidationItem = {
+        ...rawData,
+        status: resolvedStatus,
+        currentStatus: resolvedStatus,
+      };
 
       // Update state locally & refresh
       setItems((prev) => prev.map((item) => (item.id === updatedRequest.id ? updatedRequest : item)));
@@ -303,10 +327,11 @@ export const ValidationQueue: React.FC<ValidationQueueProps> = ({ currentUser })
             </div>
           ) : (
             items.map((item) => {
+              const itemStatus = getItemStatus(item);
               const isSelected = selectedItem?.id === item.id;
-              const isRejected = item.status === 'REJETE';
-              const isReturned = item.status === 'RETOURNE_POUR_CORRECTION';
-              const isValidated = item.status === 'VALIDE';
+              const isRejected = itemStatus === 'REJETE';
+              const isReturned = itemStatus === 'RETOURNE_POUR_CORRECTION';
+              const isValidated = itemStatus === 'VALIDE';
 
               return (
                 <div
@@ -346,11 +371,11 @@ export const ValidationQueue: React.FC<ValidationQueueProps> = ({ currentUser })
                           : 'bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300'
                       }`}
                     >
-                      {item.status === 'VALIDE'
+                      {isValidated
                         ? 'VALIDÉ'
-                        : item.status === 'REJETE'
+                        : isRejected
                         ? 'REJETÉ'
-                        : item.status === 'RETOURNE_POUR_CORRECTION'
+                        : isReturned
                         ? 'À CORRIGER'
                         : 'EN ATTENTE CHEF'}
                     </span>
@@ -416,39 +441,43 @@ export const ValidationQueue: React.FC<ValidationQueueProps> = ({ currentUser })
               </div>
 
               {/* Prominent Rejection Banner if Rejected or Returned */}
-              {(selectedItem.status === 'REJETE' || selectedItem.status === 'RETOURNE_POUR_CORRECTION') && (
-                <div className="p-4 rounded-xl border bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900 space-y-2">
-                  <div className="flex items-center space-x-2 text-rose-900 dark:text-rose-200 font-bold text-xs uppercase tracking-wide">
-                    <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
-                    <span>
-                      {selectedItem.status === 'REJETE'
-                        ? 'Dossier Rejeté Définitivement'
-                        : 'Dossier Renvoyé pour Correction'}
-                    </span>
+              {(() => {
+                const selectedStatus = getItemStatus(selectedItem);
+                if (selectedStatus !== 'REJETE' && selectedStatus !== 'RETOURNE_POUR_CORRECTION') return null;
+                return (
+                  <div className="p-4 rounded-xl border bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900 space-y-2">
+                    <div className="flex items-center space-x-2 text-rose-900 dark:text-rose-200 font-bold text-xs uppercase tracking-wide">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                      <span>
+                        {selectedStatus === 'REJETE'
+                          ? 'Dossier Rejeté Définitivement'
+                          : 'Dossier Renvoyé pour Correction'}
+                      </span>
+                    </div>
+
+                    {selectedItem.history?.[0]?.comment ? (
+                      <div className="p-3 bg-white dark:bg-slate-900/80 rounded-lg border border-rose-100 dark:border-rose-900/60 text-xs">
+                        <div className="text-slate-500 dark:text-slate-400 text-[11px] mb-1">
+                          Motif consigné par <span className="font-bold text-slate-800 dark:text-slate-200">{selectedItem.history[0].reviewerName}</span> le {selectedItem.history[0].timestamp} :
+                        </div>
+                        <div className="text-rose-950 dark:text-rose-200 font-medium italic">
+                          « {selectedItem.history[0].comment} »
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-rose-800 dark:text-rose-300 italic">
+                        Aucun motif textuel n a été archivé pour cette décision.
+                      </div>
+                    )}
+
+                    <p className="text-[11px] text-rose-700 dark:text-rose-400">
+                      {selectedStatus === 'REJETE'
+                        ? 'L entité rattachée à ce dossier est actuellement INACTIVE dans le système officiel.'
+                        : 'L agent enrôleur doit corriger les pièces ou données signalées et soumettre à nouveau le dossier.'}
+                    </p>
                   </div>
-
-                  {selectedItem.history?.[0]?.comment ? (
-                    <div className="p-3 bg-white dark:bg-slate-900/80 rounded-lg border border-rose-100 dark:border-rose-900/60 text-xs">
-                      <div className="text-slate-500 dark:text-slate-400 text-[11px] mb-1">
-                        Motif consigné par <span className="font-bold text-slate-800 dark:text-slate-200">{selectedItem.history[0].reviewerName}</span> le {selectedItem.history[0].timestamp} :
-                      </div>
-                      <div className="text-rose-950 dark:text-rose-200 font-medium italic">
-                        « {selectedItem.history[0].comment} »
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-rose-800 dark:text-rose-300 italic">
-                      Aucun motif textuel n a été archivé pour cette décision.
-                    </div>
-                  )}
-
-                  <p className="text-[11px] text-rose-700 dark:text-rose-400">
-                    {selectedItem.status === 'REJETE'
-                      ? 'L entité rattachée à ce dossier est actuellement INACTIVE dans le système officiel.'
-                      : 'L agent enrôleur doit corriger les pièces ou données signalées et soumettre à nouveau le dossier.'}
-                  </p>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Uploaded Documents List */}
               <div className="space-y-2">
@@ -561,66 +590,118 @@ export const ValidationQueue: React.FC<ValidationQueueProps> = ({ currentUser })
                   Décision Administrative
                 </div>
 
-                {/* Chef des Agents Execution Buttons */}
-                {isChefAgents ? (
-                  selectedItem.status === 'SOUMIS_NIVEAU2' ||
-                  selectedItem.status === 'EN_ATTENTE_NIVEAU3' ? (
-                    <div className="flex flex-col sm:flex-row flex-wrap gap-2.5">
-                      {/* Approve Button */}
-                      <button
-                        onClick={() => handleExecuteTransition('APPROVE_FINAL')}
-                        disabled={isSubmitting}
-                        className="flex-1 min-h-[44px] justify-center flex items-center space-x-1.5 bg-[#009460] hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-xs disabled:opacity-50 cursor-pointer"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        <span>Valider Définitivement (Activer Titre)</span>
-                      </button>
+                {(() => {
+                  const selectedStatus = getItemStatus(selectedItem);
+                  const isPendingChef = selectedStatus === 'SOUMIS_NIVEAU2' || selectedStatus === 'EN_ATTENTE_NIVEAU3';
+                  const isOwnSubmission = Boolean(
+                    selectedItem.submitterId &&
+                      currentUser?.id &&
+                      selectedItem.submitterId === currentUser.id
+                  );
+                  const isForeignCommune = Boolean(
+                    isChefAgents &&
+                      currentUser?.communeId &&
+                      selectedItem?.communeId &&
+                      currentUser.communeId !== selectedItem.communeId
+                  );
+                  const canChefValidate = isChefAgents && isPendingChef && !isOwnSubmission && !isForeignCommune;
 
-                      {/* Return for Correction Button */}
-                      <button
-                        onClick={() => {
-                          setReturnError(null);
-                          setReturnComment('');
-                          setIsReturnModalOpen(true);
-                        }}
-                        disabled={isSubmitting}
-                        className="w-full sm:w-auto min-h-[44px] justify-center flex items-center space-x-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-xs disabled:opacity-50 cursor-pointer"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                        <span>Renvoyer pour Correction</span>
-                      </button>
+                  if (isChefAgents) {
+                    if (canChefValidate) {
+                      return (
+                        <div className="flex flex-col sm:flex-row flex-wrap gap-2.5">
+                          {/* Approve Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleExecuteTransition('APPROVE_FINAL')}
+                            disabled={isSubmitting}
+                            className="flex-1 min-h-[44px] justify-center flex items-center space-x-1.5 bg-[#009460] hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-xs disabled:opacity-50 cursor-pointer"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            <span>Valider Définitivement (Activer Titre)</span>
+                          </button>
 
-                      {/* Reject Button */}
-                      <button
-                        onClick={() => {
-                          setRejectionError(null);
-                          setRejectionComment('');
-                          setIsRejectModalOpen(true);
-                        }}
-                        disabled={isSubmitting}
-                        className="w-full sm:w-auto min-h-[44px] justify-center flex items-center space-x-1.5 bg-[#CE1126] hover:bg-red-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-xs disabled:opacity-50 cursor-pointer"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        <span>Rejeter avec Remarque</span>
-                      </button>
+                          {/* Return for Correction Button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReturnError(null);
+                              setReturnComment('');
+                              setIsReturnModalOpen(true);
+                            }}
+                            disabled={isSubmitting}
+                            className="w-full sm:w-auto min-h-[44px] justify-center flex items-center space-x-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-xs disabled:opacity-50 cursor-pointer"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                            <span>Renvoyer pour Correction</span>
+                          </button>
+
+                          {/* Reject Button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRejectionError(null);
+                              setRejectionComment('');
+                              setIsRejectModalOpen(true);
+                            }}
+                            disabled={isSubmitting}
+                            className="w-full sm:w-auto min-h-[44px] justify-center flex items-center space-x-1.5 bg-[#CE1126] hover:bg-red-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-xs disabled:opacity-50 cursor-pointer"
+                          >
+                            <XCircle className="w-4 h-4" />
+                            <span>Rejeter avec Remarque</span>
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    if (isOwnSubmission) {
+                      return (
+                        <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl flex items-start space-x-2.5 text-xs text-amber-900 dark:text-amber-200">
+                          <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold block">Conflit d intérêt préventif</span>
+                            <span>Vous avez vous-même soumis ce dossier. Conformément aux règles d intégrité AOTUC, la validation doit être effectuée par un autre Chef des Agents ou instructeur habilité.</span>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    if (isForeignCommune) {
+                      return (
+                        <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl flex items-start space-x-2.5 text-xs text-amber-900 dark:text-amber-200">
+                          <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold block">Périmètre Territorial Distinct</span>
+                            <span>Ce dossier relève de la commune de <strong>{selectedItem.communeName}</strong>. Votre compétence d instruction est circonscrite à votre commune d affectation.</span>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="p-3 bg-slate-100 dark:bg-slate-900 rounded-xl text-xs text-slate-600 dark:text-slate-400">
+                        Ce dossier a déjà été statué (Statut actuel : <strong>{selectedStatus}</strong>).
+                      </div>
+                    );
+                  }
+
+                  if (isDirector) {
+                    return (
+                      <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-xl text-xs text-amber-900 dark:text-amber-200">
+                        <span className="font-bold">Information Direction Générale :</span> Les boutons de validation et rejet des dossiers chauffeurs/véhicules sont désactivés pour le Directeur Général conformément au transfert de responsabilité vers le Chef des Agents.
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="flex items-center space-x-2 p-3 bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 rounded-xl text-xs">
+                      <Lock className="w-4 h-4 text-slate-400 shrink-0" />
+                      <span>
+                        Mode Consultation : Votre rôle ({currentUser.roleLabel}) ne dispose pas des pouvoirs de validation sur ce dossier.
+                      </span>
                     </div>
-                  ) : (
-                    <div className="p-3 bg-slate-100 dark:bg-slate-900 rounded-xl text-xs text-slate-600 dark:text-slate-400">
-                      Ce dossier a déjà été statué (Statut actuel : <strong>{selectedItem.status}</strong>).
-                    </div>
-                  )
-                ) : isDirector ? (
-                  <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-xl text-xs text-amber-900 dark:text-amber-200">
-                    <span className="font-bold">Information Direction Générale :</span> Les boutons de validation et rejet des dossiers chauffeurs/véhicules sont désactivés pour le Directeur Général conformément au transfert de responsabilité vers le Chef des Agents.
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-2 p-3 bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 rounded-xl text-xs">
-                    <Lock className="w-4 h-4 text-slate-400 shrink-0" />
-                    <span>
-                      Mode Consultation : Votre rôle ({currentUser.roleLabel}) ne dispose pas des pouvoirs de validation sur ce dossier.
-                    </span>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             </div>
           ) : (
