@@ -66,18 +66,19 @@ describe('Milestone 3 — Multi-Level Validation Workflow & Integrity Gates', ()
       expect(evaluation.newLevel).toBe(3);
     });
 
-    it('should permit Level 3 Director to grant final validation (VALIDE)', () => {
+    it('should permit Chef des Agents (Level 2) to grant final validation (VALIDE)', () => {
       const evaluation = ValidationStateMachine.evaluate({
-        currentStatus: 'EN_ATTENTE_NIVEAU3',
+        currentStatus: 'SOUMIS_NIVEAU2',
         action: 'APPROVE_FINAL',
-        reviewerUser: { id: 'director-01', roles: ['DIRECTOR'], communeId: null },
+        reviewerUser: { id: 'chef-matoto-01', roles: ['CHEF_SERVICE'], communeId: 'commune-matoto' },
         submitterId: 'agent-matoto-01',
         comment: null,
         requestCommuneId: 'commune-matoto',
+        entityType: 'DRIVER_ENROLMENT',
       });
 
       expect(evaluation.newStatus).toBe('VALIDE');
-      expect(evaluation.newLevel).toBe(3);
+      expect(evaluation.newLevel).toBe(2);
     });
   });
 
@@ -98,7 +99,7 @@ describe('Milestone 3 — Multi-Level Validation Workflow & Integrity Gates', ()
   });
 
   describe('3. Level Skipping & Illegal Transitions', () => {
-    it('PROHIBITS skipping Level 2 (Director attempting to approve a Level 2 pending file directly)', () => {
+    it('PROHIBITS Director from attempting to approve chauffeur dossiers (transferred to Chef des Agents)', () => {
       expect(() => {
         ValidationStateMachine.evaluate({
           currentStatus: 'SOUMIS_NIVEAU2', // Still awaiting Level 2!
@@ -107,8 +108,9 @@ describe('Milestone 3 — Multi-Level Validation Workflow & Integrity Gates', ()
           submitterId: 'agent-matoto-01',
           comment: null,
           requestCommuneId: 'commune-matoto',
+          entityType: 'DRIVER_ENROLMENT',
         });
-      }).toThrow('Transition impossible');
+      }).toThrow('La validation des dossiers chauffeurs et véhicules est attribuée exclusivement au Chef des Agents');
     });
 
     it('PROHIBITS returning a file for correction without a mandatory comment', () => {

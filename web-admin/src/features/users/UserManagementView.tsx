@@ -154,7 +154,7 @@ const getRoleLabel = (role: RoleType): string => {
     case 'DIRECTOR':
       return 'Directeur Général AOTUC';
     case 'CHEF_SERVICE':
-      return 'Chef de Service Territorial';
+      return 'Chef des Agents / Chef de Service';
     case 'AGENT_TERRAIN':
       return 'Agent d Enrôlement Terrain';
     case 'DISTRIBUTEUR':
@@ -884,7 +884,7 @@ export const UserManagementView: React.FC<{
           {[
             { id: 'ALL', label: 'Tous les rôles' },
             { id: 'DIRECTOR', label: 'Direction (L3)' },
-            { id: 'CHEF_SERVICE', label: 'Chefs Territoriaux (L2)' },
+            { id: 'CHEF_SERVICE', label: 'Chefs des Agents (L2)' },
             { id: 'AGENT_TERRAIN', label: 'Agents Enrôlement (L1)' },
             { id: 'DISTRIBUTEUR', label: 'Distributeurs' },
             { id: 'SYNDICAT', label: 'Syndicats' },
@@ -1433,7 +1433,7 @@ export const UserManagementView: React.FC<{
                     className="w-full p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 bg-white text-xs"
                   >
                     <option value="AGENT_TERRAIN">Agent d Enrôlement (L1)</option>
-                    <option value="CHEF_SERVICE">Chef de Service Territorial (L2)</option>
+                    <option value="CHEF_SERVICE">Chef des Agents / Chef de Service (L2)</option>
                     <option value="DISTRIBUTEUR">Distributeur Billetterie</option>
                     <option value="SYNDICAT">Délégué Syndical FNTG</option>
                     <option value="DIRECTOR">Directeur Général (L3)</option>

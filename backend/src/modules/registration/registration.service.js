@@ -763,8 +763,64 @@ export class RegistrationService {
       prisma.driver.count({ where }),
     ]);
 
+    // Attach latest validation state and rejection remarks
+    const driverIds = drivers.map((d) => d.id);
+    let valMap = new Map();
+    if (driverIds.length > 0) {
+      const valRequests = await prisma.validationRequest.findMany({
+        where: {
+          targetEntityId: { in: driverIds },
+          entityType: 'DRIVER_ENROLMENT',
+        },
+        include: {
+          steps: {
+            orderBy: { decidedAt: 'desc' },
+            take: 1,
+            include: {
+              reviewer: { select: { id: true, firstName: true, lastName: true, jobTitle: true } },
+            },
+          },
+        },
+        orderBy: { updatedAt: 'desc' },
+      });
+      for (const vr of valRequests) {
+        if (!valMap.has(vr.targetEntityId)) {
+          valMap.set(vr.targetEntityId, vr);
+        }
+      }
+    }
+
+    const items = drivers.map((d) => {
+      const vr = valMap.get(d.id);
+      const latestStep = vr?.steps?.[0];
+      const isRejectedOrReturned =
+        vr?.currentStatus === 'REJETE' || vr?.currentStatus === 'RETOURNE_POUR_CORRECTION';
+      return {
+        ...d,
+        validationRequest: vr
+          ? {
+              id: vr.id,
+              requestNumber: vr.requestNumber,
+              status: vr.currentStatus,
+              currentLevel: vr.currentLevel,
+              latestComment: latestStep?.comment || null,
+              latestAction: latestStep?.action || null,
+              latestReviewer: latestStep?.reviewer
+                ? `${latestStep.reviewer.firstName} ${latestStep.reviewer.lastName}`
+                : null,
+              decidedAt: latestStep?.decidedAt || null,
+            }
+          : null,
+        rejectionReason: isRejectedOrReturned ? latestStep?.comment || null : null,
+        rejectionReviewer: isRejectedOrReturned && latestStep?.reviewer
+          ? `${latestStep.reviewer.firstName} ${latestStep.reviewer.lastName}`
+          : null,
+        rejectionDate: isRejectedOrReturned ? latestStep?.decidedAt || null : null,
+      };
+    });
+
     return {
-      items: drivers,
+      items,
       pagination: {
         page,
         limit,
@@ -795,7 +851,48 @@ export class RegistrationService {
         throw new AppError('Accès refusé. Ce conducteur relève d une autre commune.', 403, 'FORBIDDEN_COMMUNE_SCOPE');
       }
     }
-    return driver;
+
+    const vr = await prisma.validationRequest.findFirst({
+      where: {
+        targetEntityId: driver.id,
+        entityType: 'DRIVER_ENROLMENT',
+      },
+      include: {
+        steps: {
+          orderBy: { decidedAt: 'desc' },
+          include: {
+            reviewer: { select: { id: true, firstName: true, lastName: true, jobTitle: true } },
+          },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+    const latestStep = vr?.steps?.[0];
+    const isRejectedOrReturned =
+      vr?.currentStatus === 'REJETE' || vr?.currentStatus === 'RETOURNE_POUR_CORRECTION';
+
+    return {
+      ...driver,
+      validationRequest: vr
+        ? {
+            id: vr.id,
+            requestNumber: vr.requestNumber,
+            status: vr.currentStatus,
+            currentLevel: vr.currentLevel,
+            latestComment: latestStep?.comment || null,
+            latestAction: latestStep?.action || null,
+            latestReviewer: latestStep?.reviewer
+              ? `${latestStep.reviewer.firstName} ${latestStep.reviewer.lastName}`
+              : null,
+            decidedAt: latestStep?.decidedAt || null,
+          }
+        : null,
+      rejectionReason: isRejectedOrReturned ? latestStep?.comment || null : null,
+      rejectionReviewer: isRejectedOrReturned && latestStep?.reviewer
+        ? `${latestStep.reviewer.firstName} ${latestStep.reviewer.lastName}`
+        : null,
+      rejectionDate: isRejectedOrReturned ? latestStep?.decidedAt || null : null,
+    };
   }
 
   /**
@@ -926,8 +1023,64 @@ export class RegistrationService {
       prisma.vehicle.count({ where }),
     ]);
 
+    // Attach latest validation state and rejection remarks
+    const vehicleIds = vehicles.map((v) => v.id);
+    let valMap = new Map();
+    if (vehicleIds.length > 0) {
+      const valRequests = await prisma.validationRequest.findMany({
+        where: {
+          targetEntityId: { in: vehicleIds },
+          entityType: 'VEHICLE_ENROLMENT',
+        },
+        include: {
+          steps: {
+            orderBy: { decidedAt: 'desc' },
+            take: 1,
+            include: {
+              reviewer: { select: { id: true, firstName: true, lastName: true, jobTitle: true } },
+            },
+          },
+        },
+        orderBy: { updatedAt: 'desc' },
+      });
+      for (const vr of valRequests) {
+        if (!valMap.has(vr.targetEntityId)) {
+          valMap.set(vr.targetEntityId, vr);
+        }
+      }
+    }
+
+    const items = vehicles.map((v) => {
+      const vr = valMap.get(v.id);
+      const latestStep = vr?.steps?.[0];
+      const isRejectedOrReturned =
+        vr?.currentStatus === 'REJETE' || vr?.currentStatus === 'RETOURNE_POUR_CORRECTION';
+      return {
+        ...v,
+        validationRequest: vr
+          ? {
+              id: vr.id,
+              requestNumber: vr.requestNumber,
+              status: vr.currentStatus,
+              currentLevel: vr.currentLevel,
+              latestComment: latestStep?.comment || null,
+              latestAction: latestStep?.action || null,
+              latestReviewer: latestStep?.reviewer
+                ? `${latestStep.reviewer.firstName} ${latestStep.reviewer.lastName}`
+                : null,
+              decidedAt: latestStep?.decidedAt || null,
+            }
+          : null,
+        rejectionReason: isRejectedOrReturned ? latestStep?.comment || null : null,
+        rejectionReviewer: isRejectedOrReturned && latestStep?.reviewer
+          ? `${latestStep.reviewer.firstName} ${latestStep.reviewer.lastName}`
+          : null,
+        rejectionDate: isRejectedOrReturned ? latestStep?.decidedAt || null : null,
+      };
+    });
+
     return {
-      items: vehicles,
+      items,
       pagination: {
         page,
         limit,
@@ -979,7 +1132,47 @@ export class RegistrationService {
       }
     }
 
-    return vehicle;
+    const vr = await prisma.validationRequest.findFirst({
+      where: {
+        targetEntityId: vehicle.id,
+        entityType: 'VEHICLE_ENROLMENT',
+      },
+      include: {
+        steps: {
+          orderBy: { decidedAt: 'desc' },
+          include: {
+            reviewer: { select: { id: true, firstName: true, lastName: true, jobTitle: true } },
+          },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+    const latestStep = vr?.steps?.[0];
+    const isRejectedOrReturned =
+      vr?.currentStatus === 'REJETE' || vr?.currentStatus === 'RETOURNE_POUR_CORRECTION';
+
+    return {
+      ...vehicle,
+      validationRequest: vr
+        ? {
+            id: vr.id,
+            requestNumber: vr.requestNumber,
+            status: vr.currentStatus,
+            currentLevel: vr.currentLevel,
+            latestComment: latestStep?.comment || null,
+            latestAction: latestStep?.action || null,
+            latestReviewer: latestStep?.reviewer
+              ? `${latestStep.reviewer.firstName} ${latestStep.reviewer.lastName}`
+              : null,
+            decidedAt: latestStep?.decidedAt || null,
+          }
+        : null,
+      rejectionReason: isRejectedOrReturned ? latestStep?.comment || null : null,
+      rejectionReviewer: isRejectedOrReturned && latestStep?.reviewer
+        ? `${latestStep.reviewer.firstName} ${latestStep.reviewer.lastName}`
+        : null,
+      rejectionDate: isRejectedOrReturned ? latestStep?.decidedAt || null : null,
+    };
   }
 
   /**

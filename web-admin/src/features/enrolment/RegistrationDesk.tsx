@@ -5,6 +5,7 @@ import {
   Upload,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Search,
   FileCheck,
   Shield,
@@ -61,6 +62,10 @@ interface DriverRecord {
   unionId?: string | null;
   union?: { id: string; code: string; name: string } | null;
   createdAt: string;
+  rejectionReason?: string | null;
+  rejectionReviewer?: string | null;
+  rejectionDate?: string | null;
+  validationRequest?: any;
   person: {
     id: string;
     firstName: string;
@@ -110,6 +115,10 @@ interface VehicleRecord {
   seatingCapacity?: number | null;
   status: string;
   createdAt: string;
+  rejectionReason?: string | null;
+  rejectionReviewer?: string | null;
+  rejectionDate?: string | null;
+  validationRequest?: any;
   documents?: DocumentItem[];
   owner?: {
     id: string;
@@ -1355,7 +1364,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
     return matchesSearch && matchesCommune;
   });
 
-  const renderStatusBadge = (status: string) => {
+  const renderStatusBadge = (status: string, rejectionReason?: string | null) => {
     switch (status) {
       case 'ACTIF':
       case 'VALIDE':
@@ -1372,10 +1381,24 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
           </span>
         );
       case 'SUSPENDU':
+      case 'INACTIF':
       case 'REJETE':
         return (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800">
-            <AlertCircle className="w-3.5 h-3.5 mr-1 text-red-600" /> {status}
+          <span
+            className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 cursor-help"
+            title={rejectionReason ? `Motif : ${rejectionReason}` : undefined}
+          >
+            <AlertCircle className="w-3.5 h-3.5 mr-1 text-red-600" /> {rejectionReason ? 'REJETÉ (Voir motif)' : status}
+          </span>
+        );
+      case 'BROUILLON':
+      case 'RETOURNE_POUR_CORRECTION':
+        return (
+          <span
+            className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-800 cursor-help"
+            title={rejectionReason ? `À corriger : ${rejectionReason}` : undefined}
+          >
+            <RotateCcw className="w-3.5 h-3.5 mr-1 text-orange-600" /> {rejectionReason ? 'À CORRIGER' : 'BROUILLON'}
           </span>
         );
       default:
@@ -2790,7 +2813,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                                 </div>
                               </div>
                             </div>
-                            <div className="shrink-0">{renderStatusBadge(d.status)}</div>
+                            <div className="shrink-0">{renderStatusBadge(d.status, d.rejectionReason)}</div>
                           </div>
 
                           <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-100">
@@ -2899,7 +2922,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                                   </div>
                                 )}
                               </td>
-                              <td className="py-3.5 px-4">{renderStatusBadge(d.status)}</td>
+                              <td className="py-3.5 px-4">{renderStatusBadge(d.status, d.rejectionReason)}</td>
                               <td className="py-3.5 px-4 text-right">
                                 <button
                                   type="button"
@@ -2939,7 +2962,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                               {v.make} {v.model} {v.year ? `(${v.year})` : ''}
                             </div>
                           </div>
-                          <div className="shrink-0">{renderStatusBadge(v.status)}</div>
+                          <div className="shrink-0">{renderStatusBadge(v.status, v.rejectionReason)}</div>
                         </div>
 
                         <div className="flex flex-wrap gap-1 text-[10px]">
@@ -3053,7 +3076,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                                 </div>
                               )}
                             </td>
-                            <td className="py-3.5 px-4">{renderStatusBadge(v.status)}</td>
+                            <td className="py-3.5 px-4">{renderStatusBadge(v.status, v.rejectionReason)}</td>
                             <td className="py-3.5 px-4 text-right">
                               <button
                                 type="button"
@@ -3099,6 +3122,27 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
             </div>
 
             <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
+              {/* Rejection / Correction Reason Alert */}
+              {selectedDriver.rejectionReason && (
+                <div className="p-3.5 sm:p-4 rounded-xl bg-rose-50 border border-rose-200 space-y-1.5">
+                  <div className="flex items-center space-x-2 text-rose-900 font-bold text-xs uppercase tracking-wide">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>Remarque du Chef des Agents (Instruction)</span>
+                  </div>
+                  <div className="p-2.5 bg-white rounded-lg border border-rose-100 text-xs text-rose-950 font-medium italic">
+                    « {selectedDriver.rejectionReason} »
+                  </div>
+                  <div className="text-[11px] text-rose-700 flex justify-between items-center pt-0.5">
+                    <span>
+                      Notifié par : <strong>{selectedDriver.rejectionReviewer || 'Chef des Agents'}</strong>
+                    </span>
+                    {selectedDriver.rejectionDate && (
+                      <span>{new Date(selectedDriver.rejectionDate).toLocaleString('fr-FR')}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Top Profile Row with Photograph */}
               <div className="flex items-center space-x-3 sm:space-x-4">
                 {selectedDriverPhotoUrl ? (
@@ -3115,7 +3159,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
                 )}
 
                 <div className="space-y-1 sm:space-y-1.5 min-w-0 flex-1">
-                  <div>{renderStatusBadge(selectedDriver.status)}</div>
+                  <div>{renderStatusBadge(selectedDriver.status, selectedDriver.rejectionReason)}</div>
                   <div className="text-xs font-mono text-slate-600 truncate">
                     <strong>ID Base :</strong> {selectedDriver.id}
                   </div>
@@ -3348,6 +3392,27 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
             </div>
 
             <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+              {/* Rejection / Correction Reason Alert */}
+              {selectedVehicle.rejectionReason && (
+                <div className="p-3.5 sm:p-4 rounded-xl bg-rose-50 border border-rose-200 space-y-1.5">
+                  <div className="flex items-center space-x-2 text-rose-900 font-bold text-xs uppercase tracking-wide">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>Remarque du Chef des Agents (Instruction)</span>
+                  </div>
+                  <div className="p-2.5 bg-white rounded-lg border border-rose-100 text-xs text-rose-950 font-medium italic">
+                    « {selectedVehicle.rejectionReason} »
+                  </div>
+                  <div className="text-[11px] text-rose-700 flex justify-between items-center pt-0.5">
+                    <span>
+                      Notifié par : <strong>{selectedVehicle.rejectionReviewer || 'Chef des Agents'}</strong>
+                    </span>
+                    {selectedVehicle.rejectionDate && (
+                      <span>{new Date(selectedVehicle.rejectionDate).toLocaleString('fr-FR')}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Top Overview Row */}
               <div className="flex items-center space-x-3 sm:space-x-4">
                 {selectedVehiclePhotoUrl ? (
@@ -3365,7 +3430,7 @@ export const RegistrationDesk: React.FC<RegistrationDeskProps> = ({ currentUser 
 
                 <div className="space-y-1 sm:space-y-1.5 flex-1 min-w-0">
                   <div className="flex items-center space-x-2">
-                    {renderStatusBadge(selectedVehicle.status)}
+                    {renderStatusBadge(selectedVehicle.status, selectedVehicle.rejectionReason)}
                     <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded truncate">
                       {VEHICLE_TYPE_LABELS[selectedVehicle.vehicleType] || selectedVehicle.vehicleType}
                     </span>

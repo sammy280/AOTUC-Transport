@@ -37,7 +37,7 @@ const getRoleLabel = (role: RoleType): string => {
     case 'DIRECTOR':
       return 'Directeur Général AOTUC';
     case 'CHEF_SERVICE':
-      return 'Chef de Service Territorial';
+      return 'Chef des Agents / Chef de Service';
     case 'AGENT_TERRAIN':
       return 'Agent d Enrôlement Terrain';
     case 'DISTRIBUTEUR':
