@@ -107,6 +107,27 @@ export class BadgeController {
     }
   }
 
+  static async uploadDriverPortrait(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { base64Data, mimeType, originalName } = req.body || {};
+
+      const record = await BadgeService.uploadDriverPortrait(
+        id,
+        { base64Data, mimeType, originalName },
+        req.user
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: 'Photo portrait du chauffeur enregistrée et rattachée au badge CR80 avec succès.',
+        data: record,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   static async downloadPdf(req, res, next) {
     try {
       const { id } = req.params;

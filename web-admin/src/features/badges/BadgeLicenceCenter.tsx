@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   IdCard,
   FileCheck2,
@@ -19,6 +19,8 @@ import {
   Check,
   X,
   Info,
+  Camera,
+  Upload,
 } from 'lucide-react';
 import { UserContext } from '../../types';
 import { PERMISSIONS, hasRolePermission } from '../../utils/permissions';
@@ -77,6 +79,9 @@ export interface BadgeRecord {
   eligibilityReason: string;
   signaturePreview: string;
   photoDocumentId?: string | null;
+  hasPhoto?: boolean;
+  photoMissingOnDisk?: boolean;
+  photoDataUrl?: string | null;
   photoUrl?: string | null;
   hasIssuedBadge: boolean;
   validationHistory?: BadgeHistoryEntry[];
@@ -189,6 +194,8 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
 
   // Loaded base64 portrait photo cache keyed by photoDocumentId
   const [portraitCache, setPortraitCache] = useState<Record<string, string>>({});
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState<boolean>(false);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
   const isDirector = currentUser?.role === 'DIRECTOR';
@@ -274,9 +281,13 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
   }, [fetchDriverBadges]);
 
   // Load portrait photo with Authorization header when selectedBadge has a photoDocumentId
+  // and inline photoDataUrl was not already provided by the API
   useEffect(() => {
     const docId = selectedBadge?.photoDocumentId;
     if (!docId || portraitCache[docId]) return;
+    if (selectedBadge?.photoDataUrl && selectedBadge.photoDataUrl.startsWith('data:')) return;
+    if (selectedBadge?.photoUrl && selectedBadge.photoUrl.startsWith('data:')) return;
+    if (selectedBadge?.photoMissingOnDisk) return;
 
     const token = getStoredAuthToken();
     if (!token) return;
@@ -301,7 +312,13 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
     return () => {
       isCancelled = true;
     };
-  }, [selectedBadge?.photoDocumentId, portraitCache]);
+  }, [
+    selectedBadge?.photoDocumentId,
+    selectedBadge?.photoDataUrl,
+    selectedBadge?.photoUrl,
+    selectedBadge?.photoMissingOnDisk,
+    portraitCache,
+  ]);
 
   // Compute counts by badge workflow status
   const statusCounts = useMemo(() => {
@@ -337,10 +354,105 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
     });
   }, [badges, searchQuery, statusFilter]);
 
-  const currentPortraitUrl =
-    selectedBadge?.photoDocumentId && portraitCache[selectedBadge.photoDocumentId]
-      ? portraitCache[selectedBadge.photoDocumentId]
-      : null;
+  const getRecordPortraitUrl = useCallback(
+    (record: BadgeRecord | null | undefined): string | null => {
+      if (!record) return null;
+      if (record.photoDataUrl && record.photoDataUrl.startsWith('data:')) {
+        return record.photoDataUrl;
+      }
+      if (record.photoUrl && record.photoUrl.startsWith('data:')) {
+        return record.photoUrl;
+      }
+      if (record.photoDocumentId && portraitCache[record.photoDocumentId]) {
+        return portraitCache[record.photoDocumentId];
+      }
+      return null;
+    },
+    [portraitCache]
+  );
+
+  const currentPortraitUrl = getRecordPortraitUrl(selectedBadge);
+
+  const handlePortraitFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !selectedBadge) return;
+
+    if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
+      setErrorFeedback('Veuillez sélectionner une photo portrait au format JPEG ou PNG.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorFeedback('La photo portrait ne doit pas dépasser 5 Mo.');
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+    setErrorFeedback(null);
+    setVerificationFeedback(null);
+
+    try {
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () =>
+          typeof reader.result === 'string'
+            ? resolve(reader.result)
+            : reject(new Error('Lecture de la photo impossible.'));
+        reader.onerror = () => reject(new Error('Lecture de la photo impossible.'));
+        reader.readAsDataURL(file);
+      });
+
+      const token = getStoredAuthToken();
+      const res = await fetch(
+        buildApiUrl(`/api/v1/badges/drivers/${selectedBadge.driverId}/photo`),
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            base64Data,
+            mimeType: file.type || 'image/jpeg',
+            originalName: file.name || 'portrait_chauffeur.jpg',
+          }),
+        }
+      );
+
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body?.message || "Erreur lors de l'enregistrement de la photo portrait.");
+      }
+
+      const updatedRecord: BadgeRecord | null = body?.data || null;
+      if (updatedRecord) {
+        if (updatedRecord.photoDocumentId && updatedRecord.photoDataUrl) {
+          setPortraitCache((prev) => ({
+            ...prev,
+            [updatedRecord.photoDocumentId!]: updatedRecord.photoDataUrl!,
+          }));
+        }
+        setBadges((prev) =>
+          prev.map((b) => (b.driverId === selectedBadge.driverId ? updatedRecord : b))
+        );
+        setSelectedBadge(updatedRecord);
+      } else {
+        await fetchDriverBadges(selectedBadge.driverId);
+      }
+
+      setVerificationFeedback(
+        `✓ Photo portrait réelle enregistrée et intégrée au badge CR80 de ${selectedBadge.driverName}.`
+      );
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : 'Erreur lors du téléversement de la photo portrait.';
+      setErrorFeedback(msg);
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
 
   const getPrintableData = (): PrintableCredentialData => {
     if (activeTab === 'badges' && selectedBadge) {
@@ -1015,11 +1127,26 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
                             </div>
                           </td>
                           <td className="p-3">
-                            <div className="font-bold text-slate-900 dark:text-slate-100">
-                              {b.firstName} {b.lastName}
-                            </div>
-                            <div className="text-[10px] text-slate-500">
-                              NIN : {b.nin} • {b.phoneNumber || ''}
+                            <div className="flex items-center space-x-2.5">
+                              <div className="w-8 h-10 rounded bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 overflow-hidden flex items-center justify-center flex-shrink-0">
+                                {getRecordPortraitUrl(b) ? (
+                                  <img
+                                    src={getRecordPortraitUrl(b)!}
+                                    alt={b.driverName}
+                                    className="w-full h-full object-cover object-center"
+                                  />
+                                ) : (
+                                  <User className="w-4 h-4 text-slate-400" />
+                                )}
+                              </div>
+                              <div>
+                                <div className="font-bold text-slate-900 dark:text-slate-100">
+                                  {b.firstName} {b.lastName}
+                                </div>
+                                <div className="text-[10px] text-slate-500">
+                                  NIN : {b.nin} • {b.phoneNumber || ''}
+                                </div>
+                              </div>
                             </div>
                           </td>
                           <td className="p-3 text-slate-600 dark:text-slate-300">{b.commune}</td>
@@ -1316,15 +1443,15 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
                           <img
                             src={currentPortraitUrl}
                             alt={selectedBadge.driverName}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover object-center"
                           />
                         ) : (
-                          <>
-                            <User className="w-7 h-7 text-slate-400" />
-                            <span className="text-[5.5px] text-slate-300 font-semibold mt-0.5">
-                              PHOTO
+                          <div className="flex flex-col items-center justify-center p-1 text-center">
+                            <User className="w-6 h-6 text-slate-400" />
+                            <span className="text-[5px] text-amber-300 font-bold leading-tight mt-0.5">
+                              AUCUNE PHOTO
                             </span>
-                          </>
+                          </div>
                         )}
                       </div>
 
@@ -1386,6 +1513,64 @@ export const BadgeLicenceCenter: React.FC<{ currentUser?: UserContext }> = ({ cu
                         )}
                       </div>
                     </div>
+                  </div>
+
+                  {/* Chauffeur Portrait Photo Status & Upload Bar */}
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png"
+                    onChange={handlePortraitFileSelect}
+                    className="hidden"
+                  />
+                  <div
+                    className={`mt-3 p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 ${
+                      currentPortraitUrl
+                        ? 'bg-emerald-50/60 dark:bg-emerald-950/25 border-emerald-200 dark:border-emerald-800/70 text-emerald-900 dark:text-emerald-200'
+                        : 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2 min-w-0">
+                      <Camera
+                        className={`w-4 h-4 flex-shrink-0 ${
+                          currentPortraitUrl ? 'text-emerald-600' : 'text-amber-600'
+                        }`}
+                      />
+                      <div className="text-[11px] leading-snug truncate">
+                        {currentPortraitUrl ? (
+                          <span className="font-semibold">
+                            Photo portrait du chauffeur chargée (CR80 & PDF)
+                          </span>
+                        ) : selectedBadge.photoMissingOnDisk ? (
+                          <span className="font-semibold">
+                            Photo portrait introuvable sur le serveur — veuillez la re-téléverser
+                          </span>
+                        ) : (
+                          <span className="font-semibold">
+                            Aucune photo portrait enregistrée pour ce chauffeur
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isUploadingPhoto}
+                      onClick={() => photoInputRef.current?.click()}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center space-x-1 flex-shrink-0 transition cursor-pointer ${
+                        currentPortraitUrl
+                          ? 'bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-50'
+                          : 'bg-amber-600 hover:bg-amber-700 text-white shadow-xs'
+                      }`}
+                    >
+                      <Upload className="w-3 h-3" />
+                      <span>
+                        {isUploadingPhoto
+                          ? 'Envoi...'
+                          : currentPortraitUrl
+                          ? 'Changer photo'
+                          : 'Téléverser photo'}
+                      </span>
+                    </button>
                   </div>
 
                   {/* Eligibility & Status Explanation Banner */}

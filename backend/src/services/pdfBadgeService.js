@@ -22,6 +22,7 @@ export class PdfBadgeService {
     category = 'B, C1',
     expiresAt = new Date('2028-02-15'),
     qrPayload = 'AOTUC1.ed25519_2026_01.bdg-001.BADGE.DRIVER_Bah',
+    photoBuffer = null,
   }) {
     // Generate QR code data buffer
     const qrBuffer = await QRCode.toBuffer(qrPayload, {
@@ -68,9 +69,41 @@ export class PdfBadgeService {
       // Subtle dividing line
       doc.moveTo(8, 24).lineTo(234.65, 24).strokeColor('#E2E8F0').lineWidth(0.5).stroke();
 
-      // 3. Photo Box (Left)
+      // 3. Photo Box (Left) — Embed real chauffeur portrait photo when available
       doc.rect(8, 28, 52, 65).fillAndStroke('#F1F5F9', '#CBD5E1');
-      doc.fontSize(6).fillColor('#64748B').text('PHOTO', 8, 55, { align: 'center', width: 52 });
+      let photoRendered = false;
+      if (photoBuffer) {
+        try {
+          const imgInput =
+            typeof photoBuffer === 'string' && photoBuffer.startsWith('data:')
+              ? Buffer.from(photoBuffer.replace(/^data:[^;]+;base64,/, ''), 'base64')
+              : Buffer.isBuffer(photoBuffer)
+              ? photoBuffer
+              : null;
+
+          if (imgInput && imgInput.length > 24) {
+            const openedImg = doc.openImage(imgInput);
+            if (openedImg && openedImg.width > 0 && openedImg.height > 0) {
+              doc.save();
+              doc.rect(8, 28, 52, 65).clip();
+              doc.image(openedImg, 8, 28, {
+                cover: [52, 65],
+                align: 'center',
+                valign: 'center',
+              });
+              doc.restore();
+              doc.rect(8, 28, 52, 65).strokeColor('#CBD5E1').lineWidth(0.8).stroke();
+              photoRendered = true;
+            }
+          }
+        } catch (_) {
+          // Fallback to placeholder text if image buffer cannot be decoded
+        }
+      }
+
+      if (!photoRendered) {
+        doc.fontSize(5.5).font('Helvetica-Bold').fillColor('#64748B').text('AUCUNE\nPHOTO', 8, 52, { align: 'center', width: 52 });
+      }
 
       // 4. Details (Center)
       const leftCol = 66;

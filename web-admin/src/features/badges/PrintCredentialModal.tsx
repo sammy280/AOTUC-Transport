@@ -172,6 +172,16 @@ export const PrintCredentialModal: React.FC<PrintCredentialModalProps> = ({
             </button>
           </div>
 
+          {/* Missing Photo Notice for Driver Badges */}
+          {isBadge && !badgeData?.photoUrl && (
+            <div className="mx-5 mt-3 p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-xl flex items-center space-x-2.5 text-amber-900 dark:text-amber-200 text-xs">
+              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <div className="text-[11px] leading-relaxed">
+                <span className="font-bold">Aucune photo portrait enregistrée :</span> Ce chauffeur ne dispose d'aucune photo portrait valide rattachée à son dossier. Vous pouvez téléverser sa photo depuis le bouton <b>« Téléverser photo »</b> sous l'aperçu du badge avant de lancer l'impression.
+              </div>
+            </div>
+          )}
+
           {/* Payment Gate Notice */}
           {!isPaymentConfirmed && (
             <div className="mx-5 my-3 p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-xl flex items-center space-x-3 text-rose-900 dark:text-rose-300 text-xs">
@@ -482,11 +492,17 @@ function renderBadgeRecto(badge: PrintableBadgeData, isPrintMode = false) {
         {/* Driver Photo */}
         <div className="w-16 h-20 rounded bg-slate-800 border-2 border-slate-500 flex flex-col items-center justify-center text-slate-300 overflow-hidden shadow-inner flex-shrink-0">
           {badge.photoUrl ? (
-            <img src={badge.photoUrl} alt={badge.driverName} className="w-full h-full object-cover" />
+            <img
+              src={badge.photoUrl}
+              alt={badge.driverName}
+              className="w-full h-full object-cover object-center"
+            />
           ) : (
             <div className="flex flex-col items-center justify-center p-1 text-center">
-              <User className="w-8 h-8 text-slate-400" />
-              <span className="text-[6px] font-bold text-slate-400 mt-0.5">PHOTO</span>
+              <User className="w-7 h-7 text-slate-400" />
+              <span className="text-[5.5px] font-bold text-amber-300 leading-tight mt-0.5">
+                AUCUNE PHOTO
+              </span>
             </div>
           )}
         </div>

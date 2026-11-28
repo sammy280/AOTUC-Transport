@@ -78,6 +78,19 @@ router.post(
   BadgeController.rejectDriverBadge
 );
 
+// Upload or update a driver's portrait photo (PHOTO_PORTRAIT) for CR80 badge rendering
+router.post(
+  '/drivers/:id/photo',
+  requirePermissions(
+    PERMISSIONS.CREDENTIALS_ISSUE,
+    PERMISSIONS.APPLICATIONS_APPROVE_L2,
+    PERMISSIONS.DRIVERS_CREATE,
+    PERMISSIONS.DRIVERS_UPDATE,
+    PERMISSIONS.USERS_UPDATE
+  ),
+  BadgeController.uploadDriverPortrait
+);
+
 // Confirm driver payment (Required before badge can be printed / issued)
 router.post(
   '/drivers/:id/confirm-payment',

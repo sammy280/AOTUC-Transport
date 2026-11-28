@@ -1,4 +1,7 @@
 import request from 'supertest';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { jest } from '@jest/globals';
 import app from '../src/app.js';
 import jwt from 'jsonwebtoken';
@@ -6,6 +9,13 @@ import config from '../src/config/index.js';
 import CryptoSignatureService from '../src/services/cryptoSignatureService.js';
 import PdfBadgeService from '../src/services/pdfBadgeService.js';
 import prisma from '../src/utils/prisma.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const SAMPLE_PORTRAIT_PNG_BUFFER = fs.readFileSync(
+  path.resolve(__dirname, '../assets/aotuc-logo.png')
+);
+const SAMPLE_PORTRAIT_DATA_URI = `data:image/png;base64,${SAMPLE_PORTRAIT_PNG_BUFFER.toString('base64')}`;
 
 describe('Milestone 4 — Badges, Licences & Asymmetric Ed25519 Cryptography', () => {
   let directorToken;
@@ -248,6 +258,7 @@ describe('Milestone 4 — Badges, Licences & Asymmetric Ed25519 Cryptography', (
           await prisma.driver.deleteMany({ where: { id: enrolledDriverId } });
         }
         if (enrolledPersonId) {
+          await prisma.document.deleteMany({ where: { personId: enrolledPersonId } });
           await prisma.person.deleteMany({ where: { id: enrolledPersonId } });
         }
       } catch (_) {}
@@ -392,12 +403,47 @@ describe('Milestone 4 — Badges, Licences & Asymmetric Ed25519 Cryptography', (
       expect(refreshRes.body.data.badgeId).toBe(issuedBadgeId);
       expect(refreshRes.body.data.validationHistory.length).toBeGreaterThanOrEqual(2);
 
-      // Verify printable PDF download succeeds
-      const pdfRes = await request(app)
+      // Verify printable PDF download succeeds (without photo first)
+      const pdfNoPhotoRes = await request(app)
         .get(`/api/v1/badges/${issuedBadgeId}/pdf`)
         .set('Authorization', `Bearer ${realDirectorToken}`);
-      expect(pdfRes.status).toBe(200);
-      expect(pdfRes.headers['content-type']).toContain('application/pdf');
+      expect(pdfNoPhotoRes.status).toBe(200);
+      expect(pdfNoPhotoRes.headers['content-type']).toContain('application/pdf');
+      const noPhotoPdfSize = pdfNoPhotoRes.body.length;
+
+      // Upload a real portrait photo for the chauffeur via POST /api/v1/badges/drivers/:id/photo
+      const uploadPhotoRes = await request(app)
+        .post(`/api/v1/badges/drivers/${enrolledDriverId}/photo`)
+        .set('Authorization', `Bearer ${realDirectorToken}`)
+        .send({
+          base64Data: SAMPLE_PORTRAIT_DATA_URI,
+          mimeType: 'image/png',
+          originalName: 'portrait_chauffeur_reel.png',
+        });
+
+      expect(uploadPhotoRes.status).toBe(200);
+      expect(uploadPhotoRes.body.data.hasPhoto).toBe(true);
+      expect(uploadPhotoRes.body.data.photoMissingOnDisk).toBe(false);
+      expect(uploadPhotoRes.body.data.photoDocumentId).toBeTruthy();
+      expect(uploadPhotoRes.body.data.photoDataUrl).toMatch(/^data:image\/png;base64,/);
+
+      const photoDocId = uploadPhotoRes.body.data.photoDocumentId;
+
+      // Verify document streaming endpoint returns 200 with exact image bytes from PostgreSQL persistence
+      const streamRes = await request(app)
+        .get(`/api/v1/documents/${photoDocId}/stream`)
+        .set('Authorization', `Bearer ${realDirectorToken}`);
+      expect(streamRes.status).toBe(200);
+      expect(streamRes.headers['content-type']).toContain('image/png');
+      expect(streamRes.body.length).toBe(SAMPLE_PORTRAIT_PNG_BUFFER.length);
+
+      // Verify CR80 PDF download now embeds the real portrait photo inside the PDF
+      const pdfWithPhotoRes = await request(app)
+        .get(`/api/v1/badges/${issuedBadgeId}/pdf`)
+        .set('Authorization', `Bearer ${realDirectorToken}`);
+      expect(pdfWithPhotoRes.status).toBe(200);
+      expect(pdfWithPhotoRes.headers['content-type']).toContain('application/pdf');
+      expect(pdfWithPhotoRes.body.length).toBeGreaterThan(noPhotoPdfSize + 10000);
     });
 
     it('Step 7: Enforces mandatory explanation when rejecting a badge and persists rejection history', async () => {

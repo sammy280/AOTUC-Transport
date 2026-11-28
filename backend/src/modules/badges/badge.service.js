@@ -4,6 +4,7 @@ import logger from '../../utils/logger.js';
 import { AppError } from '../../middlewares/errorHandler.js';
 import CryptoSignatureService from '../../services/cryptoSignatureService.js';
 import PdfBadgeService from '../../services/pdfBadgeService.js';
+import DocumentStorageService from '../../services/documentStorageService.js';
 
 export class BadgeService {
   /**
@@ -99,9 +100,20 @@ export class BadgeService {
         'Chauffeur éligible : Dossier approuvé par le Chef des Agents et paiement en règle. En attente de validation du badge professionnel CR80.';
     }
 
-    const portraitDoc = (driver.person?.documents || []).find(
-      (d) => d.category === 'PHOTO_PORTRAIT'
-    );
+    const portraitDocs = [...(driver.person?.documents || [])]
+      .filter((d) => d.category === 'PHOTO_PORTRAIT')
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    let portraitDoc = portraitDocs[0] || null;
+    let photoDataUrl = null;
+    for (const candidate of portraitDocs) {
+      const resolved = DocumentStorageService.resolveDocumentDataUrl(candidate);
+      if (resolved) {
+        portraitDoc = candidate;
+        photoDataUrl = resolved;
+        break;
+      }
+    }
 
     // Build chronological validation history combining dossier steps and badge audits
     const history = [];
@@ -231,7 +243,10 @@ export class BadgeService {
         activeBadge?.qrPayload ||
         `APERÇU_NON_SIGNÉ.ed25519_2026_01.DRV_${driver.id.slice(0, 8)}.${driver.drivingLicenseNumber}`,
       photoDocumentId: portraitDoc?.id || null,
-      photoUrl: portraitDoc ? `/api/v1/documents/${portraitDoc.id}/stream` : null,
+      hasPhoto: Boolean(photoDataUrl),
+      photoMissingOnDisk: Boolean(portraitDoc && !photoDataUrl),
+      photoDataUrl: photoDataUrl || null,
+      photoUrl: photoDataUrl || (portraitDoc ? `/api/v1/documents/${portraitDoc.id}/stream` : null),
       printCount: latestBadge?.printCount || 0,
       printedAt: latestBadge?.printedAt || null,
       validationHistory: history,
@@ -820,13 +835,97 @@ export class BadgeService {
   }
 
   /**
+   * Uploads or updates a chauffeur's PHOTO_PORTRAIT and persists it in PostgreSQL.
+   */
+  static async uploadDriverPortrait(
+    driverOrBadgeId,
+    { base64Data, mimeType = 'image/jpeg', originalName = 'portrait_chauffeur.jpg' } = {},
+    actorUser
+  ) {
+    if (!base64Data || typeof base64Data !== 'string') {
+      throw new AppError(
+        'Aucune image portrait (base64Data) n a été transmise.',
+        400,
+        'PHOTO_REQUIRED'
+      );
+    }
+
+    let driver = await prisma.driver.findUnique({
+      where: { id: driverOrBadgeId },
+      include: { person: true },
+    });
+
+    if (!driver) {
+      const badge = await prisma.driverBadge.findUnique({
+        where: { id: driverOrBadgeId },
+        include: { driver: { include: { person: true } } },
+      });
+      if (badge?.driver) {
+        driver = badge.driver;
+      }
+    }
+
+    if (!driver || !driver.personId) {
+      throw new AppError('Chauffeur introuvable.', 404, 'DRIVER_NOT_FOUND');
+    }
+
+    const userRoles = actorUser?.roles || [];
+    const isGlobal =
+      userRoles.includes('SUPER_ADMIN') ||
+      userRoles.includes('DIRECTOR') ||
+      userRoles.includes('IT');
+
+    if (
+      !isGlobal &&
+      actorUser?.communeId &&
+      driver.person?.communeId &&
+      actorUser.communeId !== driver.person.communeId
+    ) {
+      throw new AppError(
+        'Accès refusé : ce chauffeur est rattaché à une autre commune.',
+        403,
+        'FORBIDDEN_COMMUNE_SCOPE'
+      );
+    }
+
+    const cleanBase64 = base64Data.replace(/^data:[^;]+;base64,/, '');
+    const fileBuffer = Buffer.from(cleanBase64, 'base64');
+
+    let effectiveMime = mimeType;
+    if (base64Data.startsWith('data:image/png')) {
+      effectiveMime = 'image/png';
+    } else if (base64Data.startsWith('data:image/jpeg') || base64Data.startsWith('data:image/jpg')) {
+      effectiveMime = 'image/jpeg';
+    }
+
+    await DocumentStorageService.storeFile({
+      fileBuffer,
+      originalName: originalName || 'portrait_chauffeur.jpg',
+      declaredMime: effectiveMime,
+      category: 'PHOTO_PORTRAIT',
+      uploadedByUserId: actorUser.id,
+      personId: driver.personId,
+    });
+
+    return await this.getDriverBadgeDetails(driver.id, actorUser);
+  }
+
+  /**
    * Generates printable CR80 PDF for a badge.
    */
   static async generateBadgePdf(badgeOrDriverId, actorUser) {
     let badge = await prisma.driverBadge.findUnique({
       where: { id: badgeOrDriverId },
       include: {
-        driver: { include: { person: true } },
+        driver: {
+          include: {
+            person: {
+              include: {
+                documents: { orderBy: { createdAt: 'desc' } },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -834,7 +933,15 @@ export class BadgeService {
       badge = await prisma.driverBadge.findFirst({
         where: { driverId: badgeOrDriverId, status: 'ACTIF' },
         include: {
-          driver: { include: { person: true } },
+          driver: {
+            include: {
+              person: {
+                include: {
+                  documents: { orderBy: { createdAt: 'desc' } },
+                },
+              },
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -865,6 +972,18 @@ export class BadgeService {
       );
     }
 
+    const portraitDocs = (badge.driver?.person?.documents || []).filter(
+      (d) => d.category === 'PHOTO_PORTRAIT'
+    );
+    let photoBuffer = null;
+    for (const doc of portraitDocs) {
+      const buf = DocumentStorageService.resolveDocumentBuffer(doc);
+      if (buf && buf.length > 0) {
+        photoBuffer = buf;
+        break;
+      }
+    }
+
     const pdfBuffer = await PdfBadgeService.generateDriverBadgePdf({
       badgeNumber: badge.badgeNumber,
       driverName: `${badge.driver.person.firstName} ${badge.driver.person.lastName}`,
@@ -872,6 +991,7 @@ export class BadgeService {
       category: badge.driver.licenseCategory,
       expiresAt: badge.expiresAt,
       qrPayload: badge.qrPayload,
+      photoBuffer,
     });
 
     // Increment print count

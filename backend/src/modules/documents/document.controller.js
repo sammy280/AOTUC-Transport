@@ -55,13 +55,16 @@ export class DocumentController {
       const { id } = req.params;
       const document = await DocumentStorageService.getDocumentForStreaming(id, req.user);
 
-      res.setHeader('Content-Type', document.mimeType);
-      res.setHeader('Content-Length', document.fileSizeBytes);
-      res.setHeader('Content-Disposition', `inline; filename="${document.originalName}"`);
+      const buffer = document.fileBuffer;
+      res.setHeader('Content-Type', document.mimeType || 'image/jpeg');
+      res.setHeader('Content-Length', buffer.length);
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename="${encodeURIComponent(document.originalName || document.fileName || 'document.jpg')}"`
+      );
       res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 
-      const fileStream = fs.createReadStream(document.storagePath);
-      fileStream.pipe(res);
+      return res.send(buffer);
     } catch (err) {
       next(err);
     }

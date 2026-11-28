@@ -4,6 +4,20 @@ import logger from '../../utils/logger.js';
 import { AppError } from '../../middlewares/errorHandler.js';
 import ValidationStateMachine from './validation.machine.js';
 
+const DOCUMENT_METADATA_SELECT = {
+  id: true,
+  fileName: true,
+  originalName: true,
+  mimeType: true,
+  fileSizeBytes: true,
+  fileHashSha256: true,
+  category: true,
+  uploadedByUserId: true,
+  personId: true,
+  vehicleId: true,
+  createdAt: true,
+};
+
 export class ValidationService {
   /**
    * Helper to enrich a validation request with target entity details,
@@ -26,7 +40,7 @@ export class ValidationService {
           person: {
             include: {
               commune: true,
-              documents: true,
+              documents: { select: DOCUMENT_METADATA_SELECT },
             },
           },
           union: true,
@@ -68,7 +82,7 @@ export class ValidationService {
               },
             },
           },
-          documents: true,
+          documents: { select: DOCUMENT_METADATA_SELECT },
           assignments: {
             include: {
               driver: {
@@ -111,7 +125,7 @@ export class ValidationService {
           person: {
             include: {
               commune: true,
-              documents: true,
+              documents: { select: DOCUMENT_METADATA_SELECT },
             },
           },
         },

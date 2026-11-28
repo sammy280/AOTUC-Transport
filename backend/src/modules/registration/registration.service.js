@@ -755,7 +755,26 @@ export class RegistrationService {
         skip,
         take: limit,
         include: {
-          person: { include: { commune: true, documents: true } },
+          person: {
+            include: {
+              commune: true,
+              documents: {
+                select: {
+                  id: true,
+                  fileName: true,
+                  originalName: true,
+                  mimeType: true,
+                  fileSizeBytes: true,
+                  fileHashSha256: true,
+                  category: true,
+                  uploadedByUserId: true,
+                  personId: true,
+                  vehicleId: true,
+                  createdAt: true,
+                },
+              },
+            },
+          },
           union: true,
         },
         orderBy: { createdAt: 'desc' },
@@ -1012,7 +1031,21 @@ export class RegistrationService {
         take: limit,
         include: {
           owner: { include: { person: { include: { commune: true } } } },
-          documents: true,
+          documents: {
+            select: {
+              id: true,
+              fileName: true,
+              originalName: true,
+              mimeType: true,
+              fileSizeBytes: true,
+              fileHashSha256: true,
+              category: true,
+              uploadedByUserId: true,
+              personId: true,
+              vehicleId: true,
+              createdAt: true,
+            },
+          },
           assignments: {
             where: { isActive: true },
             include: { driver: { include: { person: true } }, transportLine: true },

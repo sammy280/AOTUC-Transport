@@ -146,8 +146,18 @@ export class DocumentStorageService {
     const safeServerFileName = `${crypto.randomUUID()}${safeExtension}`;
     const destinationPath = path.join(STORAGE_BASE_DIR, safeServerFileName);
 
-    // 5. Write to Protected Storage
-    await fs.promises.writeFile(destinationPath, fileBuffer, { mode: 0o600 });
+    // 5. Write to local disk cache (best-effort) AND persist as Data URI in PostgreSQL
+    // so uploaded portraits and documents survive ephemeral container restarts (Render).
+    try {
+      await fs.promises.writeFile(destinationPath, fileBuffer, { mode: 0o600 });
+    } catch (diskErr) {
+      logger.warn('Could not write local cache copy of document; relying on PostgreSQL persistence', {
+        destinationPath,
+        error: diskErr?.message,
+      });
+    }
+
+    const persistentDataUri = `data:${declaredMime};base64,${fileBuffer.toString('base64')}`;
 
     // 6. Record in Database
     const document = await prisma.document.create({
@@ -156,7 +166,7 @@ export class DocumentStorageService {
         originalName: path.basename(originalName).substring(0, 255),
         mimeType: declaredMime,
         fileSizeBytes: fileBuffer.length,
-        storagePath: destinationPath,
+        storagePath: persistentDataUri,
         fileHashSha256: hash,
         category,
         uploadedByUserId,
@@ -182,6 +192,61 @@ export class DocumentStorageService {
   }
 
   /**
+   * Resolves a document's binary Buffer from either its persistent PostgreSQL Data URI (storagePath)
+   * or its local disk path / STORAGE_BASE_DIR fallback.
+   */
+  static resolveDocumentBuffer(document) {
+    if (!document) return null;
+
+    // 1. Persistent PostgreSQL Data URI stored in storagePath
+    if (typeof document.storagePath === 'string' && document.storagePath.startsWith('data:')) {
+      const commaIdx = document.storagePath.indexOf(';base64,');
+      if (commaIdx !== -1) {
+        const b64 = document.storagePath.slice(commaIdx + 8);
+        try {
+          const buf = Buffer.from(b64, 'base64');
+          if (buf.length > 0) return buf;
+        } catch (_) {}
+      }
+    }
+
+    // 2. Local filesystem fallback (exact storagePath)
+    if (typeof document.storagePath === 'string' && !document.storagePath.startsWith('data:')) {
+      try {
+        if (fs.existsSync(document.storagePath)) {
+          const buf = fs.readFileSync(document.storagePath);
+          if (buf.length > 0) return buf;
+        }
+      } catch (_) {}
+    }
+
+    // 3. Local STORAGE_BASE_DIR fallback by fileName
+    if (typeof document.fileName === 'string' && document.fileName.trim()) {
+      const candidatePath = path.join(STORAGE_BASE_DIR, path.basename(document.fileName));
+      try {
+        if (fs.existsSync(candidatePath)) {
+          const buf = fs.readFileSync(candidatePath);
+          if (buf.length > 0) return buf;
+        }
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
+  /**
+   * Resolves a document as a ready-to-render base64 Data URL (`data:<mime>;base64,...`),
+   * or null if the binary content is unavailable.
+   */
+  static resolveDocumentDataUrl(document) {
+    if (!document) return null;
+    const buffer = DocumentStorageService.resolveDocumentBuffer(document);
+    if (!buffer || buffer.length === 0) return null;
+    const mime = document.mimeType || 'image/jpeg';
+    return `data:${mime};base64,${buffer.toString('base64')}`;
+  }
+
+  /**
    * Retrieves a document by ID with authorization and scope checks.
    */
   static async getDocumentForStreaming(documentId, userContext) {
@@ -203,11 +268,18 @@ export class DocumentStorageService {
     }
 
     // Authorization & Scope enforcement
-    const isSuperAdminOrDirector = userContext.roles.includes('SUPER_ADMIN') || userContext.roles.includes('DIRECTOR');
-    
-    if (!isSuperAdminOrDirector) {
+    const userRoles = userContext?.roles || [];
+    const isGlobalAuthority =
+      userRoles.includes('SUPER_ADMIN') ||
+      userRoles.includes('DIRECTOR') ||
+      userRoles.includes('IT');
+
+    if (!isGlobalAuthority) {
       // If user is CHEF_SERVICE or AGENT_TERRAIN, ensure document belongs to their assigned commune
-      const docCommuneId = document.person?.communeId || document.vehicle?.owner?.person?.communeId || document.union?.communeId;
+      const docCommuneId =
+        document.person?.communeId ||
+        document.vehicle?.owner?.person?.communeId ||
+        document.union?.communeId;
       if (docCommuneId && userContext.communeId && docCommuneId !== userContext.communeId) {
         logger.warn('Forbidden document access attempt across communes', {
           userId: userContext.id,
@@ -223,12 +295,23 @@ export class DocumentStorageService {
       }
     }
 
-    if (!fs.existsSync(document.storagePath)) {
-      logger.error('Document record exists but file is missing on disk', { documentId, path: document.storagePath });
-      throw new AppError('Fichier introuvable sur le serveur de stockage.', 404, 'FILE_MISSING_ON_DISK');
+    const fileBuffer = DocumentStorageService.resolveDocumentBuffer(document);
+    if (!fileBuffer) {
+      logger.error('Document record exists but file is missing on disk and in DB', {
+        documentId,
+        path: document.storagePath,
+      });
+      throw new AppError(
+        'Fichier introuvable sur le serveur de stockage.',
+        404,
+        'FILE_MISSING_ON_DISK'
+      );
     }
 
-    return document;
+    return {
+      ...document,
+      fileBuffer,
+    };
   }
 }
 
