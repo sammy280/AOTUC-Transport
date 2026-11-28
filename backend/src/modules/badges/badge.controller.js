@@ -3,17 +3,104 @@ import CryptoSignatureService from '../../services/cryptoSignatureService.js';
 import { AppError } from '../../middlewares/errorHandler.js';
 
 export class BadgeController {
+  static async listDriverBadges(req, res, next) {
+    try {
+      const { search = '', status = 'ALL', communeId = null, page = 1, limit = 100 } = req.query;
+      const result = await BadgeService.listDriverBadges(req.user, {
+        search,
+        status,
+        communeId,
+        page: Number(page) || 1,
+        limit: Number(limit) || 100,
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: result.items,
+        items: result.items,
+        counts: result.counts,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getBadgeStatistics(req, res, next) {
+    try {
+      const result = await BadgeService.listDriverBadges(req.user, { limit: 500 });
+      return res.status(200).json({
+        success: true,
+        data: result.counts,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getDriverBadgeDetails(req, res, next) {
+    try {
+      const { id } = req.params;
+      const record = await BadgeService.getDriverBadgeDetails(id, req.user);
+      return res.status(200).json({
+        success: true,
+        data: record,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   static async issueBadge(req, res, next) {
     try {
-      const { driverId } = req.body;
-      if (!driverId) throw new AppError('L identifiant du chauffeur est obligatoire.', 400, 'DRIVER_ID_REQUIRED');
+      const { driverId, comment } = req.body;
+      if (!driverId) {
+        throw new AppError('L identifiant du chauffeur est obligatoire.', 400, 'DRIVER_ID_REQUIRED');
+      }
 
-      const badge = await BadgeService.issueDriverBadge(driverId, req.user);
+      const badge = await BadgeService.issueDriverBadge(driverId, req.user, { comment });
+      const record = await BadgeService.getDriverBadgeDetails(driverId, req.user);
 
       return res.status(201).json({
         success: true,
-        message: 'Badge professionnel CR80 émis et signé avec succès.',
+        message: 'Badge professionnel CR80 validé, émis et signé avec succès.',
         data: badge,
+        record,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async validateDriverBadge(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { comment } = req.body || {};
+
+      const badge = await BadgeService.issueDriverBadge(id, req.user, { comment });
+      const record = await BadgeService.getDriverBadgeDetails(id, req.user);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Badge professionnel CR80 validé, émis et signé avec succès.',
+        data: record,
+        badge,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async rejectDriverBadge(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { reason, comment } = req.body || {};
+
+      const record = await BadgeService.rejectDriverBadge(id, reason || comment, req.user);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Badge chauffeur rejeté avec enregistrement du motif officiel.',
+        data: record,
       });
     } catch (err) {
       next(err);
@@ -37,15 +124,18 @@ export class BadgeController {
 
   static async confirmPayment(req, res, next) {
     try {
-      const { id } = req.params; // driverId
+      const { id } = req.params; // driverId or badgeId
       const { paymentReference } = req.body || {};
 
       const result = await BadgeService.confirmDriverPayment(id, req.user, { paymentReference });
+      const record = await BadgeService.getDriverBadgeDetails(result.id, req.user);
 
       return res.status(200).json({
         success: true,
-        message: 'Paiement du chauffeur confirmé avec succès. Le badge est désormais éligible à la délivrance et l impression.',
+        message:
+          'Paiement du chauffeur confirmé avec succès. Le badge est désormais éligible à la délivrance et l impression.',
         data: result,
+        record,
       });
     } catch (err) {
       next(err);
@@ -72,7 +162,9 @@ export class BadgeController {
   static async verifyQr(req, res, next) {
     try {
       const { qrPayload } = req.body;
-      if (!qrPayload) throw new AppError('Le contenu du QR code est obligatoire.', 400, 'QR_PAYLOAD_REQUIRED');
+      if (!qrPayload) {
+        throw new AppError('Le contenu du QR code est obligatoire.', 400, 'QR_PAYLOAD_REQUIRED');
+      }
 
       const result = await BadgeService.verifyBadgeQr(qrPayload);
 

@@ -263,7 +263,7 @@ export class ValidationService {
       }
     }
 
-    return await prisma.$transaction(async (tx) => {
+    const updatedRequest = await prisma.$transaction(async (tx) => {
       // 1. Fetch current request state
       const request = await tx.validationRequest.findUnique({
         where: { id: requestId },
@@ -393,8 +393,10 @@ export class ValidationService {
         comment: trimmedComment,
       });
 
-      return await this.enrichRequest(updatedRequest);
-    });
+      return updatedRequest;
+    }, { maxWait: 10000, timeout: 25000 });
+
+    return await this.enrichRequest(updatedRequest);
   }
 
   /**
